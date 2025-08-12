@@ -10,6 +10,7 @@ import SwiftUI
 struct Habit: Identifiable {
     let id = UUID()
     var name: String
+    var frequency: Frequency = .everyDay
     var completion: [String: Bool] // date string (yyyy-MM-dd) to completion status
     
     func isCompleted(for date: Date) -> Bool {
@@ -26,6 +27,12 @@ struct Habit: Identifiable {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+    
+    func shouldAppear(on date: Date) -> Bool {
+        // Use the Frequency enum's shouldTrigger method with a default start date
+        let startDate = Date() // You could store this as a property if needed
+        return frequency.shouldTrigger(on: date, from: startDate)
     }
 }
 
@@ -59,26 +66,28 @@ struct HabitView: View {
             .padding(.bottom, 24)
             
             VStack(spacing: 0) {
-                ForEach(habits.indices, id: \ .self) { index in
-                    Button(action: {
-                        habits[index].toggle(for: selectedDate)
-                    }) {
-                        HStack {
-                            Image(systemName: habits[index].isCompleted(for: selectedDate) ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .primary : .gray)
-                            Text(habits[index].name)
-                                .strikethrough(habits[index].isCompleted(for: selectedDate))
-                                .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .secondary : .primary)
-                            Spacer()
+                ForEach(habits.indices, id: \.self) { index in
+                    if habits[index].shouldAppear(on: selectedDate) {
+                        Button(action: {
+                            habits[index].toggle(for: selectedDate)
+                        }) {
+                            HStack {
+                                Image(systemName: habits[index].isCompleted(for: selectedDate) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .primary : .gray)
+                                Text(habits[index].name)
+                                    .strikethrough(habits[index].isCompleted(for: selectedDate))
+                                    .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .secondary : .primary)
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
                         }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                
-                    if index < habits.count {
-                        Divider()
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 8)
+                        .buttonStyle(PlainButtonStyle())
+                    
+                        if index < habits.count - 1 && habits[(index + 1)...].contains(where: { $0.shouldAppear(on: selectedDate) }) {
+                            Divider()
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 8)
+                        }
                     }
                 }
             }
@@ -126,6 +135,8 @@ struct ManageHabitsView: View {
                 }
             }
         }
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 }
 
@@ -134,16 +145,30 @@ struct EditableHabitRow: View {
     let index: Int
     
     var body: some View {
-        HStack {
-            TextField("Habit Name", text: $habits[index].name)
-            Spacer()
-            Button(action: {
-                habits.remove(at: index)
-            }) {
-                Image(systemName: "trash")
-                    .foregroundColor(.red)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                TextField("Habit Name", text: $habits[index].name)
+                Spacer()
+                Button(action: {
+                    habits.remove(at: index)
+                }) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+            }
+            
+            HStack {
+        
+                Picker("", selection: $habits[index].frequency) {
+                    ForEach(Frequency.allCases) { frequency in
+                        Text(frequency.displayName)
+                            .tag(frequency)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
             }
         }
+        .padding(.vertical, 4)
     }
 }
 

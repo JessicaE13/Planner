@@ -24,19 +24,34 @@ enum Frequency: String, CaseIterable, Identifiable {
     // Helper method to check if a date should trigger this frequency
     func shouldTrigger(on date: Date, from startDate: Date) -> Bool {
         let calendar = Calendar.current
-        let components = calendar.dateComponents([.day, .weekOfYear, .month, .year], from: startDate, to: date)
         
         switch self {
         case .everyDay:
             return true
         case .everyWeek:
-            return (components.weekOfYear ?? 0) >= 1
+            // Check if it's the same day of the week as the start date
+            let startWeekday = calendar.component(.weekday, from: startDate)
+            let currentWeekday = calendar.component(.weekday, from: date)
+            return startWeekday == currentWeekday
         case .everyTwoWeeks:
-            return (components.weekOfYear ?? 0) >= 2
+            // Check if it's the same day of the week and the correct week interval
+            let startWeekday = calendar.component(.weekday, from: startDate)
+            let currentWeekday = calendar.component(.weekday, from: date)
+            if startWeekday != currentWeekday {
+                return false
+            }
+            let weeksDifference = calendar.dateComponents([.weekOfYear], from: startDate, to: date).weekOfYear ?? 0
+            return weeksDifference % 2 == 0
         case .everyMonth:
-            return (components.month ?? 0) >= 1
+            // Check if it's the same day of the month as the start date
+            let startDay = calendar.component(.day, from: startDate)
+            let currentDay = calendar.component(.day, from: date)
+            return startDay == currentDay
         case .everyYear:
-            return (components.year ?? 0) >= 1
+            // Check if it's the same day and month as the start date
+            let startComponents = calendar.dateComponents([.month, .day], from: startDate)
+            let currentComponents = calendar.dateComponents([.month, .day], from: date)
+            return startComponents.month == currentComponents.month && startComponents.day == currentComponents.day
         case .custom:
             // Custom logic would need to be implemented based on specific requirements
             return true
