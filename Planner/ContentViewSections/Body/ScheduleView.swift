@@ -8,36 +8,37 @@
 import SwiftUI
 
 struct ScheduleView: View {
+    var selectedDate: Date
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter
+    }()
+    
     var body: some View {
         VStack {
             HStack {
-                Text("Schedule")
-                
+                Text("Schedule - \(dateFormatter.string(from: selectedDate))")
                 Spacer()
-                
                 Image(systemName: "ellipsis")
             }
             
             VStack {
                 HStack {
                     ZStack {
-                        
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color("Color1"))
                             .frame(width: 50, height: 75)
-                        
-                        Image(systemName: "figure.yoga")
+                        Image(systemName: getScheduleIcon(for: selectedDate))
                     }
-                    Text("12:00 PM")
+                    Text(getScheduleTime(for: selectedDate))
                         .font(.body)
                         .foregroundColor(Color.gray)
-                    
-                    Text("Yoga Class")
+                    Text(getScheduleTitle(for: selectedDate))
                         .font(.body)
-                    
                     Image(systemName: "repeat")
                         .foregroundColor(Color("Color1"))
-                    
                     Spacer()
                 }
                 
@@ -59,7 +60,7 @@ struct ScheduleView: View {
                         .font(.body)
                     
                     //  Image(systemName: "repeat")
-                       // .foregroundColor(Color("Color2"))
+                    // .foregroundColor(Color("Color2"))
                     Spacer()
                 }
                 HStack {
@@ -85,15 +86,47 @@ struct ScheduleView: View {
                 }
                
             }
-            .padding()
         }
         .padding()
+    }
+    
+    private func getScheduleIcon(for date: Date) -> String {
+        let calendar = Calendar.current
+        let dayOfWeek = calendar.component(.weekday, from: date)
+        
+        switch dayOfWeek {
+        case 1, 7: return "figure.yoga" // Weekend - Yoga
+        case 2, 4, 6: return "figure.run" // Mon, Wed, Fri - Running
+        default: return "figure.walk" // Other days - Walking
+        }
+    }
+    
+    private func getScheduleTime(for date: Date) -> String {
+        let calendar = Calendar.current
+        let dayOfWeek = calendar.component(.weekday, from: date)
+        
+        switch dayOfWeek {
+        case 1, 7: return "10:00 AM" // Weekend - Morning
+        case 2, 4, 6: return "6:00 AM" // Mon, Wed, Fri - Early morning
+        default: return "12:00 PM" // Other days - Noon
+        }
+    }
+    
+    private func getScheduleTitle(for date: Date) -> String {
+        let calendar = Calendar.current
+        let dayOfWeek = calendar.component(.weekday, from: date)
+        
+        switch dayOfWeek {
+        case 1, 7: return "Yoga Class" // Weekend
+        case 2, 4, 6: return "Morning Run" // Mon, Wed, Fri
+        default: return "Lunch Walk" // Other days
+        }
     }
 }
 
 #Preview {
     ZStack {
         BackgroundView()
-        ScheduleView()
+        ScheduleView(selectedDate: Date())
     }
 }

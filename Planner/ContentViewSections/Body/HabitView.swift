@@ -10,33 +10,53 @@ import SwiftUI
 struct Habit: Identifiable {
     let id = UUID()
     let name: String
-    var isCompleted: Bool
+    var completion: [String: Bool] // date string (yyyy-MM-dd) to completion status
+    
+    func isCompleted(for date: Date) -> Bool {
+        let key = Habit.dateKey(for: date)
+        return completion[key] ?? false
+    }
+    
+    mutating func toggle(for date: Date) {
+        let key = Habit.dateKey(for: date)
+        completion[key] = !(completion[key] ?? false)
+    }
+    
+    static func dateKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
 }
 
 struct HabitView: View {
     @State private var habits = [
-        Habit(name: "Habit 1", isCompleted: false),
-        Habit(name: "Habit 2", isCompleted: false),
-        Habit(name: "Habit 3", isCompleted: false),
-        Habit(name: "Habit 4", isCompleted: false),
-        Habit(name: "Habit 5", isCompleted: false)
+        Habit(name: "Habit 1", completion: [:]),
+        Habit(name: "Habit 2", completion: [:]),
+        Habit(name: "Habit 3", completion: [:]),
+        Habit(name: "Habit 4", completion: [:]),
+        Habit(name: "Habit 5", completion: [:])
     ]
+    var selectedDate: Date
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
                 Text("Habits")
+                    .font(.headline)
                 Spacer()
                 Image(systemName: "ellipsis")
             }
             VStack(spacing: 0) {
                 ForEach(habits.indices, id: \ .self) { index in
                     Button(action: {
-                        habits[index].isCompleted.toggle()
+                        habits[index].toggle(for: selectedDate)
                     }) {
                         HStack {
-                            Image(systemName: habits[index].isCompleted ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(habits[index].isCompleted ? .accentColor : .secondary)
+                            Image(systemName: habits[index].isCompleted(for: selectedDate) ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .green : .gray)
                             Text(habits[index].name)
+                                .strikethrough(habits[index].isCompleted(for: selectedDate))
+                                .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .secondary : .primary)
                             Spacer()
                         }
                         .contentShape(Rectangle())
@@ -57,5 +77,5 @@ struct HabitView: View {
 }
 
 #Preview {
-    HabitView()
+    HabitView(selectedDate: Date())
 }

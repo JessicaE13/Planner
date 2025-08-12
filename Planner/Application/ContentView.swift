@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var selectedDate = Date()
     var body: some View {
         ZStack {
             
@@ -15,19 +16,16 @@ struct ContentView: View {
             
             VStack (spacing: 0) {
                 
-                TopRowView()
-                HeaderView()
-                Divider()
-                    .background(Color.gray.opacity(0.5))
+                HeaderView(selectedDate: $selectedDate)
               
                 ScrollView {
                     VStack {
                         
-                        RoutineView()
+                        RoutineView(selectedDate: selectedDate)
                         
-                        ScheduleView()
+                        ScheduleView(selectedDate: selectedDate)
                         
-                        HabitView()
+                        HabitView(selectedDate: selectedDate)
                         Spacer()
                     }
                 }
