@@ -27,7 +27,7 @@ struct RoutineView: View {
                 Image(systemName: "ellipsis")
             }
             
-            HStack {
+            HStack (spacing: 16) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color.white.opacity(0.8))
@@ -52,6 +52,7 @@ struct RoutineView: View {
                     .fill(Color.white.opacity(0.8))
                     .frame(width: 100, height: 100)
             }
+            .padding(.horizontal, 16)
         }
         .padding()
     }

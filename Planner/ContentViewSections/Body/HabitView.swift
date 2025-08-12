@@ -74,6 +74,7 @@ struct HabitView: View {
                     }
                 }
             }
+            .padding(.leading, 16)
         
             Spacer()
         }
