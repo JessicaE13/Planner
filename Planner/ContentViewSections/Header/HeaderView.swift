@@ -44,6 +44,18 @@ struct HeaderView: View {
                 }
                 .padding(.trailing, 8)
                 
+ 
+                
+                // Next week button
+                Button {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        currentWeekOffset += 1
+                    }
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
+                .padding(.trailing, 8)
+                
                 // Today button
                 Button("Today") {
                     withAnimation(.easeInOut(duration: 0.3)) {
@@ -56,16 +68,6 @@ struct HeaderView: View {
                 .background(Color.blue.opacity(0.1))
                 .foregroundColor(.blue)
                 .cornerRadius(8)
-                
-                // Next week button
-                Button {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        currentWeekOffset += 1
-                    }
-                } label: {
-                    Image(systemName: "chevron.right")
-                }
-                .padding(.leading, 8)
                 
                 // Calendar button
                 Button {
@@ -94,10 +96,10 @@ struct HeaderView: View {
                 DragGesture()
                     .onEnded { value in
                         withAnimation(.easeInOut(duration: 0.3)) {
-                            if value.translation.width > 50 {
+                            if value.translation.width > 20 {
                                 // Swipe right - go to previous week
                                 currentWeekOffset -= 1
-                            } else if value.translation.width < -50 {
+                            } else if value.translation.width < -20 {
                                 // Swipe left - go to next week
                                 currentWeekOffset += 1
                             }
