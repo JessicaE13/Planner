@@ -46,7 +46,7 @@ struct SectionHeaderStyle: ViewModifier {
             .kerning(1)
             .textCase(.uppercase)
             .foregroundColor(.primary)
-            .padding(.bottom, 16)
+           // .padding(.bottom, 16)
     }
 }
 

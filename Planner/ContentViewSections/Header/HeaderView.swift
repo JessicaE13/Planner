@@ -118,8 +118,6 @@ struct HeaderView: View {
                     )
                     .datePickerStyle(.graphical)
                     .padding()
-                    
-                    Spacer()
                 }
                 .navigationTitle("Select Date")
                 .navigationBarTitleDisplayMode(.inline)
@@ -132,6 +130,8 @@ struct HeaderView: View {
                     }
                 }
             }
+            .presentationDetents([.medium])
+            .presentationCornerRadius(28)
         }
         
         Rectangle()

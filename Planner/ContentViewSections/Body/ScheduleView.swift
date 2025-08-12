@@ -24,8 +24,12 @@ struct ScheduleView: View {
                 
                 Spacer()
                 
-                Image(systemName: "ellipsis")
+                Image(systemName: "plus")
+                    .font(.title2)
+                    .foregroundColor(.primary)
+                    .contentShape(Rectangle())
             }
+            .padding(.bottom, 16)
             
             VStack {
                 HStack {

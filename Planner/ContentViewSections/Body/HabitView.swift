@@ -9,7 +9,7 @@ import SwiftUI
 
 struct Habit: Identifiable {
     let id = UUID()
-    let name: String
+    var name: String
     var completion: [String: Bool] // date string (yyyy-MM-dd) to completion status
     
     func isCompleted(for date: Date) -> Bool {
@@ -38,18 +38,26 @@ struct HabitView: View {
         Habit(name: "Habit 5", completion: [:])
     ]
     var selectedDate: Date
+    @State private var showManageHabits = false
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                
+            HStack(alignment: .center) {
                 Text("Habits")
                     .sectionHeaderStyle()
-                
                 Spacer()
-                
-                Image(systemName: "ellipsis")
-                
+                Button(action: {
+                    showManageHabits = true
+                }) {
+                    Image(systemName: "plus")
+                        .font(.title2)
+                        .foregroundColor(.primary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
             }
+            .padding(.bottom, 24)
+            
             VStack(spacing: 0) {
                 ForEach(habits.indices, id: \ .self) { index in
                     Button(action: {
@@ -79,11 +87,66 @@ struct HabitView: View {
             Spacer()
         }
         .padding()
+        .sheet(isPresented: $showManageHabits) {
+            ManageHabitsView(habits: $habits)
+        }
+    }
+}
+
+struct ManageHabitsView: View {
+    @Binding var habits: [Habit]
+    @Environment(\.dismiss) var dismiss
+    @State private var newHabitName = ""
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                List {
+                    ForEach(habits.indices, id: \.self) { index in
+                        EditableHabitRow(habits: $habits, index: index)
+                    }
+                }
+                
+                HStack {
+                    TextField("New Habit", text: $newHabitName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    Button("Add") {
+                        if !newHabitName.isEmpty {
+                            habits.append(Habit(name: newHabitName, completion: [:]))
+                            newHabitName = ""
+                        }
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Manage Habits")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+struct EditableHabitRow: View {
+    @Binding var habits: [Habit]
+    let index: Int
+    
+    var body: some View {
+        HStack {
+            TextField("Habit Name", text: $habits[index].name)
+            Spacer()
+            Button(action: {
+                habits.remove(at: index)
+            }) {
+                Image(systemName: "trash")
+                    .foregroundColor(.red)
+            }
+        }
     }
 }
 
 #Preview {
     HabitView(selectedDate: Date())
 }
-
-
