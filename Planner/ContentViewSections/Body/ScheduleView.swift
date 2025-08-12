@@ -19,8 +19,11 @@ struct ScheduleView: View {
     var body: some View {
         VStack {
             HStack {
-                Text("Schedule - \(dateFormatter.string(from: selectedDate))")
+                Text("Schedule")
+                    .sectionHeaderStyle()
+                
                 Spacer()
+                
                 Image(systemName: "ellipsis")
             }
             
@@ -38,7 +41,7 @@ struct ScheduleView: View {
                     Text(getScheduleTitle(for: selectedDate))
                         .font(.body)
                     Image(systemName: "repeat")
-                        .foregroundColor(Color("Color1"))
+                        .foregroundColor(Color.gray.opacity(0.6))
                     Spacer()
                 }
                 
@@ -60,7 +63,7 @@ struct ScheduleView: View {
                         .font(.body)
                     
                     //  Image(systemName: "repeat")
-                    // .foregroundColor(Color("Color2"))
+                       // .foregroundColor(Color.gray.opacity(0.6))
                     Spacer()
                 }
                 HStack {
@@ -80,7 +83,7 @@ struct ScheduleView: View {
                         .font(.body)
                     
                     Image(systemName: "repeat")
-                        .foregroundColor(Color("Color3"))
+                        .foregroundColor(Color.gray.opacity(0.6))
                     
                     Spacer()
                 }

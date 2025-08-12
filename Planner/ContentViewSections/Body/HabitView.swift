@@ -39,12 +39,16 @@ struct HabitView: View {
     ]
     var selectedDate: Date
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
+                
                 Text("Habits")
-                    .font(.headline)
+                    .sectionHeaderStyle()
+                
                 Spacer()
+                
                 Image(systemName: "ellipsis")
+                
             }
             VStack(spacing: 0) {
                 ForEach(habits.indices, id: \ .self) { index in
@@ -53,7 +57,7 @@ struct HabitView: View {
                     }) {
                         HStack {
                             Image(systemName: habits[index].isCompleted(for: selectedDate) ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .green : .gray)
+                                .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .primary : .gray)
                             Text(habits[index].name)
                                 .strikethrough(habits[index].isCompleted(for: selectedDate))
                                 .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .secondary : .primary)
@@ -62,14 +66,15 @@ struct HabitView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .padding(.vertical, 8)
-                    if index < habits.count - 1 {
+                
+                    if index < habits.count {
                         Divider()
                             .padding(.horizontal, 24)
+                            .padding(.vertical, 8)
                     }
                 }
             }
-            .padding()
+        
             Spacer()
         }
         .padding()
@@ -79,3 +84,5 @@ struct HabitView: View {
 #Preview {
     HabitView(selectedDate: Date())
 }
+
+

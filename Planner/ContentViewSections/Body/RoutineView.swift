@@ -19,8 +19,11 @@ struct RoutineView: View {
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
-                Text("Routines - \(dateFormatter.string(from: selectedDate))")
+                Text("Routines")
+                    .sectionHeaderStyle()
+                
                 Spacer()
+                
                 Image(systemName: "ellipsis")
             }
             
@@ -67,3 +70,4 @@ struct RoutineView: View {
         RoutineView(selectedDate: Date())
     }
 }
+

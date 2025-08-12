@@ -37,3 +37,22 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
+
+
+struct SectionHeaderStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 16, weight: .bold, design: .default))
+            .kerning(2)
+            .textCase(.uppercase)
+            .foregroundColor(.primary)
+            .padding(.bottom, 16)
+    }
+}
+
+
+extension View {
+    func sectionHeaderStyle() -> some View {
+        self.modifier(SectionHeaderStyle())
+    }
+}
