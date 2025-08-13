@@ -83,7 +83,7 @@ struct ScheduleDetailView: View {
     }
 }
 #Preview {
-    @State var editingItem: ScheduleItem? = nil
+    @State @Previewable var editingItem: ScheduleItem? = nil
     return ScheduleDetailView(
         item: ScheduleItem(title: "Sample Event", time: Date(), icon: "star", color: "Color1", isRepeating: false),
         editingItem: $editingItem

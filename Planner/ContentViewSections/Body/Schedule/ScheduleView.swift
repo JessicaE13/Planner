@@ -7,11 +7,11 @@
 
 import SwiftUI
 
-// Schedule item data model
+
 struct ScheduleItem: Identifiable {
     let id = UUID()
     var title: String
-    var time: Date // Changed from String to Date
+    var time: Date
     var icon: String
     var color: String
     var isRepeating: Bool
@@ -45,7 +45,7 @@ struct ScheduleView: View {
             .padding(.bottom, 16)
             
             VStack {
-                // First schedule item - dynamic based on date
+       
                 HStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 18)
@@ -73,7 +73,6 @@ struct ScheduleView: View {
                     )
                 }
                 
-                // Second schedule item - Morning Walk
                 HStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 18)
@@ -99,7 +98,6 @@ struct ScheduleView: View {
                     )
                 }
                 
-                // Third schedule item - Team Meeting
                 HStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 18)
