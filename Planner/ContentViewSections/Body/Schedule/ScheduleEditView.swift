@@ -20,24 +20,57 @@ struct ScheduleEditView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section("Event Details") {
+                Section {
                     HStack {
-                        Text("Title")
-                        Spacer()
-                        TextField("Event title", text: $item.title)
-                            .multilineTextAlignment(.trailing)
+                        Image(systemName: item.icon)
+                            .foregroundColor(.blue)
+                            .padding(.trailing, 8)
+                       
+                        TextField("Title", text: $item.title)
+                            .multilineTextAlignment(.leading)
                     }
                     
+                    
+                       HStack {
+                           
+                           TextField("Location", text: $item.location)
+                               .multilineTextAlignment(.leading)
+                           
+                       }
+                    
+    
+                }
+                
+                Section {
+                 
                     HStack {
-                        Text("Time")
+                        
+                        Text("All-day")
+                        Spacer()
+                        Toggle("", isOn: $item.isRepeating)
+                    }
+                    HStack {
+                        Text("Start")
                         Spacer()
                         DatePicker("", selection: $item.time, displayedComponents: .hourAndMinute)
                             .labelsHidden()
+                        DatePicker("", selection: $item.time, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
                     }
-                }
-                
-                Section("Settings") {
+
                     HStack {
+                        Text("End")
+                        Spacer()
+                        DatePicker("", selection: $item.time, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                        DatePicker("", selection: $item.time, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                    }
+
+
+
+                    HStack {
+                        
                         Image(systemName: "repeat")
                         Text("Repeating")
                         Spacer()
@@ -59,12 +92,11 @@ struct ScheduleEditView: View {
                     }
                 }
                 
-                Section("Appearance") {
+                Section {
                     HStack {
                         Text("Icon")
                         Spacer()
-                        Image(systemName: item.icon)
-                            .foregroundColor(.blue)
+               
                     }
                     
                     HStack {
