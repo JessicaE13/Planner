@@ -66,24 +66,36 @@ struct RoutineView: View {
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.white.opacity(0.8))
+                                    .fill(Color("Background"))
                                     .frame(width: 150, height: 100)
                                 VStack {
-                                    HStack {
-                                        Image(systemName: routines[index].icon)
-                                            .font(.largeTitle)
+                                    HStack(alignment: .top) {
+                        
                                         VStack(alignment: .leading) {
                                             Text(routines[index].name)
                                                 .font(.body)
                                             Text("Routine")
                                                 .font(.caption)
                                         }
+                                        Spacer()
+                                        
+                                        Image(systemName: routines[index].icon)
+                                            .frame(width: 40, height: 40)
+                                            .font(.largeTitle)
+                                            .foregroundColor(Color(UIColor.lightGray).opacity(0.25))
+                                           // .background(.red)
+                                
+                                        
+                                      
                                     }
                                     ProgressView(value: routines[index].progress, total: 1.0)
                                         .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
-                                        .frame(width: 124)
+                                        .padding(.top, 8)
+                                     //  .frame(width: 124)
                                 }
+                                .frame(width: 124)
                             }
+                            
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
@@ -195,7 +207,7 @@ struct RoutineDetailView: View {
 
 #Preview {
     ZStack {
-        BackgroundView()
+       // BackgroundView()
         RoutineView(
             selectedDate: Date(),
             routines: .constant([
