@@ -73,7 +73,8 @@ struct RoutineView: View {
                         
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(routines[index].name)
-                                                .font(.body)                                         
+                                                .font(.system(size: 16, weight: .medium, design: .default))
+                                                .kerning(1)
                                                 .foregroundColor(.primary)
                                                
                                             Text("Routine")

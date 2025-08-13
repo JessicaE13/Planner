@@ -63,7 +63,7 @@ struct ContentView: View {
                         .shadow(radius: 20)
                 )
                 .padding(.horizontal, 32)
-                .transition(.scale)
+                .transition(.blurReplace)
                 .zIndex(1)
             }
         }
