@@ -95,25 +95,42 @@ struct RoutineView: View {
     }
 }
 
+
+// Popup?
 struct RoutineDetailView: View {
     @Binding var routine: Routine
     var dismissAction: (() -> Void)? = nil
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header with icon and name
-            VStack(spacing: 16) {
-                Image(systemName: routine.icon)
-                    .font(.system(size: 48))
-                    .foregroundColor(.primary)
+  
+            ZStack {
+                VStack (spacing: 0) {
+                HStack {
+                    Spacer()
+                    Button(action: { dismissAction?() }) {
+                        Image(systemName: "xmark")
+                            .font(.title2)
+                            .foregroundColor(.primary)
+                            .padding(12)
+                    }
+                    .padding()
+                }
                 
-                Text(routine.name + " Routine")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                ProgressView(value: routine.progress, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
-                    .frame(maxWidth: 200)
+                VStack(spacing: 16) {
+                    Image(systemName: routine.icon)
+                        .font(.system(size: 48))
+                        .foregroundColor(.primary)
+                    
+                    Text(routine.name + " Routine")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    ProgressView(value: routine.progress, total: 1.0)
+                        .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
+                        .frame(maxWidth: 200)
+                }
+            }
             }
             .padding(.top, 24)
             .padding(.bottom, 32)
@@ -184,7 +201,7 @@ struct RoutineDetailView: View {
             routines: .constant([
                 Routine(name: "Morning", icon: "sunrise.fill", items: ["Wake up", "Brush teeth", "Exercise"]),
                 Routine(name: "Evening", icon: "moon.stars.fill", items: ["Read", "Meditate", "Sleep"]),
-                Routine(name: "Afternoon", icon: "cloud.sun.fill", items: ["Lunch", "Walk", "Check email"]),
+                Routine(name: "Afternoon", icon: "cloud.sun_fill", items: ["Lunch", "Walk", "Check email"]),
                 Routine(name: "Workout", icon: "figure.walk", items: ["Warm up", "Run", "Stretch"])
             ]),
             showRoutineDetail: .constant(false),
