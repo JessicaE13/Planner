@@ -7,54 +7,26 @@
 
 import SwiftUI
 
+// Schedule item data model
 struct ScheduleItem: Identifiable {
     let id = UUID()
-    let title: String
-    let time: String
-    let icon: String
-    let color: String
-    let description: String
-    let isRepeating: Bool
+    var title: String
+    var time: String
+    var icon: String
+    var color: String
+    var isRepeating: Bool
 }
 
 struct ScheduleView: View {
     var selectedDate: Date
-    @State private var presentedItem: ScheduleItem?
+    @State private var selectedItem: ScheduleItem?
+    @State private var showEditView = false
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMM d"
         return formatter
     }()
-    
-    private var scheduleItems: [ScheduleItem] {
-        [
-            ScheduleItem(
-                title: getScheduleTitle(for: selectedDate),
-                time: getScheduleTime(for: selectedDate),
-                icon: getScheduleIcon(for: selectedDate),
-                color: "Color1",
-                description: getScheduleDescription(for: selectedDate),
-                isRepeating: true
-            ),
-            ScheduleItem(
-                title: "Morning Walk",
-                time: "12:00 PM",
-                icon: "figure.walk",
-                color: "Color2",
-                description: "A refreshing walk to get some fresh air and exercise during lunch break.",
-                isRepeating: false
-            ),
-            ScheduleItem(
-                title: "Team Meeting",
-                time: "12:00 PM",
-                icon: "person.3.fill",
-                color: "Color3",
-                description: "Weekly team sync to discuss project progress, blockers, and upcoming milestones.",
-                isRepeating: true
-            )
-        ]
-    }
     
     var body: some View {
         VStack {
@@ -72,19 +44,102 @@ struct ScheduleView: View {
             .padding(.bottom, 16)
             
             VStack {
-                ForEach(scheduleItems, id: \.id) { item in
-                    ScheduleRowView(item: item) {
-                        presentedItem = item
+                // First schedule item - dynamic based on date
+                HStack {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color("Color1"))
+                            .frame(width: 50, height: 75)
+                        Image(systemName: getScheduleIcon(for: selectedDate))
                     }
+                    Text(getScheduleTime(for: selectedDate))
+                        .font(.body)
+                        .foregroundColor(Color.gray)
+                    Text(getScheduleTitle(for: selectedDate))
+                        .font(.body)
+                    Image(systemName: "repeat")
+                        .foregroundColor(Color.gray.opacity(0.6))
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedItem = ScheduleItem(
+                        title: getScheduleTitle(for: selectedDate),
+                        time: getScheduleTime(for: selectedDate),
+                        icon: getScheduleIcon(for: selectedDate),
+                        color: "Color1",
+                        isRepeating: true
+                    )
+                }
+                
+                // Second schedule item - Morning Walk
+                HStack {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color("Color2"))
+                            .frame(width: 50, height: 75)
+                        Image(systemName: "figure.walk")
+                    }
+                    Text("12:00 PM")
+                        .font(.body)
+                        .foregroundColor(Color.gray)
+                    Text("Morning Walk")
+                        .font(.body)
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedItem = ScheduleItem(
+                        title: "Morning Walk",
+                        time: "12:00 PM",
+                        icon: "figure.walk",
+                        color: "Color2",
+                        isRepeating: false
+                    )
+                }
+                
+                // Third schedule item - Team Meeting
+                HStack {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color("Color3"))
+                            .frame(width: 50, height: 75)
+                        Image(systemName: "person.3.fill")
+                    }
+                    Text("12:00 PM")
+                        .font(.body)
+                        .foregroundColor(Color.gray)
+                    Text("Team Meeting")
+                        .font(.body)
+                    Image(systemName: "repeat")
+                        .foregroundColor(Color.gray.opacity(0.6))
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedItem = ScheduleItem(
+                        title: "Team Meeting",
+                        time: "12:00 PM",
+                        icon: "person.3.fill",
+                        color: "Color3",
+                        isRepeating: true
+                    )
                 }
             }
             .padding(.horizontal, 16)
         }
         .padding()
-        .sheet(item: $presentedItem) { item in
-            ScheduleDetailView(item: item)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+        .sheet(item: $selectedItem) { item in
+            if showEditView {
+                ScheduleEditView(item: item) { updatedItem in
+                    selectedItem = nil
+                    showEditView = false
+                }
+            } else {
+                ScheduleDetailView(item: item) {
+                    showEditView = true
+                }
+            }
         }
     }
     
@@ -120,115 +175,146 @@ struct ScheduleView: View {
         default: return "Lunch Walk" // Other days
         }
     }
-    
-    private func getScheduleDescription(for date: Date) -> String {
-        let calendar = Calendar.current
-        let dayOfWeek = calendar.component(.weekday, from: date)
-        
-        switch dayOfWeek {
-        case 1, 7: return "Join us for a relaxing yoga session to improve flexibility and reduce stress." // Weekend
-        case 2, 4, 6: return "A brisk run to kickstart your day with energy and enthusiasm." // Mon, Wed, Fri
-        default: return "A pleasant walk to enjoy your lunch break and refresh your mind." // Other days
-        }
-    }
 }
 
-struct ScheduleRowView: View {
-    let item: ScheduleItem
-    let onTap: () -> Void
-    
-    var body: some View {
-        HStack {
-            ZStack {
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color(item.color))
-                    .frame(width: 50, height: 75)
-                Image(systemName: item.icon)
-                    .foregroundColor(.white)
-            }
-            
-            Text(item.time)
-                .font(.body)
-                .foregroundColor(Color.gray)
-            
-            Text(item.title)
-                .font(.body)
-            
-            if item.isRepeating {
-                Image(systemName: "repeat")
-                    .foregroundColor(Color.gray.opacity(0.6))
-            }
-            
-            Spacer()
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
-        }
-    }
-}
-
+// MARK: - Schedule Detail View (Popup)
 struct ScheduleDetailView: View {
     let item: ScheduleItem
+    let onEditTapped: () -> Void
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Main content
-                HStack(alignment: .top, spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(Color(item.color))
-                            .frame(width: 60, height: 90)
-                        Image(systemName: item.icon)
-                            .foregroundColor(.white)
-                            .font(.title2)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(item.title)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        
-                        Text(item.time)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        if item.isRepeating {
-                            HStack(spacing: 4) {
-                                Image(systemName: "repeat")
-                                    .foregroundColor(.secondary)
-                                    .font(.caption)
-                                Text("Repeating")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    
-                    Spacer()
+            VStack(spacing: 24) {
+                // Event Icon and Color
+                ZStack {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color(item.color))
+                        .frame(width: 80, height: 120)
+                    Image(systemName: item.icon)
+                        .font(.title)
+                        .foregroundColor(.white)
                 }
                 
-                // Description section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Description")
-                        .font(.headline)
+                // Event Details
+                VStack(spacing: 16) {
+                    Text(item.title)
+                        .font(.title2)
+                        .fontWeight(.semibold)
                     
-                    Text(item.description)
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .lineLimit(nil)
+                    HStack {
+                        Image(systemName: "clock")
+                            .foregroundColor(.gray)
+                        Text(item.time)
+                            .font(.body)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    if item.isRepeating {
+                        HStack {
+                            Image(systemName: "repeat")
+                                .foregroundColor(.gray)
+                            Text("Repeating")
+                                .font(.body)
+                                .foregroundColor(.gray)
+                        }
+                    }
                 }
                 
                 Spacer()
+                
+                // Edit Button
+                Button(action: onEditTapped) {
+                    HStack {
+                        Image(systemName: "pencil")
+                        Text("Edit Event")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
             }
             .padding()
-            .navigationTitle("Schedule Details")
+            .navigationTitle("Event Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Schedule Edit View
+struct ScheduleEditView: View {
+    @State private var item: ScheduleItem
+    let onSave: (ScheduleItem) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    init(item: ScheduleItem, onSave: @escaping (ScheduleItem) -> Void) {
+        self._item = State(initialValue: item)
+        self.onSave = onSave
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Event Details") {
+                    HStack {
+                        Text("Title")
+                        Spacer()
+                        TextField("Event title", text: $item.title)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    
+                    HStack {
+                        Text("Time")
+                        Spacer()
+                        TextField("Time", text: $item.time)
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+                
+                Section("Settings") {
+                    HStack {
+                        Image(systemName: "repeat")
+                        Text("Repeating")
+                        Spacer()
+                        Toggle("", isOn: $item.isRepeating)
+                    }
+                }
+                
+                Section("Appearance") {
+                    HStack {
+                        Text("Icon")
+                        Spacer()
+                        Image(systemName: item.icon)
+                            .foregroundColor(.blue)
+                    }
+                    
+                    HStack {
+                        Text("Color")
+                        Spacer()
+                        Circle()
+                            .fill(Color(item.color))
+                            .frame(width: 20, height: 20)
+                    }
+                }
+            }
+            .navigationTitle("Edit Event")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        onSave(item)
                         dismiss()
                     }
                 }
