@@ -41,32 +41,34 @@ struct ContentView: View {
             }
            
             if showRoutineDetail, let index = selectedRoutineIndex {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-                    .onTapGesture {
-                        withAnimation {
-                            showRoutineDetail = false
+                Group {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation {
+                                showRoutineDetail = false
+                            }
                         }
+                    VStack {
+                        RoutineDetailView(routine: $routines[index], dismissAction: {
+                            withAnimation {
+                                showRoutineDetail = false
+                            }
+                        })
                     }
-                VStack {
-                    RoutineDetailView(routine: $routines[index], dismissAction: {
-                        withAnimation {
-                            showRoutineDetail = false
-                        }
-                    })
+                    .frame(maxWidth: 350)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(Color(.systemBackground))
+                            .shadow(radius: 20)
+                    )
+                    .padding(.horizontal, 32)
+                    .transition(.blurReplace)
                 }
-                .frame(maxWidth: 350)
-                .background(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color(.systemBackground))
-                        .shadow(radius: 20)
-                )
-                .padding(.horizontal, 32)
-                .transition(.blurReplace)
                 .zIndex(1)
             }
         }
+        .animation(nil, value: showRoutineDetail)
     }
 }
 
