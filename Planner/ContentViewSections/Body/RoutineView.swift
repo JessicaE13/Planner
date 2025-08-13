@@ -66,21 +66,27 @@ struct RoutineView: View {
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color("Background"))
-                                    .frame(width: 150, height: 100)
+                                    .fill(Color("Background").opacity(0.75))
+                                    .frame(width: 164, height: 100)
                                 VStack {
-                                    HStack(alignment: .top) {
+                                    HStack(alignment: .bottom) {
                         
-                                        VStack(alignment: .leading) {
+                                        VStack(alignment: .leading, spacing: 4) {
                                             Text(routines[index].name)
-                                                .font(.body)
+                                                .font(.body)                                         
+                                                .foregroundColor(.primary)
+                                               
                                             Text("Routine")
-                                                .font(.caption)
+                                                .font(.system(size: 10, weight: .regular, design: .default))
+                                                .kerning(1)
+                                                .textCase(.uppercase)
+                                                .foregroundColor(.primary.opacity(0.75))
+                                             
                                         }
                                         Spacer()
                                         
                                         Image(systemName: routines[index].icon)
-                                            .frame(width: 40, height: 40)
+                                            .frame(width: 36, height: 36)
                                             .font(.largeTitle)
                                             .foregroundColor(Color(UIColor.lightGray).opacity(0.25))
                                            // .background(.red)
@@ -88,12 +94,13 @@ struct RoutineView: View {
                                         
                                       
                                     }
+                                    .padding(.horizontal, 8)
                                     ProgressView(value: routines[index].progress, total: 1.0)
                                         .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
                                         .padding(.top, 8)
                                      //  .frame(width: 124)
                                 }
-                                .frame(width: 124)
+                                .frame(width: 136)
                             }
                             
                         }

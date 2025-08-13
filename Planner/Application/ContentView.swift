@@ -18,8 +18,6 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             
-            //BackgroundView()
-            
             VStack (spacing: 0) {
                 
                 HeaderView(selectedDate: $selectedDate)
@@ -41,7 +39,7 @@ struct ContentView: View {
                     }
                 }
             }
-            // Overlay for routine detail popup
+           
             if showRoutineDetail, let index = selectedRoutineIndex {
                 Color.black.opacity(0.3)
                     .ignoresSafeArea()
