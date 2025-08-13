@@ -16,6 +16,14 @@ struct ScheduleItem: Identifiable {
     var color: String
     var isRepeating: Bool
     var frequency: Frequency = .everyWeek
+    var description: String = ""
+    var location: String = ""
+    var allDay: Bool = false
+    var category: String = ""
+    var type: String = "Schedule"
+    var isCompleted: Bool = false
+    var startTime: Date = Date()
+    var endTime: Date = Date()
 }
 
 struct ScheduleView: View {
