@@ -31,7 +31,7 @@ struct Routine: Identifiable {
 struct RoutineView: View {
     var selectedDate: Date
     @State private var showRoutineDetail = false
-    @State private var selectedRoutine: Routine? = nil
+    @State private var selectedRoutineIndex: Int = 0
     @State private var routines = [
         Routine(name: "Morning", icon: "sunrise", items: ["Brush teeth", "Shower", "Make bed", "Breakfast"]),
         Routine(name: "Evening", icon: "moon", items: ["Dinner", "Read book", "Skincare", "Set alarm"])
@@ -61,7 +61,7 @@ struct RoutineView: View {
             HStack (spacing: 16) {
                 ForEach(routines.indices, id: \.self) { index in
                     Button(action: {
-                        selectedRoutine = routines[index]
+                        selectedRoutineIndex = index
                         showRoutineDetail = true
                     }) {
                         ZStack {
@@ -92,19 +92,9 @@ struct RoutineView: View {
             .padding(.horizontal, 16)
         }
         .padding()
-        .sheet(isPresented: $showRoutineDetail) {
-            if let routine = selectedRoutine,
-               let index = routines.firstIndex(where: { $0.id == routine.id }) {
-                RoutineDetailView(routine: $routines[index])
-            }
+        .fullScreenCover(isPresented: $showRoutineDetail) {
+            RoutineDetailView(routine: $routines[selectedRoutineIndex])
         }
-    }
-    
-    private func progressForDate(_ date: Date) -> Double {
-        // Example: Different progress based on day of week
-        let calendar = Calendar.current
-        let dayOfWeek = calendar.component(.weekday, from: date)
-        return Double(dayOfWeek) / 7.0
     }
 }
 
