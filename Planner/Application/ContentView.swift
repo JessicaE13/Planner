@@ -18,6 +18,8 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             
+            BackgroundView()
+            
             VStack (spacing: 0) {
                 
                 HeaderView(selectedDate: $selectedDate)

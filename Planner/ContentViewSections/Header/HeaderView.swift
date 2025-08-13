@@ -121,7 +121,7 @@ struct HeaderView: View {
                     .datePickerStyle(.graphical)
                     .padding()
                 }
-                .background(Color("Background"))
+                .background(Color("Background").opacity(0.2))
                 .navigationTitle("Select Date")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
