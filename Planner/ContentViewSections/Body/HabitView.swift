@@ -30,8 +30,8 @@ struct Habit: Identifiable {
     }
     
     func shouldAppear(on date: Date) -> Bool {
-        // Use the Frequency enum's shouldTrigger method with a default start date
-        let startDate = Date() // You could store this as a property if needed
+
+        let startDate = Date()
         return frequency.shouldTrigger(on: date, from: startDate)
     }
 }

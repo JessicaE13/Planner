@@ -54,28 +54,24 @@ struct HeaderView: View {
                 } label: {
                     Image(systemName: "chevron.right")
                 }
-                .padding(.trailing, 8)
-                
-                // Today button
+
                 Button("Today") {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         currentWeekOffset = 0
                         selectedDate = Date()
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(Color.gray.opacity(0.001))
                 .foregroundColor(Color("AccentColor"))
                 .cornerRadius(12)
                 
-                // Calendar button
                 Button {
                     showingDatePicker = true
                 } label: {
                     Image(systemName: "calendar")
                 }
-                .padding(.leading, 8)
             }
             
             HStack {
