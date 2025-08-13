@@ -9,6 +9,12 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var selectedDate = Date()
+    @State private var showRoutineDetail = false
+    @State private var selectedRoutineIndex: Int? = nil
+    @State private var routines = [
+        Routine(name: "Morning", icon: "sunrise", items: ["Brush teeth", "Shower", "Make bed", "Breakfast"]),
+        Routine(name: "Evening", icon: "moon", items: ["Dinner", "Read book", "Skincare", "Set alarm"])
+    ]
     var body: some View {
         ZStack {
             
@@ -21,7 +27,12 @@ struct ContentView: View {
                 ScrollView {
                     VStack {
                         
-                        RoutineView(selectedDate: selectedDate)
+                        RoutineView(
+                            selectedDate: selectedDate,
+                            routines: $routines,
+                            showRoutineDetail: $showRoutineDetail,
+                            selectedRoutineIndex: $selectedRoutineIndex
+                        )
                         
                         ScheduleView(selectedDate: selectedDate)
                         
@@ -29,6 +40,33 @@ struct ContentView: View {
                         Spacer()
                     }
                 }
+            }
+            // Overlay for routine detail popup
+            if showRoutineDetail, let index = selectedRoutineIndex {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .onTapGesture {
+                        withAnimation {
+                            showRoutineDetail = false
+                        }
+                    }
+                VStack {
+                    RoutineDetailView(routine: $routines[index], dismissAction: {
+                        withAnimation {
+                            showRoutineDetail = false
+                        }
+                    })
+                }
+                .frame(maxWidth: 350)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color(.systemBackground))
+                        .shadow(radius: 20)
+                )
+                .padding(.horizontal, 32)
+                .transition(.scale)
+                .zIndex(1)
             }
         }
     }

@@ -30,12 +30,9 @@ struct Routine: Identifiable {
 
 struct RoutineView: View {
     var selectedDate: Date
-    @State private var showRoutineDetail = false
-    @State private var selectedRoutineIndex: Int? = nil
-    @State private var routines = [
-        Routine(name: "Morning", icon: "sunrise", items: ["Brush teeth", "Shower", "Make bed", "Breakfast"]),
-        Routine(name: "Evening", icon: "moon", items: ["Dinner", "Read book", "Skincare", "Set alarm"])
-    ]
+    @Binding var routines: [Routine]
+    @Binding var showRoutineDetail: Bool
+    @Binding var selectedRoutineIndex: Int?
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -44,21 +41,21 @@ struct RoutineView: View {
     }()
     
     var body: some View {
-        ZStack {
-            VStack(alignment: .leading) {
-                HStack {
-                    Text("Routines")
-                        .sectionHeaderStyle()
-                    
-                    Spacer()
-                    
-                    Image(systemName: "plus")
-                        .font(.title2)
-                        .foregroundColor(.primary)
-                        .contentShape(Rectangle())
-                }
-                .padding(.bottom, 16)
+        VStack(alignment: .leading) {
+            HStack {
+                Text("Routines")
+                    .sectionHeaderStyle()
                 
+                Spacer()
+                
+                Image(systemName: "plus")
+                    .font(.title2)
+                    .foregroundColor(.primary)
+                    .contentShape(Rectangle())
+            }
+            .padding(.bottom, 16)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
                 HStack (spacing: 16) {
                     ForEach(routines.indices, id: \.self) { index in
                         Button(action: {
@@ -75,7 +72,6 @@ struct RoutineView: View {
                                     HStack {
                                         Image(systemName: routines[index].icon)
                                             .font(.largeTitle)
-                                            
                                         VStack(alignment: .leading) {
                                             Text(routines[index].name)
                                                 .font(.body)
@@ -94,37 +90,8 @@ struct RoutineView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .padding()
-            
-            // Custom popup overlay
-            if showRoutineDetail, let index = selectedRoutineIndex {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-                    .onTapGesture {
-                        withAnimation {
-                            showRoutineDetail = false
-                        }
-                    }
-                
-                VStack {
-                    RoutineDetailView(routine: $routines[index], dismissAction: {
-                        withAnimation {
-                            showRoutineDetail = false
-                        }
-                    })
-                }
-                .frame(maxWidth: 350)
-                .background(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color(.systemBackground))
-                        .shadow(radius: 20)
-                )
-                .padding(.horizontal, 32)
-                .transition(.scale)
-                .zIndex(1)
-            }
         }
+        .padding()
     }
 }
 
@@ -212,6 +179,16 @@ struct RoutineDetailView: View {
 #Preview {
     ZStack {
         BackgroundView()
-        RoutineView(selectedDate: Date())
+        RoutineView(
+            selectedDate: Date(),
+            routines: .constant([
+                Routine(name: "Morning", icon: "sunrise.fill", items: ["Wake up", "Brush teeth", "Exercise"]),
+                Routine(name: "Evening", icon: "moon.stars.fill", items: ["Read", "Meditate", "Sleep"]),
+                Routine(name: "Afternoon", icon: "cloud.sun.fill", items: ["Lunch", "Walk", "Check email"]),
+                Routine(name: "Workout", icon: "figure.walk", items: ["Warm up", "Run", "Stretch"])
+            ]),
+            showRoutineDetail: .constant(false),
+            selectedRoutineIndex: .constant(nil)
+        )
     }
 }
