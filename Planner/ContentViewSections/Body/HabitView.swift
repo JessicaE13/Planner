@@ -102,41 +102,111 @@ struct HabitView: View {
     }
 }
 
+struct HabitDetailView: View {
+    @Binding var habit: Habit
+    var onDelete: (() -> Void)?
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        Form {
+            Section(header: Text("Habit Details")) {
+                TextField("Habit Name", text: $habit.name)
+                Picker("Frequency", selection: $habit.frequency) {
+                    ForEach(Frequency.allCases) { frequency in
+                        Text(frequency.displayName).tag(frequency)
+                    }
+                }
+            }
+            Section {
+                Button("Delete Habit", role: .destructive) {
+                    onDelete?()
+                    dismiss()
+                }
+            }
+        }
+        .navigationTitle(habit.name)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 struct ManageHabitsView: View {
     @Binding var habits: [Habit]
     @Environment(\.dismiss) var dismiss
     @State private var newHabitName = ""
+    @State private var selectedIndex: Int? = nil
     
     var body: some View {
         NavigationView {
-            VStack {
-                List {
-                    ForEach(habits.indices, id: \.self) { index in
-                        EditableHabitRow(habits: $habits, index: index)
+            VStack(spacing: 0) {
+                if !habits.isEmpty {
+                    VStack(spacing: 0) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                            
+                            VStack(spacing: 0) {
+                                ForEach(habits.indices, id: \.self) { index in
+                                    NavigationLink(destination: HabitDetailView(habit: $habits[index], onDelete: {
+                                        habits.remove(at: index)
+                                    })) {
+                                        HStack {
+                                            Text(habits[index].name)
+                                            Spacer()
+                                            Image(systemName: "chevron.right")
+                                                .foregroundColor(.secondary)
+                                                .font(.caption)
+                                        }
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 16)
+                                        .contentShape(Rectangle()) // Make the whole row tappable
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    if index < habits.count - 1 {
+                                        Divider()
+                                            .padding(.leading, 16)
+                                    }
+                                }
+                            }
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
                     }
                 }
                 
-                HStack {
-                    TextField("New Habit", text: $newHabitName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    Button("Add") {
-                        if !newHabitName.isEmpty {
-                            habits.append(Habit(name: newHabitName, completion: [:]))
-                            newHabitName = ""
+                Spacer()
+                
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        .frame(height: 56)
+                    HStack {
+                        TextField("New Habit", text: $newHabitName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                        Button("Add") {
+                            if !newHabitName.isEmpty {
+                                habits.append(Habit(name: newHabitName, completion: [:]))
+                                newHabitName = ""
+                            }
                         }
                     }
+                    .padding(.horizontal)
                 }
-                .padding()
+                .padding(.all, 16)
             }
+            .background(Color(.systemGray6))
             .navigationTitle("Manage Habits")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
             }
         }
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(Color(.systemGray6))
     }
 }
 

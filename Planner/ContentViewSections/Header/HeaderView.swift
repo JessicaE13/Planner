@@ -82,7 +82,10 @@ struct HeaderView: View {
                 ForEach(weekDates, id: \.self) { date in
                     VStack {
                         Text(dateFormatter.string(from: date))
+                            .font(.caption)
                         Text(dayFormatter.string(from: date))
+                            .font(.headline)
+                            
                     }
                     .padding(8)
                     .background(isSelected(date) ? Color.blue.opacity(0.2) : Color.clear)
