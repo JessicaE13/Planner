@@ -34,7 +34,7 @@ struct ScheduleView: View {
             VStack {
                 HStack {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: 18)
                             .fill(Color("Color1"))
                             .frame(width: 50, height: 75)
                         Image(systemName: getScheduleIcon(for: selectedDate))
@@ -53,7 +53,7 @@ struct ScheduleView: View {
                 HStack {
                     ZStack {
                         
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: 18)
                             .fill(Color("Color2"))
                             .frame(width: 50, height: 75)
                         
@@ -73,7 +73,7 @@ struct ScheduleView: View {
                 HStack {
                     ZStack {
                         
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: 18)
                             .fill(Color("Color3"))
                             .frame(width: 50, height: 75)
                         

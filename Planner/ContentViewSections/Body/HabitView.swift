@@ -108,21 +108,25 @@ struct HabitDetailView: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        Form {
-            Section(header: Text("Habit Details")) {
-                TextField("Habit Name", text: $habit.name)
-                Picker("Frequency", selection: $habit.frequency) {
-                    ForEach(Frequency.allCases) { frequency in
-                        Text(frequency.displayName).tag(frequency)
+        ZStack {
+            Color("Background").ignoresSafeArea()
+            Form {
+                Section(header: Text("Habit Details")) {
+                    TextField("Habit Name", text: $habit.name)
+                    Picker("Frequency", selection: $habit.frequency) {
+                        ForEach(Frequency.allCases) { frequency in
+                            Text(frequency.displayName).tag(frequency)
+                        }
+                    }
+                }
+                Section {
+                    Button("Delete Habit", role: .destructive) {
+                        onDelete?()
+                        dismiss()
                     }
                 }
             }
-            Section {
-                Button("Delete Habit", role: .destructive) {
-                    onDelete?()
-                    dismiss()
-                }
-            }
+            .scrollContentBackground(.hidden)
         }
         .navigationTitle(habit.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -197,7 +201,7 @@ struct ManageHabitsView: View {
                 }
                 .padding(.all, 16)
             }
-            .background(Color(.systemGray6))
+            .background(Color("Background"))
             .navigationTitle("Manage Habits")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -206,7 +210,7 @@ struct ManageHabitsView: View {
                 }
             }
         }
-        .background(Color(.systemGray6))
+        .background(Color("Background"))
     }
 }
 

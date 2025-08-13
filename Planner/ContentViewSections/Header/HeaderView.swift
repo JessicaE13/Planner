@@ -65,9 +65,9 @@ struct HeaderView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(Color.blue.opacity(0.1))
-                .foregroundColor(.blue)
-                .cornerRadius(8)
+                .background(Color.gray.opacity(0.001))
+                .foregroundColor(Color("AccentColor"))
+                .cornerRadius(12)
                 
                 // Calendar button
                 Button {
@@ -83,13 +83,16 @@ struct HeaderView: View {
                     VStack {
                         Text(dateFormatter.string(from: date))
                             .font(.caption)
+                            .foregroundColor(isSelected(date) ? Color.white : .primary)
                         Text(dayFormatter.string(from: date))
                             .font(.headline)
+                            .foregroundColor(isSelected(date) ? Color.white : .primary)
                             
                     }
+                    .frame(width: 28, height: 48)
                     .padding(8)
-                    .background(isSelected(date) ? Color.blue.opacity(0.2) : Color.clear)
-                    .cornerRadius(8)
+                    .background(isSelected(date) ? Color("AccentColor") : Color.clear)
+                    .cornerRadius(16)
                     .onTapGesture {
                         selectedDate = date
                     }
@@ -122,6 +125,7 @@ struct HeaderView: View {
                     .datePickerStyle(.graphical)
                     .padding()
                 }
+                .background(Color("Background"))
                 .navigationTitle("Select Date")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
