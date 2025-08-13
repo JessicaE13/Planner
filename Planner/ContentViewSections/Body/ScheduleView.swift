@@ -15,12 +15,13 @@ struct ScheduleItem: Identifiable {
     var icon: String
     var color: String
     var isRepeating: Bool
+    var frequency: Frequency = .everyWeek
 }
 
 struct ScheduleView: View {
     var selectedDate: Date
-    @State private var selectedItem: ScheduleItem?
-    @State private var showEditView = false
+    @State private var presentedItem: ScheduleItem?
+    @State private var editingItem: ScheduleItem?
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -63,7 +64,7 @@ struct ScheduleView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    selectedItem = ScheduleItem(
+                    presentedItem = ScheduleItem(
                         title: getScheduleTitle(for: selectedDate),
                         time: getScheduleTime(for: selectedDate),
                         icon: getScheduleIcon(for: selectedDate),
@@ -89,7 +90,7 @@ struct ScheduleView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    selectedItem = ScheduleItem(
+                    presentedItem = ScheduleItem(
                         title: "Morning Walk",
                         time: "12:00 PM",
                         icon: "figure.walk",
@@ -117,7 +118,7 @@ struct ScheduleView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    selectedItem = ScheduleItem(
+                    presentedItem = ScheduleItem(
                         title: "Team Meeting",
                         time: "12:00 PM",
                         icon: "person.3.fill",
@@ -129,16 +130,12 @@ struct ScheduleView: View {
             .padding(.horizontal, 16)
         }
         .padding()
-        .sheet(item: $selectedItem) { item in
-            if showEditView {
-                ScheduleEditView(item: item) { updatedItem in
-                    selectedItem = nil
-                    showEditView = false
-                }
-            } else {
-                ScheduleDetailView(item: item) {
-                    showEditView = true
-                }
+        .sheet(item: $presentedItem) { item in
+            ScheduleDetailView(item: item, editingItem: $editingItem)
+        }
+        .sheet(item: $editingItem) { item in
+            ScheduleEditView(item: item) { updatedItem in
+                editingItem = nil
             }
         }
     }
@@ -180,7 +177,7 @@ struct ScheduleView: View {
 // MARK: - Schedule Detail View (Popup)
 struct ScheduleDetailView: View {
     let item: ScheduleItem
-    let onEditTapped: () -> Void
+    @Binding var editingItem: ScheduleItem?
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -224,7 +221,10 @@ struct ScheduleDetailView: View {
                 Spacer()
                 
                 // Edit Button
-                Button(action: onEditTapped) {
+                Button(action: {
+                    editingItem = item
+                    dismiss()
+                }) {
                     HStack {
                         Image(systemName: "pencil")
                         Text("Edit Event")
@@ -286,6 +286,20 @@ struct ScheduleEditView: View {
                         Text("Repeating")
                         Spacer()
                         Toggle("", isOn: $item.isRepeating)
+                    }
+                    
+                    if item.isRepeating {
+                        HStack {
+                            Image(systemName: "calendar")
+                            Text("Frequency")
+                            Spacer()
+                            Picker("Frequency", selection: $item.frequency) {
+                                ForEach(Frequency.allCases) { frequency in
+                                    Text(frequency.displayName).tag(frequency)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                        }
                     }
                 }
                 
