@@ -35,7 +35,7 @@ struct ScheduleDetailView: View {
                     HStack {
                         Image(systemName: "clock")
                             .foregroundColor(.gray)
-                        Text(item.time)
+                        Text(DateFormatter.localizedString(from: item.time, dateStyle: .none, timeStyle: .short))
                             .font(.body)
                             .foregroundColor(.gray)
                     }
@@ -83,14 +83,9 @@ struct ScheduleDetailView: View {
     }
 }
 #Preview {
-    ScheduleDetailView(
-        item: ScheduleItem(
-            title: "Sample Event",
-            time: "10:00 AM",
-            icon: "calendar",
-            color: "Color1",
-            isRepeating: true
-        ),
-        editingItem: .constant(nil)
+    @State var editingItem: ScheduleItem? = nil
+    return ScheduleDetailView(
+        item: ScheduleItem(title: "Sample Event", time: Date(), icon: "star", color: "Color1", isRepeating: false),
+        editingItem: $editingItem
     )
 }

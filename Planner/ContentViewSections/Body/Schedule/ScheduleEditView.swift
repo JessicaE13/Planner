@@ -31,8 +31,8 @@ struct ScheduleEditView: View {
                     HStack {
                         Text("Time")
                         Spacer()
-                        TextField("Time", text: $item.time)
-                            .multilineTextAlignment(.trailing)
+                        DatePicker("", selection: $item.time, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
                     }
                 }
                 
@@ -95,15 +95,5 @@ struct ScheduleEditView: View {
 
 
 #Preview {
-    ScheduleEditView(
-        item: ScheduleItem(
-            title: "Sample Event",
-            time: "10:00 AM",
-            icon: "calendar",
-            color: "Color1",
-            isRepeating: true,
-            frequency: .everyWeek
-        ),
-        onSave: { _ in }
-    )
+    ScheduleEditView(item: ScheduleItem(title: "Sample Event", time: Date(), icon: "star", color: "Color1", isRepeating: false), onSave: { _ in })
 }
