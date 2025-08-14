@@ -29,8 +29,7 @@ struct ScheduleItem: Identifiable {
 
 struct ScheduleView: View {
     var selectedDate: Date
-    @State private var presentedItem: ScheduleItem? = nil
-    @State private var showDetail: Bool = false
+    @State private var selectedItem: ScheduleItem?
     @State private var showEdit: Bool = false
     
     private let dateFormatter: DateFormatter = {
@@ -74,7 +73,7 @@ struct ScheduleView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    presentedItem = ScheduleItem(
+                    let item = ScheduleItem(
                         title: getScheduleTitle(for: selectedDate),
                         time: getScheduleTimeAsDate(for: selectedDate),
                         icon: getScheduleIcon(for: selectedDate),
@@ -82,7 +81,7 @@ struct ScheduleView: View {
                         isRepeating: true,
                         startTime: getScheduleStartTime(for: selectedDate)
                     )
-                    showDetail = true
+                    selectedItem = item
                 }
                 
                 HStack {
@@ -101,7 +100,7 @@ struct ScheduleView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    presentedItem = ScheduleItem(
+                    let item = ScheduleItem(
                         title: "Morning Walk",
                         time: getFixedTime(hour: 12, minute: 0),
                         icon: "figure.walk",
@@ -109,7 +108,7 @@ struct ScheduleView: View {
                         isRepeating: false,
                         startTime: getFixedTime(hour: 12, minute: 0)
                     )
-                    showDetail = true
+                    selectedItem = item
                 }
                 
                 HStack {
@@ -130,7 +129,7 @@ struct ScheduleView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    presentedItem = ScheduleItem(
+                    let item = ScheduleItem(
                         title: "Team Meeting",
                         time: getFixedTime(hour: 12, minute: 0),
                         icon: "person.3.fill",
@@ -138,29 +137,33 @@ struct ScheduleView: View {
                         isRepeating: true,
                         startTime: getFixedTime(hour: 12, minute: 0)
                     )
-                    showDetail = true
+                    selectedItem = item
                 }
             }
             .padding(.horizontal, 16)
         }
         .padding()
-        .sheet(isPresented: $showDetail) {
-            if let item = presentedItem {
+        .sheet(item: $selectedItem) { item in
+            NavigationView {
                 ScheduleDetailView(
                     item: item,
-                    onEdit: { showEdit = true },
-                    onSave: { editedItem in
-                        presentedItem = editedItem
-                        showEdit = false
-                    }
+                    onEdit: {
+                        selectedItem = nil
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            showEdit = true
+                        }
+                    },
+                    onSave: { _ in }
                 )
             }
         }
         .sheet(isPresented: $showEdit) {
-            if let item = presentedItem {
-                ScheduleEditView(item: item) { updatedItem in
-                    presentedItem = updatedItem
-                    showEdit = false
+            if let item = selectedItem {
+                NavigationView {
+                    ScheduleEditView(item: item) { updatedItem in
+                        showEdit = false
+                        selectedItem = nil
+                    }
                 }
             }
         }
@@ -236,14 +239,6 @@ struct ScheduleView: View {
         formatter.dateFormat = "h:mm a"
         return formatter.string(from: date)
     }
-    
-    private func bindingForPresentedItem() -> Binding<ScheduleItem>? {
-        guard let _ = presentedItem else { return nil }
-        return Binding(
-            get: { presentedItem! },
-            set: { presentedItem = $0 }
-        )
-    }
 }
 
 struct ScheduleDetailView: View {
@@ -251,73 +246,69 @@ struct ScheduleDetailView: View {
     let onEdit: () -> Void
     let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var showEditView = false
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                // Event Icon and Color
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color(item.color))
-                        .frame(width: 80, height: 120)
-                    Image(systemName: item.icon)
-                        .font(.title)
-                        .foregroundColor(.white)
+        VStack(spacing: 24) {
+            // Event Icon and Color
+            ZStack {
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color(item.color))
+                    .frame(width: 80, height: 120)
+                Image(systemName: item.icon)
+                    .font(.title)
+                    .foregroundColor(.white)
+            }
+            
+            // Event Details
+            VStack(spacing: 16) {
+                Text(item.title)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                
+                HStack {
+                    Image(systemName: "clock")
+                        .foregroundColor(.gray)
+                    Text(DateFormatter.localizedString(from: item.time, dateStyle: .none, timeStyle: .short))
+                        .font(.body)
+                        .foregroundColor(.gray)
                 }
                 
-                // Event Details
-                VStack(spacing: 16) {
-                    Text(item.title)
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    
+                if item.isRepeating {
                     HStack {
-                        Image(systemName: "clock")
+                        Image(systemName: "repeat")
                             .foregroundColor(.gray)
-                        Text(DateFormatter.localizedString(from: item.time, dateStyle: .none, timeStyle: .short))
+                        Text("Repeating")
                             .font(.body)
                             .foregroundColor(.gray)
                     }
-                    
-                    if item.isRepeating {
-                        HStack {
-                            Image(systemName: "repeat")
-                                .foregroundColor(.gray)
-                            Text("Repeating")
-                                .font(.body)
-                                .foregroundColor(.gray)
-                        }
-                    }
                 }
-                
-                Spacer()
-                
-                // Edit Button
-                Button(action: {
-                    onEdit()
-                    dismiss()
-                }) {
-                    HStack {
-                        Image(systemName: "pencil")
-                        Text("Edit Event")
-                    }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal)
             }
-            .padding()
-            .navigationTitle("Event Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+            
+            Spacer()
+            
+            // Edit Button
+            Button(action: {
+                onEdit()
+            }) {
+                HStack {
+                    Image(systemName: "pencil")
+                    Text("Edit Event")
                 }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.blue)
+                .cornerRadius(12)
+            }
+            .padding(.horizontal)
+        }
+        .padding()
+        .navigationTitle("Event Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") { dismiss() }
             }
         }
     }
@@ -430,212 +421,208 @@ struct ScheduleEditView: View {
             let response = try? await search.start()
             if let items = response?.mapItems {
                 let mapped = items.prefix(10).map { IdentifiableMapItem(mapItem: $0) }
-                print("DEBUG: Found \(mapped.count) map items: \(mapped.map { $0.mapItem.name ?? "Unknown" })")
-                locationSearchResults = mapped
+                await MainActor.run {
+                    locationSearchResults = mapped
+                }
             } else {
-                print("DEBUG: No map items found")
-                locationSearchResults = []
+                await MainActor.run {
+                    locationSearchResults = []
+                }
             }
         }
     }
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section {
-                    HStack {
-                        Image(systemName: item.icon)
-                            .foregroundColor(.blue)
-                            .padding(.trailing, 8)
-                        TextField("Title", text: $item.title)
-                            .multilineTextAlignment(.leading)
-                    }
-                    
-                    // Inline Location Search as Form Rows
-                    TextField("Location", text: $item.location, onEditingChanged: { editing in
-                        isSearchingLocation = editing
-                        if editing { performLocationSearch() }
-                    })
-                    .multilineTextAlignment(.leading)
-                    .onChange(of: item.location) { _, _ in
-                        performLocationSearch()
-                    }
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    
-                    if isSearchingLocation && !locationSearchResults.isEmpty {
-                        ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
-                            Button(action: {
-                                let name = itemResult.mapItem.name ?? "Selected Location"
-                                let address = itemResult.mapItem.placemark.title ?? ""
-                                item.location = name + (address.isEmpty ? "" : "\n" + address)
-                                isSearchingLocation = false
-                                locationSearchResults = []
-                            }) {
-                                VStack(alignment: .leading) {
-                                    Text(itemResult.mapItem.name ?? "Unknown")
-                                        .foregroundColor(.primary)
-                                    Text(itemResult.mapItem.placemark.title ?? "")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        }
-                    }
+        Form {
+            Section {
+                HStack {
+                    Image(systemName: item.icon)
+                        .foregroundColor(.blue)
+                        .padding(.trailing, 8)
+                    TextField("Title", text: $item.title)
+                        .multilineTextAlignment(.leading)
                 }
                 
-                Section {
-                    HStack {
-                        Text("All-day")
-                        Spacer()
-                        Toggle("", isOn: $item.allDay)
-                    }
-                    
-                    HStack {
-                        Text("Start")
-                        Spacer()
-                        DatePicker("", selection: $item.startTime, displayedComponents: .date)
-                            .labelsHidden()
-                        
-                        // Only show time picker if not all-day
-                        if !item.allDay {
-                            DatePicker("", selection: $item.startTime, displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                        }
-                    }
-
-                    HStack {
-                        Text("End")
-                        Spacer()
-                        DatePicker("", selection: $item.endTime, displayedComponents: .date)
-                            .labelsHidden()
-                        
-                        // Only show time picker if not all-day
-                        if !item.allDay {
-                            DatePicker("", selection: $item.endTime, displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                        }
-                    }
-
-                    HStack {
-                        Text("Repeat")
-                        Spacer()
-                        Picker("", selection: $item.frequency) {
-                            ForEach(Frequency.allCases) { frequency in
-                                Text(frequency.displayName).tag(frequency)
-                            }
-                        }
-                        .pickerStyle(MenuPickerStyle())
-                    }
+                // Inline Location Search as Form Rows
+                TextField("Location", text: $item.location, onEditingChanged: { editing in
+                    isSearchingLocation = editing
+                    if editing { performLocationSearch() }
+                })
+                .multilineTextAlignment(.leading)
+                .onChange(of: item.location) { _, _ in
+                    performLocationSearch()
                 }
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
                 
-                Section {
-                    HStack {
-                        Text("Icon")
-                        Spacer()
-                    }
-                    
-                    HStack {
-                        Text("Color")
-                        Spacer()
-                        Circle()
-                            .fill(Color(item.color))
-                            .frame(width: 20, height: 20)
-                    }
-                }
-
-                Section {
-                    // Enhanced Description field with toolbar
-                    VStack(alignment: .leading, spacing: 0) {
-                        // Always visible toolbar for text formatting
-                        HStack {
-                            Button(action: {
-                                toggleToTextMode()
-                            }) {
-                                Image(systemName: "textformat")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(isChecklistMode ? .gray : .blue)
-                                    .frame(width: 32, height: 32)
-                                    .background(isChecklistMode ? Color.gray.opacity(0.1) : Color.blue.opacity(0.15))
-                                    .cornerRadius(6)
+                if isSearchingLocation && !locationSearchResults.isEmpty {
+                    ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
+                        Button(action: {
+                            let name = itemResult.mapItem.name ?? "Selected Location"
+                            let address = itemResult.mapItem.placemark.title ?? ""
+                            item.location = name + (address.isEmpty ? "" : "\n" + address)
+                            isSearchingLocation = false
+                            locationSearchResults = []
+                        }) {
+                            VStack(alignment: .leading) {
+                                Text(itemResult.mapItem.name ?? "Unknown")
+                                    .foregroundColor(.primary)
+                                Text(itemResult.mapItem.placemark.title ?? "")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
                             }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            Button(action: {
-                                toggleToChecklistMode()
-                            }) {
-                                Image(systemName: "checklist")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(isChecklistMode ? .blue : .gray)
-                                    .frame(width: 32, height: 32)
-                                    .background(isChecklistMode ? Color.blue.opacity(0.15) : Color.gray.opacity(0.1))
-                                    .cornerRadius(6)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            Spacer()
+                            .padding(.vertical, 4)
                         }
-                        .padding(.bottom, 8)
-                        
-                        // Text Editor for description with selection tracking
-                        TextEditor(text: $item.description)
-                            .focused($descriptionIsFocused)
-                            .frame(minHeight: 100, maxHeight: 200)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(descriptionIsFocused ? Color.blue : Color.gray.opacity(0.3), lineWidth: 1)
-                            )
-                            .onChange(of: descriptionIsFocused) { _, newValue in
-                                isDescriptionFocused = newValue
-                            }
-                            .onChange(of: item.description) { oldValue, newValue in
-                                handleTextChange(oldValue: oldValue, newValue: newValue)
-                            }
                     }
-                    .padding(.vertical, 4)
                 }
             }
-            .navigationTitle("Edit Event")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .keyboard) {
+            
+            Section {
+                HStack {
+                    Text("All-day")
+                    Spacer()
+                    Toggle("", isOn: $item.allDay)
+                }
+                
+                HStack {
+                    Text("Start")
+                    Spacer()
+                    DatePicker("", selection: $item.startTime, displayedComponents: .date)
+                        .labelsHidden()
+                    
+                    // Only show time picker if not all-day
+                    if !item.allDay {
+                        DatePicker("", selection: $item.startTime, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                    }
+                }
+
+                HStack {
+                    Text("End")
+                    Spacer()
+                    DatePicker("", selection: $item.endTime, displayedComponents: .date)
+                        .labelsHidden()
+                    
+                    // Only show time picker if not all-day
+                    if !item.allDay {
+                        DatePicker("", selection: $item.endTime, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                    }
+                }
+
+                HStack {
+                    Text("Repeat")
+                    Spacer()
+                    Picker("", selection: $item.frequency) {
+                        ForEach(Frequency.allCases) { frequency in
+                            Text(frequency.displayName).tag(frequency)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                }
+            }
+            
+            Section {
+                HStack {
+                    Text("Icon")
+                    Spacer()
+                }
+                
+                HStack {
+                    Text("Color")
+                    Spacer()
+                    Circle()
+                        .fill(Color(item.color))
+                        .frame(width: 20, height: 20)
+                }
+            }
+
+            Section {
+                // Enhanced Description field with toolbar
+                VStack(alignment: .leading, spacing: 0) {
+                    // Always visible toolbar for text formatting
                     HStack {
                         Button(action: {
                             toggleToTextMode()
                         }) {
                             Image(systemName: "textformat")
+                                .font(.system(size: 16))
                                 .foregroundColor(isChecklistMode ? .gray : .blue)
+                                .frame(width: 32, height: 32)
+                                .background(isChecklistMode ? Color.gray.opacity(0.1) : Color.blue.opacity(0.15))
+                                .cornerRadius(6)
                         }
+                        .buttonStyle(PlainButtonStyle())
                         
                         Button(action: {
                             toggleToChecklistMode()
                         }) {
                             Image(systemName: "checklist")
+                                .font(.system(size: 16))
                                 .foregroundColor(isChecklistMode ? .blue : .gray)
+                                .frame(width: 32, height: 32)
+                                .background(isChecklistMode ? Color.blue.opacity(0.15) : Color.gray.opacity(0.1))
+                                .cornerRadius(6)
                         }
+                        .buttonStyle(PlainButtonStyle())
                         
                         Spacer()
-                        
-                        Button("Done") {
-                            descriptionIsFocused = false
-                        }
                     }
+                    .padding(.bottom, 8)
+                    
+                    // Text Editor for description with selection tracking
+                    TextEditor(text: $item.description)
+                        .focused($descriptionIsFocused)
+                        .frame(minHeight: 100, maxHeight: 200)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(descriptionIsFocused ? Color.blue : Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                        .onChange(of: descriptionIsFocused) { _, newValue in
+                            isDescriptionFocused = newValue
+                        }
+                        .onChange(of: item.description) { oldValue, newValue in
+                            handleTextChange(oldValue: oldValue, newValue: newValue)
+                        }
                 }
-                
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        onSave(item)
-                        dismiss()
+                .padding(.vertical, 4)
+            }
+        }
+        .navigationTitle("Edit Event")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .keyboard) {
+                HStack {
+                    Button(action: {
+                        toggleToTextMode()
+                    }) {
+                        Image(systemName: "textformat")
+                            .foregroundColor(isChecklistMode ? .gray : .blue)
+                    }
+                    
+                    Button(action: {
+                        toggleToChecklistMode()
+                    }) {
+                        Image(systemName: "checklist")
+                            .foregroundColor(isChecklistMode ? .blue : .gray)
+                    }
+                    
+                    Spacer()
+                    
+                    Button("Done") {
+                        descriptionIsFocused = false
                     }
                 }
             }
-            .onTapGesture {
-                // Only dismiss keyboard when tapping outside the description area
-                // This helps maintain focus when using toolbar buttons
+            
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") {
+                    onSave(item)
+                    dismiss()
+                }
             }
         }
         .onAppear {
@@ -643,79 +630,9 @@ struct ScheduleEditView: View {
             // Start in text mode by default
             isChecklistMode = false
         }
-    }
-    
-    private func insertTextAtCursor(_ text: String) {
-        // Switch to text mode and remove checkbox from current line
-        isChecklistMode = false
-        removeCheckboxFromCurrentLine()
-        
-        // Keep the TextEditor focused when inserting text
-        DispatchQueue.main.async {
-            self.descriptionIsFocused = true
+        .onDisappear {
+            locationSearchTask?.cancel()
         }
-    }
-    
-    private func removeCheckboxFromCurrentLine() {
-        let lines = item.description.components(separatedBy: "\n")
-        
-        // Find the current line (we'll assume it's the last line since user is typing)
-        guard !lines.isEmpty else { return }
-        
-        var modifiedLines = lines
-        let lastLineIndex = lines.count - 1
-        let currentLine = lines[lastLineIndex]
-        
-        // Simple string replacement to remove checkbox patterns
-        var modifiedLine = currentLine
-        
-        // Remove empty checkbox
-        if modifiedLine.hasPrefix("☐ ") {
-            modifiedLine = String(modifiedLine.dropFirst(2))
-        }
-        // Remove checked checkbox
-        else if modifiedLine.hasPrefix("☑ ") {
-            modifiedLine = String(modifiedLine.dropFirst(2))
-        }
-        
-        modifiedLines[lastLineIndex] = modifiedLine
-        item.description = modifiedLines.joined(separator: "\n")
-    }
-    
-    private func insertChecklistAtCursor() {
-        // Switch to checklist mode
-        isChecklistMode = true
-        
-        let lines = item.description.components(separatedBy: "\n")
-        guard !lines.isEmpty else {
-            // If empty, just add a checkbox
-            item.description = "☐ "
-            return
-        }
-        
-        var modifiedLines = lines
-        let lastLineIndex = lines.count - 1
-        let currentLine = lines[lastLineIndex]
-        
-        // If current line doesn't already have a checkbox, add one
-        if !currentLine.hasPrefix("☐ ") && !currentLine.hasPrefix("☑ ") {
-            modifiedLines[lastLineIndex] = "☐ " + currentLine
-            item.description = modifiedLines.joined(separator: "\n")
-        }
-        
-        // Maintain focus on the TextEditor
-        DispatchQueue.main.async {
-            self.descriptionIsFocused = true
-        }
-    }
-    
-    private func addChecklistItem() {
-        let cursorPosition = item.description.isEmpty ? 0 : item.description.count
-        let newChecklistItem = item.description.isEmpty ? "☐ " : "\n☐ "
-        
-        // Insert checklist item at cursor position
-        let startIndex = item.description.index(item.description.startIndex, offsetBy: min(cursorPosition, item.description.count))
-        item.description.insert(contentsOf: newChecklistItem, at: startIndex)
     }
 }
 
@@ -730,8 +647,7 @@ struct ScheduleEditView: View {
 }
 
 #Preview("Schedule Detail View") {
-    ZStack {
-        BackgroundView()
+    NavigationView {
         ScheduleDetailView(
             item: ScheduleItem(
                 title: "Sample Event",
@@ -752,8 +668,7 @@ struct ScheduleEditView: View {
 }
 
 #Preview("Schedule Edit View") {
-    ZStack {
-        BackgroundView()
+    NavigationView {
         ScheduleEditView(
             item: ScheduleItem(
                 title: "Sample Event",
