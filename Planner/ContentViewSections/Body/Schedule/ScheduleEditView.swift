@@ -52,44 +52,33 @@ struct ScheduleEditView: View {
                     HStack {
                         Text("Start")
                         Spacer()
-                        DatePicker("", selection: $item.time, displayedComponents: .hourAndMinute)
+                        DatePicker("", selection: $item.startTime, displayedComponents: .date)
                             .labelsHidden()
-                        DatePicker("", selection: $item.time, displayedComponents: .hourAndMinute)
+                        DatePicker("", selection: $item.startTime, displayedComponents: .hourAndMinute)
                             .labelsHidden()
                     }
 
                     HStack {
                         Text("End")
                         Spacer()
-                        DatePicker("", selection: $item.time, displayedComponents: .hourAndMinute)
+                        DatePicker("", selection: $item.endTime, displayedComponents: .date)
                             .labelsHidden()
-                        DatePicker("", selection: $item.time, displayedComponents: .hourAndMinute)
+                        DatePicker("", selection: $item.endTime, displayedComponents: .hourAndMinute)
                             .labelsHidden()
                     }
 
-
-
-                    HStack {
-                        
-                        Image(systemName: "repeat")
-                        Text("Repeating")
-                        Spacer()
-                        Toggle("", isOn: $item.isRepeating)
-                    }
-                    
-                    if item.isRepeating {
                         HStack {
-                            Image(systemName: "calendar")
-                            Text("Frequency")
+                 
+                            Text("Repeat")
                             Spacer()
-                            Picker("Frequency", selection: $item.frequency) {
+                            Picker("", selection: $item.frequency) {
                                 ForEach(Frequency.allCases) { frequency in
                                     Text(frequency.displayName).tag(frequency)
                                 }
                             }
                             .pickerStyle(MenuPickerStyle())
                         }
-                    }
+                    
                 }
                 
                 Section {

@@ -8,6 +8,7 @@
 import Foundation
 
 enum Frequency: String, CaseIterable, Identifiable {
+    case never = "Never"
     case everyDay = "Every Day"
     case everyWeek = "Every Week"
     case everyTwoWeeks = "Every 2 Weeks"
@@ -26,6 +27,9 @@ enum Frequency: String, CaseIterable, Identifiable {
         let calendar = Calendar.current
         
         switch self {
+            
+            case .never: return false
+            
         case .everyDay:
             return true
         case .everyWeek:
