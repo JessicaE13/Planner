@@ -9,9 +9,11 @@ struct IdentifiableMapItem: Identifiable, Hashable {
 struct MapPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var searchText = ""
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+    @State private var cameraPosition: MapCameraPosition = .region(
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        )
     )
     @State private var searchResults: [IdentifiableMapItem] = []
     let onSelect: (String) -> Void
@@ -22,8 +24,10 @@ struct MapPickerView: View {
                 TextField("Search for a place", text: $searchText, onCommit: search)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding()
-                Map(coordinateRegion: $region, annotationItems: searchResults) { item in
-                    MapMarker(coordinate: item.mapItem.placemark.coordinate, tint: .blue)
+                Map(position: $cameraPosition) {
+                    ForEach(searchResults) { item in
+                        Marker(item.mapItem.name ?? "Unknown", coordinate: item.mapItem.placemark.coordinate)
+                    }
                 }
                 .frame(height: 300)
                 List(searchResults, id: \.self) { item in
@@ -59,7 +63,12 @@ struct MapPickerView: View {
             if let items = response?.mapItems {
                 searchResults = items.map { IdentifiableMapItem(mapItem: $0) }
                 if let first = items.first {
-                    region.center = first.placemark.coordinate
+                    cameraPosition = .region(
+                        MKCoordinateRegion(
+                            center: first.placemark.coordinate,
+                            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                        )
+                    )
                 }
             }
         }
