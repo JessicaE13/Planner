@@ -348,6 +348,9 @@ struct ScheduleEditView: View {
                         TextField("Title", text: $item.title)
                             .multilineTextAlignment(.leading)
                     }
+                    
+         
+                    
                     // Inline Location Search as Form Rows
                     TextField("Location", text: $item.location, onEditingChanged: { editing in
                         isSearchingLocation = editing
@@ -359,6 +362,7 @@ struct ScheduleEditView: View {
                     }
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
+                    
                     if isSearchingLocation && !locationSearchResults.isEmpty {
                         ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
                             Button(action: {
@@ -441,6 +445,19 @@ struct ScheduleEditView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
+
+                Section {
+                    // Description field
+                    VStack(alignment: .leading) {
+                        TextField("Description", text: $item.description, axis: .vertical)
+                            .lineLimit(3...6)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+               
+                }
+
+
             }
             .navigationTitle("Edit Event")
             .navigationBarTitleDisplayMode(.inline)
@@ -484,7 +501,6 @@ struct ScheduleEditView: View {
     }
 }
 
-
 // MARK: - Previews
 
 #Preview("Schedule View") {
@@ -527,7 +543,7 @@ struct ScheduleEditView: View {
                 color: "blue",
                 isRepeating: true,
                 frequency: .everyWeek,
-                description: "Sample description",
+                description: "",
                 location: "Sample location",
                 startTime: Date(),
                 endTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
