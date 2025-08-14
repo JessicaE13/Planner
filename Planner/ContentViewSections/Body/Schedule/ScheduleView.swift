@@ -64,7 +64,7 @@ struct ScheduleView: View {
             .padding(.bottom, 16)
             
             VStack {
-       
+                
                 HStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 18)
@@ -215,7 +215,6 @@ struct ScheduleView: View {
         }
     }
     
-    // Helper to convert time string to Date for schedule items
     private func getScheduleTimeAsDate(for date: Date) -> Date {
         let calendar = Calendar.current
         let formatter = DateFormatter()
@@ -456,7 +455,7 @@ struct ScheduleEditView: View {
                             .labelsHidden()
                     }
                 }
-
+                
                 HStack {
                     Text("End")
                     Spacer()
@@ -469,7 +468,7 @@ struct ScheduleEditView: View {
                             .labelsHidden()
                     }
                 }
-
+                
                 HStack {
                     Text("Repeat")
                     Spacer()
@@ -498,7 +497,7 @@ struct ScheduleEditView: View {
             }
             
             Section(header: Text("")) {
-                VStack(alignment: .leading, spacing: 8) {
+                ZStack(alignment: .topLeading) {
                     TextEditor(text: $descriptionText)
                         .frame(minHeight: 100)
                         .focused($descriptionIsFocused)
@@ -506,14 +505,25 @@ struct ScheduleEditView: View {
                             descriptionIsFocused = true
                         }
                         .onChange(of: descriptionText) { _, newValue in
-                            // Convert string back to AttributedString
                             item.description = AttributedString(newValue)
                         }
-                
+                        // Optional: match your design
+                        .scrollContentBackground(.hidden)
+
+                    // Placeholder
+                    if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("Description")
+                            .foregroundColor(.secondary.opacity(0.5))
+                            .padding(.top, 8)
+                            .padding(.leading, 6)
+                            .allowsHitTesting(false) // do not block taps on the editor
+                            .transition(.opacity)
+                            .animation(.easeInOut(duration: 0.2), value: descriptionText)
+                    }
                 }
                 .padding(.vertical, 4)
             }
-            
+
             Section(header: Text("")) {
                
                 ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
@@ -534,20 +544,13 @@ struct ScheduleEditView: View {
                         .strikethrough(checklistItem.isCompleted)
                         .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
                         
-                        Button(action: {
-                            removeChecklistItem(at: index)
-                        }) {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundColor(.red)
-                                .font(.title2)
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                 
                     }
                     .padding(.vertical, 2)
                 }
                 .onDelete(perform: deleteChecklistItems)
                 
-                // Add new checklist item at the bottom
+                
                 HStack {
                     Image(systemName: "plus.circle.fill")
                         .foregroundColor(.green)
@@ -568,7 +571,7 @@ struct ScheduleEditView: View {
                 }
                 .padding(.vertical, 4)
                 
-          
+                
             }
         }
         .navigationTitle("Edit Event")
