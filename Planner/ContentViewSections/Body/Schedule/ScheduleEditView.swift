@@ -11,6 +11,7 @@ struct ScheduleEditView: View {
     @State private var item: ScheduleItem
     let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var showMapPicker = false
     
     init(item: ScheduleItem, onSave: @escaping (ScheduleItem) -> Void) {
         self._item = State(initialValue: item)
@@ -32,10 +33,20 @@ struct ScheduleEditView: View {
                     
                     
                        HStack {
-                           
-                           TextField("Location", text: $item.location)
-                               .multilineTextAlignment(.leading)
-                           
+                           Button(action: { showMapPicker = true }) {
+                               HStack {
+                                   Text(item.location.isEmpty ? "Pick Location" : item.location)
+                                       .foregroundColor(item.location.isEmpty ? .gray : .primary)
+                                   Spacer()
+                                   Image(systemName: "mappin.and.ellipse")
+                                       .foregroundColor(.blue)
+                               }
+                           }
+                           .sheet(isPresented: $showMapPicker) {
+                               MapPickerView { selectedLocation in
+                                   item.location = selectedLocation
+                               }
+                           }
                        }
                     
     

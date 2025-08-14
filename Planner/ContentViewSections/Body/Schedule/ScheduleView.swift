@@ -15,7 +15,7 @@ struct ScheduleItem: Identifiable {
     var icon: String
     var color: String
     var isRepeating: Bool
-    var frequency: Frequency = .everyWeek
+    var frequency: Frequency = .never
     var description: String = ""
     var location: String = ""
     var allDay: Bool = false
