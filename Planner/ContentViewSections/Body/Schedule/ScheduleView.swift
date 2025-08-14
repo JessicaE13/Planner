@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import MapKit
 
 
 struct ScheduleItem: Identifiable {
@@ -144,13 +145,20 @@ struct ScheduleView: View {
         }
         .padding()
         .sheet(isPresented: $showDetail) {
-            if let binding = bindingForPresentedItem() {
-                ScheduleDetailView(item: binding)
+            if let item = presentedItem {
+                ScheduleDetailView(
+                    item: item,
+                    onEdit: { showEdit = true },
+                    onSave: { editedItem in
+                        presentedItem = editedItem
+                        showEdit = false
+                    }
+                )
             }
         }
         .sheet(isPresented: $showEdit) {
-            if let binding = bindingForPresentedItem() {
-                ScheduleEditView(item: binding) { updatedItem in
+            if let item = presentedItem {
+                ScheduleEditView(item: item) { updatedItem in
                     presentedItem = updatedItem
                     showEdit = false
                 }
@@ -240,9 +248,10 @@ struct ScheduleView: View {
 
 struct ScheduleDetailView: View {
     let item: ScheduleItem
-    @Binding var editingItem: ScheduleItem?
-    @State private var showEditView = false
+    let onEdit: () -> Void
+    let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var showEditView = false
     
     var body: some View {
         NavigationStack {
@@ -286,7 +295,8 @@ struct ScheduleDetailView: View {
                 
                 // Edit Button
                 Button(action: {
-                    showEditView = true
+                    onEdit()
+                    dismiss()
                 }) {
                     HStack {
                         Image(systemName: "pencil")
@@ -307,11 +317,6 @@ struct ScheduleDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
-                }
-            }
-            .navigationDestination(isPresented: $showEditView) {
-                ScheduleEditView(item: item) { editedItem in
-                    editingItem = editedItem
                 }
             }
         }
@@ -475,13 +480,54 @@ struct ScheduleEditView: View {
 }
 
 
+// MARK: - Previews
 
-// MARK: - Schedule Edit View
-
-
-#Preview {
+#Preview("Schedule View") {
     ZStack {
         BackgroundView()
         ScheduleView(selectedDate: Date())
+    }
+}
+
+#Preview("Schedule Detail View") {
+    ZStack {
+        BackgroundView()
+        ScheduleDetailView(
+            item: ScheduleItem(
+                title: "Sample Event",
+                time: Date(),
+                icon: "calendar",
+                color: "blue",
+                isRepeating: true,
+                frequency: .everyWeek,
+                description: "Sample description",
+                location: "Sample location",
+                startTime: Date(),
+                endTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
+            ),
+            onEdit: { },
+            onSave: { _ in }
+        )
+    }
+}
+
+#Preview("Schedule Edit View") {
+    ZStack {
+        BackgroundView()
+        ScheduleEditView(
+            item: ScheduleItem(
+                title: "Sample Event",
+                time: Date(),
+                icon: "calendar",
+                color: "blue",
+                isRepeating: true,
+                frequency: .everyWeek,
+                description: "Sample description",
+                location: "Sample location",
+                startTime: Date(),
+                endTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
+            ),
+            onSave: { _ in }
+        )
     }
 }
