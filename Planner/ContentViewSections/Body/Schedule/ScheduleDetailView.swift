@@ -15,7 +15,7 @@ struct ScheduleDetailView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
                 // Event Icon and Color
                 ZStack {
@@ -70,16 +70,6 @@ struct ScheduleDetailView: View {
                     .cornerRadius(12)
                 }
                 .padding(.horizontal)
-                // NavigationLink to ScheduleEditView
-                NavigationLink(
-                    destination: ScheduleEditView(item: item) { editedItem in
-                        editingItem = editedItem
-                    },
-                    isActive: $showEditView
-                ) {
-                    EmptyView()
-                }
-                .hidden()
             }
             .padding()
             .navigationTitle("Event Details")
@@ -87,6 +77,11 @@ struct ScheduleDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
+                }
+            }
+            .navigationDestination(isPresented: $showEditView) {
+                ScheduleEditView(item: item) { editedItem in
+                    editingItem = editedItem
                 }
             }
         }
