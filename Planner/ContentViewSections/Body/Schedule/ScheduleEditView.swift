@@ -13,7 +13,7 @@ struct ScheduleEditView: View {
     let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var showMapPicker = false
-    @State private var locationSearchResults: [MKMapItem] = []
+    @State private var locationSearchResults: [IdentifiableMapItem] = []
     @State private var isSearchingLocation = false
     @State private var locationSearchTask: Task<Void, Never>? = nil
     
@@ -30,47 +30,38 @@ struct ScheduleEditView: View {
                         Image(systemName: item.icon)
                             .foregroundColor(.blue)
                             .padding(.trailing, 8)
-                       
                         TextField("Title", text: $item.title)
                             .multilineTextAlignment(.leading)
                     }
-                    // Inline Location Search
-                    VStack(alignment: .leading, spacing: 0) {
-                        TextField("Location", text: $item.location, onEditingChanged: { editing in
-                            isSearchingLocation = editing
-                            if editing { performLocationSearch() }
-                        })
-                        .multilineTextAlignment(.leading)
-                        .onChange(of: item.location) { _, _ in
-                            performLocationSearch()
-                        }
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        if isSearchingLocation && !locationSearchResults.isEmpty {
-                            VStack(alignment: .leading, spacing: 0) {
-                                ForEach(locationSearchResults.prefix(5), id: \.self) { itemResult in
-                                    Button(action: {
-                                        let name = itemResult.name ?? "Selected Location"
-                                        let address = itemResult.placemark.title ?? ""
-                                        item.location = name + (address.isEmpty ? "" : "\n" + address)
-                                        isSearchingLocation = false
-                                        locationSearchResults = []
-                                    }) {
-                                        VStack(alignment: .leading) {
-                                            Text(itemResult.name ?? "Unknown")
-                                            Text(itemResult.placemark.title ?? "")
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                        }
-                                        .padding(.vertical, 4)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
+                    // Inline Location Search as Form Rows
+                    TextField("Location", text: $item.location, onEditingChanged: { editing in
+                        isSearchingLocation = editing
+                        if editing { performLocationSearch() }
+                    })
+                    .multilineTextAlignment(.leading)
+                    .onChange(of: item.location) { _, _ in
+                        performLocationSearch()
+                    }
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    if isSearchingLocation && !locationSearchResults.isEmpty {
+                        ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
+                            Button(action: {
+                                let name = itemResult.mapItem.name ?? "Selected Location"
+                                let address = itemResult.mapItem.placemark.title ?? ""
+                                item.location = name + (address.isEmpty ? "" : "\n" + address)
+                                isSearchingLocation = false
+                                locationSearchResults = []
+                            }) {
+                                VStack(alignment: .leading) {
+                                    Text(itemResult.mapItem.name ?? "Unknown")
+                                        .foregroundColor(.primary)
+                                    Text(itemResult.mapItem.placemark.title ?? "")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
                                 }
+                                .padding(.vertical, 4)
                             }
-                            .background(Color(.systemBackground))
-                            .cornerRadius(8)
-                            .shadow(radius: 2)
-                            .padding(.top, 2)
                         }
                     }
                 }
@@ -162,8 +153,11 @@ struct ScheduleEditView: View {
             let search = MKLocalSearch(request: request)
             let response = try? await search.start()
             if let items = response?.mapItems {
-                locationSearchResults = items
+                let mapped = items.prefix(10).map { IdentifiableMapItem(mapItem: $0) }
+                print("DEBUG: Found \(mapped.count) map items: \(mapped.map { $0.mapItem.name ?? "Unknown" })")
+                locationSearchResults = mapped
             } else {
+                print("DEBUG: No map items found")
                 locationSearchResults = []
             }
         }
