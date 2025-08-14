@@ -17,7 +17,7 @@ struct ScheduleItem: Identifiable {
     var color: String
     var isRepeating: Bool
     var frequency: Frequency = .never
-    var description: String = ""
+    var description: AttributedString = ""
     var location: String = ""
     var allDay: Bool = false
     var category: String = ""
@@ -325,26 +325,12 @@ struct ScheduleEditView: View {
     @State private var locationSearchTask: Task<Void, Never>? = nil
     @State private var isDescriptionFocused = false
     @FocusState private var descriptionIsFocused: Bool
-    @State private var currentLineFormat: LineFormat = .text
     
-    enum LineFormat {
-        case text
-        case checklist
-    }
+
     
     init(item: ScheduleItem, onSave: @escaping (ScheduleItem) -> Void) {
         self._item = State(initialValue: item)
         self.onSave = onSave
-    }
-    
-    // MARK: - Helper Functions
-    
-    private func setCurrentLineFormat(_ format: LineFormat) {
-        currentLineFormat = format
-        
-        DispatchQueue.main.async {
-            self.descriptionIsFocused = true
-        }
     }
     
     private func performLocationSearch() {
@@ -429,7 +415,6 @@ struct ScheduleEditView: View {
                     DatePicker("", selection: $item.startTime, displayedComponents: .date)
                         .labelsHidden()
                     
-                    // Only show time picker if not all-day
                     if !item.allDay {
                         DatePicker("", selection: $item.startTime, displayedComponents: .hourAndMinute)
                             .labelsHidden()
@@ -475,316 +460,23 @@ struct ScheduleEditView: View {
                         .frame(width: 20, height: 20)
                 }
             }
-
+            
             Section {
-                // Enhanced Description field with toolbar
-                VStack(alignment: .leading, spacing: 0) {
-                    // Always visible toolbar for text formatting
-                    HStack {
-                        Button(action: {
-                            setCurrentLineFormat(.text)
-                        }) {
-                            Image(systemName: "textformat")
-                                .font(.system(size: 16))
-                                .foregroundColor(currentLineFormat == .text ? .blue : .gray)
-                                .frame(width: 32, height: 32)
-                                .background(currentLineFormat == .text ? Color.blue.opacity(0.15) : Color.gray.opacity(0.1))
-                                .cornerRadius(6)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        Button(action: {
-                            setCurrentLineFormat(.checklist)
-                        }) {
-                            Image(systemName: "checklist")
-                                .font(.system(size: 16))
-                                .foregroundColor(currentLineFormat == .checklist ? .blue : .gray)
-                                .frame(width: 32, height: 32)
-                                .background(currentLineFormat == .checklist ? Color.blue.opacity(0.15) : Color.gray.opacity(0.1))
-                                .cornerRadius(6)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        Spacer()
-                        
-                        Text("New lines will be: \(currentLineFormat == .text ? "Plain text" : "Checklist items")")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                    .padding(.bottom, 8)
-                    
-                    // Custom line-based editor
-                    DescriptionLineEditor(
-                        description: $item.description,
-                        currentLineFormat: $currentLineFormat
-                    )
-                    .focused($descriptionIsFocused)
-                    .frame(minHeight: 100, maxHeight: 200)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(descriptionIsFocused ? Color.blue : Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    .onChange(of: descriptionIsFocused) { _, newValue in
-                        isDescriptionFocused = newValue
-                    }
+                HStack {
+                    Text("\($item.description)")
                 }
-                .padding(.vertical, 4)
             }
+
+
         }
         .navigationTitle("Edit Event")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .keyboard) {
-                HStack {
-                    Button(action: {
-                        setCurrentLineFormat(.text)
-                    }) {
-                        Image(systemName: "textformat")
-                            .foregroundColor(currentLineFormat == .text ? .blue : .gray)
-                    }
-                    
-                    Button(action: {
-                        setCurrentLineFormat(.checklist)
-                    }) {
-                        Image(systemName: "checklist")
-                            .foregroundColor(currentLineFormat == .checklist ? .blue : .gray)
-                    }
-                    
-                    Spacer()
-                    
-                    Button("Done") {
-                        descriptionIsFocused = false
-                    }
-                }
-            }
-            
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") { dismiss() }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
-                    onSave(item)
-                    dismiss()
-                }
-            }
-        }
         .onAppear {
             performLocationSearch()
-            // Start in text mode by default
-            currentLineFormat = .text
         }
         .onDisappear {
             locationSearchTask?.cancel()
         }
-    }
-}
-
-// MARK: - Custom Line-Based Editor
-
-struct DescriptionLine: Identifiable {
-    let id = UUID()
-    var text: String
-    var isChecklist: Bool
-    var isCompleted: Bool = false
-}
-
-struct DescriptionLineEditor: View {
-    @Binding var description: String
-    @Binding var currentLineFormat: ScheduleEditView.LineFormat
-    @State private var lines: [DescriptionLine] = []
-    @State private var newLineText: String = ""
-    @State private var focusedLineIndex: Int? = nil
-    @FocusState private var newLineFocused: Bool
-    @FocusState private var lineFieldFocused: Int?
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 8) {
-                // Existing lines
-                ForEach(lines.indices, id: \.self) { index in
-                    HStack(alignment: .top, spacing: 8) {
-                        // Toggle circle for checklist items
-                        if lines[index].isChecklist {
-                            Button(action: {
-                                lines[index].isCompleted.toggle()
-                                updateDescription()
-                            }) {
-                                Image(systemName: lines[index].isCompleted ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(lines[index].isCompleted ? .blue : .gray)
-                                    .font(.system(size: 18))
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .padding(.top, 2)
-                        } else {
-                            // Spacer for text lines to align with checklist items
-                            Spacer()
-                                .frame(width: 18)
-                        }
-                        
-                        // Editable text
-                        TextField("Line \(index + 1)", text: $lines[index].text, axis: .vertical)
-                            .textFieldStyle(PlainTextFieldStyle())
-                            .lineLimit(1...3)
-                            .strikethrough(lines[index].isChecklist && lines[index].isCompleted)
-                            .foregroundColor(lines[index].isChecklist && lines[index].isCompleted ? .secondary : .primary)
-                            .focused($lineFieldFocused, equals: index)
-                            .onChange(of: lines[index].text) { _, _ in
-                                updateDescription()
-                            }
-                            .onTapGesture {
-                                focusedLineIndex = index
-                                lineFieldFocused = index
-                            }
-                        
-                        // Delete button
-                        Button(action: {
-                            lines.remove(at: index)
-                            updateDescription()
-                        }) {
-                            Image(systemName: "minus.circle.fill")
-                                .foregroundColor(.red.opacity(0.7))
-                                .font(.system(size: 16))
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .padding(.top, 2)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.gray.opacity(0.05))
-                    .cornerRadius(6)
-                }
-                
-                // New line input
-                HStack(alignment: .top, spacing: 8) {
-                    // Toggle circle for checklist items
-                    if currentLineFormat == .checklist {
-                        Image(systemName: "circle")
-                            .foregroundColor(.gray)
-                            .font(.system(size: 18))
-                            .padding(.top, 2)
-                    } else {
-                        // Spacer for text lines
-                        Spacer()
-                            .frame(width: 18)
-                    }
-                    
-                    TextField("Add new line...", text: $newLineText, axis: .vertical)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .focused($newLineFocused)
-                        .onSubmit {
-                            addNewLine()
-                        }
-                        .onTapGesture {
-                            focusedLineIndex = nil // Clear focused line when editing new line
-                            newLineFocused = true
-                        }
-                    
-                    // Add button
-                    Button(action: {
-                        addNewLine()
-                    }) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundColor(.blue)
-                            .font(.system(size: 16))
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.top, 2)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.blue.opacity(0.05))
-                .cornerRadius(6)
-            }
-            .padding(8)
-        }
-        .onAppear {
-            parseDescription()
-        }
-        .onChange(of: description) { _, newValue in
-            // Only parse if the change came from outside this view
-            if newValue != generateDescriptionString() {
-                parseDescription()
-            }
-        }
-        .onChange(of: currentLineFormat) { _, newFormat in
-            // Convert the currently focused line when format changes
-            if let focusedIndex = focusedLineIndex, focusedIndex < lines.count {
-                let shouldBeChecklist = (newFormat == .checklist)
-                if lines[focusedIndex].isChecklist != shouldBeChecklist {
-                    lines[focusedIndex].isChecklist = shouldBeChecklist
-                    if !shouldBeChecklist {
-                        lines[focusedIndex].isCompleted = false // Reset completion when converting to text
-                    }
-                    updateDescription()
-                }
-            }
-        }
-        .onChange(of: lineFieldFocused) { _, newValue in
-            if let focusedIndex = newValue {
-                focusedLineIndex = focusedIndex
-            }
-        }
-    }
-    
-    private func addNewLine() {
-        guard !newLineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
-        let newLine = DescriptionLine(
-            text: newLineText.trimmingCharacters(in: .whitespacesAndNewlines),
-            isChecklist: currentLineFormat == .checklist
-        )
-        
-        lines.append(newLine)
-        newLineText = ""
-        updateDescription()
-        
-        // Keep focus on new line input
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            newLineFocused = true
-        }
-    }
-    
-    private func parseDescription() {
-        // Parse the description string back into lines
-        let textLines = description.components(separatedBy: "\n")
-        lines = textLines.compactMap { line in
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return nil }
-            
-            // Check if it's a checklist item (starts with ☐ or ☑)
-            if trimmed.hasPrefix("☐ ") {
-                return DescriptionLine(
-                    text: String(trimmed.dropFirst(2)),
-                    isChecklist: true,
-                    isCompleted: false
-                )
-            } else if trimmed.hasPrefix("☑ ") {
-                return DescriptionLine(
-                    text: String(trimmed.dropFirst(2)),
-                    isChecklist: true,
-                    isCompleted: true
-                )
-            } else {
-                return DescriptionLine(
-                    text: trimmed,
-                    isChecklist: false
-                )
-            }
-        }
-    }
-    
-    private func updateDescription() {
-        description = generateDescriptionString()
-    }
-    
-    private func generateDescriptionString() -> String {
-        return lines.map { line in
-            if line.isChecklist {
-                return (line.isCompleted ? "☑ " : "☐ ") + line.text
-            } else {
-                return line.text
-            }
-        }.joined(separator: "\n")
     }
 }
 
@@ -830,7 +522,7 @@ struct DescriptionLineEditor: View {
                 isRepeating: true,
                 frequency: .everyWeek,
                 description: "",
-                location: "Sample location",
+                location: "",
                 startTime: Date(),
                 endTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
             ),
