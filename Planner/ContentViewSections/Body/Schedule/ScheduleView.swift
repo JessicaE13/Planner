@@ -8,14 +8,14 @@
 import SwiftUI
 
 
-struct ScheduleItem: Identifiable, Codable {
-    var id: UUID = UUID()
+struct ScheduleItem: Identifiable {
+    let id = UUID()
     var title: String
     var time: Date
     var icon: String
     var color: String
     var isRepeating: Bool
-    var frequency: Frequency = .never
+    var frequency: Frequency = .everyWeek
     var description: String = ""
     var location: String = ""
     var allDay: Bool = false
@@ -30,18 +30,12 @@ struct ScheduleView: View {
     var selectedDate: Date
     @State private var presentedItem: ScheduleItem?
     @State private var editingItem: ScheduleItem?
-    @State private var scheduleItems: [ScheduleItem] = []
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMM d"
         return formatter
     }()
-    
-    init(selectedDate: Date) {
-        self.selectedDate = selectedDate
-        _scheduleItems = State(initialValue: ScheduleView.loadScheduleItems())
-    }
     
     var body: some View {
         VStack {
@@ -51,44 +45,92 @@ struct ScheduleView: View {
                 
                 Spacer()
                 
-                Button(action: {
-                    let newItem = ScheduleItem(title: "New Event", time: Date(), icon: "calendar", color: "Color1", isRepeating: false)
-                    editingItem = newItem
-                }) {
-                    Image(systemName: "plus")
-                        .font(.title2)
-                        .foregroundColor(.primary)
-                        .contentShape(Rectangle())
-                }
+                Image(systemName: "plus")
+                    .font(.title2)
+                    .foregroundColor(.primary)
+                    .contentShape(Rectangle())
             }
             .padding(.bottom, 16)
             
             VStack {
-                ForEach(scheduleItems) { item in
-                    HStack {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(Color(item.color))
-                                .frame(width: 50, height: 75)
-                            Image(systemName: item.icon)
-                        }
-                        VStack(alignment: .leading) {
-                            Text(item.title)
-                                .font(.body)
-                            Text(item.location)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                        Spacer()
-                        if item.isRepeating {
-                            Image(systemName: "repeat")
-                                .foregroundColor(Color.gray.opacity(0.6))
-                        }
+       
+                HStack {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color("Color1"))
+                            .frame(width: 50, height: 75)
+                        Image(systemName: getScheduleIcon(for: selectedDate))
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        editingItem = item
+                    Text(getScheduleTime(for: selectedDate))
+                        .font(.body)
+                        .foregroundColor(Color.gray)
+                    Text(getScheduleTitle(for: selectedDate))
+                        .font(.body)
+                    Image(systemName: "repeat")
+                        .foregroundColor(Color.gray.opacity(0.6))
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    presentedItem = ScheduleItem(
+                        title: getScheduleTitle(for: selectedDate),
+                        time: getScheduleTimeAsDate(for: selectedDate),
+                        icon: getScheduleIcon(for: selectedDate),
+                        color: "Color1",
+                        isRepeating: true
+                    )
+                }
+                
+                HStack {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color("Color2"))
+                            .frame(width: 50, height: 75)
+                        Image(systemName: "figure.walk")
                     }
+                    Text("12:00 PM")
+                        .font(.body)
+                        .foregroundColor(Color.gray)
+                    Text("Morning Walk")
+                        .font(.body)
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    presentedItem = ScheduleItem(
+                        title: "Morning Walk",
+                        time: getFixedTime(hour: 12, minute: 0),
+                        icon: "figure.walk",
+                        color: "Color2",
+                        isRepeating: false
+                    )
+                }
+                
+                HStack {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(Color("Color3"))
+                            .frame(width: 50, height: 75)
+                        Image(systemName: "person.3.fill")
+                    }
+                    Text("12:00 PM")
+                        .font(.body)
+                        .foregroundColor(Color.gray)
+                    Text("Team Meeting")
+                        .font(.body)
+                    Image(systemName: "repeat")
+                        .foregroundColor(Color.gray.opacity(0.6))
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    presentedItem = ScheduleItem(
+                        title: "Team Meeting",
+                        time: getFixedTime(hour: 12, minute: 0),
+                        icon: "person.3.fill",
+                        color: "Color3",
+                        isRepeating: true
+                    )
                 }
             }
             .padding(.horizontal, 16)
@@ -99,12 +141,6 @@ struct ScheduleView: View {
         }
         .sheet(item: $editingItem) { item in
             ScheduleEditView(item: item) { updatedItem in
-                if let idx = scheduleItems.firstIndex(where: { $0.id == updatedItem.id }) {
-                    scheduleItems[idx] = updatedItem
-                } else {
-                    scheduleItems.append(updatedItem)
-                }
-                saveScheduleItems()
                 editingItem = nil
             }
         }
@@ -161,22 +197,6 @@ struct ScheduleView: View {
     private func getFixedTime(hour: Int, minute: Int) -> Date {
         let calendar = Calendar.current
         return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: Date()) ?? Date()
-    }
-    
-    private static func loadScheduleItems() -> [ScheduleItem] {
-        if let data = UserDefaults.standard.data(forKey: "scheduleItems") {
-            let decoder = JSONDecoder()
-            if let items = try? decoder.decode([ScheduleItem].self, from: data) {
-                return items
-            }
-        }
-        return []
-    }
-    private func saveScheduleItems() {
-        let encoder = JSONEncoder()
-        if let data = try? encoder.encode(scheduleItems) {
-            UserDefaults.standard.set(data, forKey: "scheduleItems")
-        }
     }
 }
 
