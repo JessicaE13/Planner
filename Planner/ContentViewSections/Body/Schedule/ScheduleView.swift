@@ -8,6 +8,13 @@
 import SwiftUI
 import MapKit
 
+// MARK: - Models
+
+struct ChecklistItem: Identifiable, Hashable, Codable {
+    let id = UUID()
+    var text: String
+    var isCompleted: Bool = false
+}
 
 struct ScheduleItem: Identifiable {
     let id = UUID()
@@ -25,7 +32,10 @@ struct ScheduleItem: Identifiable {
     var isCompleted: Bool = false
     var startTime: Date = Date()
     var endTime: Date = Date()
+    var checklist: [ChecklistItem] = []
 }
+
+// MARK: - Schedule View
 
 struct ScheduleView: View {
     var selectedDate: Date
@@ -79,7 +89,8 @@ struct ScheduleView: View {
                         icon: getScheduleIcon(for: selectedDate),
                         color: "Color1",
                         isRepeating: true,
-                        startTime: getScheduleStartTime(for: selectedDate)
+                        startTime: getScheduleStartTime(for: selectedDate),
+                        checklist: []
                     )
                     selectedItem = item
                 }
@@ -106,7 +117,8 @@ struct ScheduleView: View {
                         icon: "figure.walk",
                         color: "Color2",
                         isRepeating: false,
-                        startTime: getFixedTime(hour: 12, minute: 0)
+                        startTime: getFixedTime(hour: 12, minute: 0),
+                        checklist: []
                     )
                     selectedItem = item
                 }
@@ -135,7 +147,8 @@ struct ScheduleView: View {
                         icon: "person.3.fill",
                         color: "Color3",
                         isRepeating: true,
-                        startTime: getFixedTime(hour: 12, minute: 0)
+                        startTime: getFixedTime(hour: 12, minute: 0),
+                        checklist: []
                     )
                     selectedItem = item
                 }
@@ -241,6 +254,8 @@ struct ScheduleView: View {
     }
 }
 
+// MARK: - Schedule Detail View
+
 struct ScheduleDetailView: View {
     let item: ScheduleItem
     let onEdit: () -> Void
@@ -282,6 +297,16 @@ struct ScheduleDetailView: View {
                             .foregroundColor(.gray)
                     }
                 }
+                
+                if !item.checklist.isEmpty {
+                    HStack {
+                        Image(systemName: "checklist")
+                            .foregroundColor(.gray)
+                        Text("\(item.checklist.filter(\.isCompleted).count)/\(item.checklist.count) tasks completed")
+                            .font(.body)
+                            .foregroundColor(.gray)
+                    }
+                }
             }
             
             Spacer()
@@ -314,6 +339,7 @@ struct ScheduleDetailView: View {
     }
 }
 
+// MARK: - Schedule Edit View
 
 struct ScheduleEditView: View {
     @State private var item: ScheduleItem
@@ -326,11 +352,21 @@ struct ScheduleEditView: View {
     @State private var isDescriptionFocused = false
     @FocusState private var descriptionIsFocused: Bool
     
-
+    // String representation of the description for editing
+    @State private var descriptionText: String = ""
+    
+    // Checklist management
+    @State private var checklistItems: [ChecklistItem] = []
+    @State private var newChecklistItem: String = ""
+    @FocusState private var checklistInputFocused: Bool
     
     init(item: ScheduleItem, onSave: @escaping (ScheduleItem) -> Void) {
         self._item = State(initialValue: item)
         self.onSave = onSave
+        // Convert AttributedString to String for editing
+        self._descriptionText = State(initialValue: String(item.description.characters))
+        // Initialize checklist items from the item
+        self._checklistItems = State(initialValue: item.checklist)
     }
     
     private func performLocationSearch() {
@@ -461,25 +497,129 @@ struct ScheduleEditView: View {
                 }
             }
             
-            Section {
-                HStack {
-                    Text("\($item.description)")
+            Section(header: Text("")) {
+                VStack(alignment: .leading, spacing: 8) {
+                    TextEditor(text: $descriptionText)
+                        .frame(minHeight: 100)
+                        .focused($descriptionIsFocused)
+                        .onTapGesture {
+                            descriptionIsFocused = true
+                        }
+                        .onChange(of: descriptionText) { _, newValue in
+                            // Convert string back to AttributedString
+                            item.description = AttributedString(newValue)
+                        }
+                
                 }
+                .padding(.vertical, 4)
             }
-
-
+            
+            Section(header: Text("")) {
+               
+                ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
+                    HStack {
+                        Button(action: {
+                            checklistItems[index].isCompleted.toggle()
+                        }) {
+                            Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(checklistItem.isCompleted ? .green : .gray)
+                                .font(.title2)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        TextField("Item", text: Binding(
+                            get: { checklistItems[index].text },
+                            set: { checklistItems[index].text = $0 }
+                        ))
+                        .strikethrough(checklistItem.isCompleted)
+                        .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                        
+                        Button(action: {
+                            removeChecklistItem(at: index)
+                        }) {
+                            Image(systemName: "minus.circle.fill")
+                                .foregroundColor(.red)
+                                .font(.title2)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .padding(.vertical, 2)
+                }
+                .onDelete(perform: deleteChecklistItems)
+                
+                // Add new checklist item at the bottom
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.title2)
+                    
+                    TextField("Add subtask", text: $newChecklistItem)
+                        .focused($checklistInputFocused)
+                        .onSubmit {
+                            addChecklistItem()
+                        }
+                    
+                    if !newChecklistItem.isEmpty {
+                        Button("Add") {
+                            addChecklistItem()
+                        }
+                        .foregroundColor(.blue)
+                    }
+                }
+                .padding(.vertical, 4)
+                
+          
+            }
         }
         .navigationTitle("Edit Event")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") {
+                    // Ensure the description and checklist are updated before saving
+                    item.description = AttributedString(descriptionText)
+                    item.checklist = checklistItems
+                    onSave(item)
+                    dismiss()
+                }
+            }
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Cancel") {
+                    dismiss()
+                }
+            }
+        }
         .onAppear {
             performLocationSearch()
+            // Initialize descriptionText from the item's description
+            descriptionText = String(item.description.characters)
+            // Initialize checklist items from the item
+            checklistItems = item.checklist
         }
         .onDisappear {
             locationSearchTask?.cancel()
         }
     }
+    
+    // MARK: - Checklist Helper Methods
+    
+    private func addChecklistItem() {
+        guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        let newItem = ChecklistItem(text: newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines))
+        checklistItems.append(newItem)
+        newChecklistItem = ""
+        checklistInputFocused = false
+    }
+    
+    private func removeChecklistItem(at index: Int) {
+        checklistItems.remove(at: index)
+    }
+    
+    private func deleteChecklistItems(offsets: IndexSet) {
+        checklistItems.remove(atOffsets: offsets)
+    }
 }
-
 
 // MARK: - Previews
 
@@ -503,7 +643,12 @@ struct ScheduleEditView: View {
                 description: "Sample description",
                 location: "Sample location",
                 startTime: Date(),
-                endTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
+                endTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date(),
+                checklist: [
+                    ChecklistItem(text: "Prepare presentation", isCompleted: true),
+                    ChecklistItem(text: "Review agenda", isCompleted: false),
+                    ChecklistItem(text: "Print handouts", isCompleted: false)
+                ]
             ),
             onEdit: { },
             onSave: { _ in }
@@ -524,7 +669,8 @@ struct ScheduleEditView: View {
                 description: "",
                 location: "",
                 startTime: Date(),
-                endTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
+                endTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date(),
+                checklist: []
             ),
             onSave: { _ in }
         )
