@@ -11,6 +11,7 @@ import SwiftUI
 struct ScheduleDetailView: View {
     let item: ScheduleItem
     @Binding var editingItem: ScheduleItem?
+    @State private var showEditView = false
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -55,8 +56,7 @@ struct ScheduleDetailView: View {
                 
                 // Edit Button
                 Button(action: {
-                    editingItem = item
-                    dismiss()
+                    showEditView = true
                 }) {
                     HStack {
                         Image(systemName: "pencil")
@@ -70,6 +70,16 @@ struct ScheduleDetailView: View {
                     .cornerRadius(12)
                 }
                 .padding(.horizontal)
+                // NavigationLink to ScheduleEditView
+                NavigationLink(
+                    destination: ScheduleEditView(item: item) { editedItem in
+                        editingItem = editedItem
+                    },
+                    isActive: $showEditView
+                ) {
+                    EmptyView()
+                }
+                .hidden()
             }
             .padding()
             .navigationTitle("Event Details")
