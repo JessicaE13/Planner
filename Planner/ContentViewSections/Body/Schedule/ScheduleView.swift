@@ -16,7 +16,7 @@ struct ScheduleItem: Identifiable {
     var icon: String
     var color: String
     var isRepeating: Bool
-    var frequency: Frequency = .everyWeek
+    var frequency: Frequency = .never
     var description: String = ""
     var location: String = ""
     var allDay: Bool = false
@@ -382,20 +382,23 @@ struct ScheduleEditView: View {
                 }
                 
                 Section {
-                 
                     HStack {
-                        
                         Text("All-day")
                         Spacer()
-                        Toggle("", isOn: $item.isRepeating)
+                        Toggle("", isOn: $item.allDay)
                     }
+                    
                     HStack {
                         Text("Start")
                         Spacer()
                         DatePicker("", selection: $item.startTime, displayedComponents: .date)
                             .labelsHidden()
-                        DatePicker("", selection: $item.startTime, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
+                        
+                        // Only show time picker if not all-day
+                        if !item.allDay {
+                            DatePicker("", selection: $item.startTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
                     }
 
                     HStack {
@@ -403,22 +406,24 @@ struct ScheduleEditView: View {
                         Spacer()
                         DatePicker("", selection: $item.endTime, displayedComponents: .date)
                             .labelsHidden()
-                        DatePicker("", selection: $item.endTime, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
+                        
+                        // Only show time picker if not all-day
+                        if !item.allDay {
+                            DatePicker("", selection: $item.endTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
                     }
 
-                        HStack {
-                 
-                            Text("Repeat")
-                            Spacer()
-                            Picker("", selection: $item.frequency) {
-                                ForEach(Frequency.allCases) { frequency in
-                                    Text(frequency.displayName).tag(frequency)
-                                }
+                    HStack {
+                        Text("Repeat")
+                        Spacer()
+                        Picker("", selection: $item.frequency) {
+                            ForEach(Frequency.allCases) { frequency in
+                                Text(frequency.displayName).tag(frequency)
                             }
-                            .pickerStyle(MenuPickerStyle())
                         }
-                    
+                        .pickerStyle(MenuPickerStyle())
+                    }
                 }
                 
                 Section {
