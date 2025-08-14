@@ -41,6 +41,7 @@ struct ScheduleView: View {
     var selectedDate: Date
     @State private var selectedItem: ScheduleItem?
     @State private var showEdit: Bool = false
+    @State private var scheduleItems: [ScheduleItem] = [] // Store schedule items with their state
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -83,14 +84,14 @@ struct ScheduleView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    let item = ScheduleItem(
+                    let item = getOrCreateScheduleItem(
+                        id: "daily-routine",
                         title: getScheduleTitle(for: selectedDate),
                         time: getScheduleTimeAsDate(for: selectedDate),
                         icon: getScheduleIcon(for: selectedDate),
                         color: "Color1",
                         isRepeating: true,
-                        startTime: getScheduleStartTime(for: selectedDate),
-                        checklist: []
+                        startTime: getScheduleStartTime(for: selectedDate)
                     )
                     selectedItem = item
                 }
@@ -111,14 +112,14 @@ struct ScheduleView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    let item = ScheduleItem(
+                    let item = getOrCreateScheduleItem(
+                        id: "morning-walk",
                         title: "Morning Walk",
                         time: getFixedTime(hour: 12, minute: 0),
                         icon: "figure.walk",
                         color: "Color2",
                         isRepeating: false,
-                        startTime: getFixedTime(hour: 12, minute: 0),
-                        checklist: []
+                        startTime: getFixedTime(hour: 12, minute: 0)
                     )
                     selectedItem = item
                 }
@@ -141,14 +142,14 @@ struct ScheduleView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    let item = ScheduleItem(
+                    let item = getOrCreateScheduleItem(
+                        id: "team-meeting",
                         title: "Team Meeting",
                         time: getFixedTime(hour: 12, minute: 0),
                         icon: "person.3.fill",
                         color: "Color3",
                         isRepeating: true,
-                        startTime: getFixedTime(hour: 12, minute: 0),
-                        checklist: []
+                        startTime: getFixedTime(hour: 12, minute: 0)
                     )
                     selectedItem = item
                 }
@@ -166,7 +167,10 @@ struct ScheduleView: View {
                             showEdit = true
                         }
                     },
-                    onSave: { _ in }
+                    onSave: { updatedItem in
+                        // Update the item in our local storage
+                        updateScheduleItem(updatedItem)
+                    }
                 )
             }
         }
@@ -174,11 +178,72 @@ struct ScheduleView: View {
             if let item = selectedItem {
                 NavigationView {
                     ScheduleEditView(item: item) { updatedItem in
+                        updateScheduleItem(updatedItem)
                         showEdit = false
                         selectedItem = nil
                     }
                 }
             }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func getOrCreateScheduleItem(id: String, title: String, time: Date, icon: String, color: String, isRepeating: Bool, startTime: Date) -> ScheduleItem {
+        // Check if we already have this item stored with checklist state
+        if let existingItem = scheduleItems.first(where: { $0.id.uuidString == id }) {
+            return existingItem
+        }
+        
+        // Create new item with default checklist based on the type
+        let defaultChecklist = getDefaultChecklist(for: title)
+        let newItem = ScheduleItem(
+            title: title,
+            time: time,
+            icon: icon,
+            color: color,
+            isRepeating: isRepeating,
+            startTime: startTime,
+            checklist: defaultChecklist
+        )
+        
+        // Store it for future reference
+        scheduleItems.append(newItem)
+        return newItem
+    }
+    
+    private func updateScheduleItem(_ updatedItem: ScheduleItem) {
+        if let index = scheduleItems.firstIndex(where: { $0.id == updatedItem.id }) {
+            scheduleItems[index] = updatedItem
+        } else {
+            scheduleItems.append(updatedItem)
+        }
+    }
+    
+    private func getDefaultChecklist(for title: String) -> [ChecklistItem] {
+        switch title {
+        case "Yoga Class", "Morning Run", "Lunch Walk":
+            return [
+                ChecklistItem(text: "Wear workout clothes", isCompleted: false),
+                ChecklistItem(text: "Bring water bottle", isCompleted: false),
+                ChecklistItem(text: "Warm up properly", isCompleted: false),
+                ChecklistItem(text: "Cool down and stretch", isCompleted: false)
+            ]
+        case "Morning Walk":
+            return [
+                ChecklistItem(text: "Check weather", isCompleted: false),
+                ChecklistItem(text: "Bring water", isCompleted: false),
+                ChecklistItem(text: "Choose route", isCompleted: false)
+            ]
+        case "Team Meeting":
+            return [
+                ChecklistItem(text: "Review agenda", isCompleted: false),
+                ChecklistItem(text: "Prepare updates", isCompleted: false),
+                ChecklistItem(text: "Test video/audio", isCompleted: false),
+                ChecklistItem(text: "Take notes", isCompleted: false)
+            ]
+        default:
+            return []
         }
     }
     
@@ -229,6 +294,7 @@ struct ScheduleView: View {
         if ampm == "AM" && hour == 12 { hour = 0 }
         return calendar.date(bySettingHour: hour, minute: minute ?? 0, second: 0, of: date) ?? date
     }
+    
     private func getFixedTime(hour: Int, minute: Int) -> Date {
         let calendar = Calendar.current
         return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: Date()) ?? Date()
@@ -253,81 +319,246 @@ struct ScheduleView: View {
     }
 }
 
-// MARK: - Schedule Detail View
+// MARK: - Enhanced Schedule Detail View
 
 struct ScheduleDetailView: View {
-    let item: ScheduleItem
+    @State private var item: ScheduleItem
     let onEdit: () -> Void
     let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
     
+    // Initialize with a copy of the item for potential modifications
+    init(item: ScheduleItem, onEdit: @escaping () -> Void, onSave: @escaping (ScheduleItem) -> Void) {
+        self._item = State(initialValue: item)
+        self.onEdit = onEdit
+        self.onSave = onSave
+    }
+    
+    private let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
+    }()
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
+    
     var body: some View {
-        VStack(spacing: 24) {
-            // Event Icon and Color
-            ZStack {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(item.color))
-                    .frame(width: 80, height: 120)
-                Image(systemName: item.icon)
-                    .font(.title)
-                    .foregroundColor(.white)
-            }
-            
-            // Event Details
-            VStack(spacing: 16) {
-                Text(item.title)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                HStack {
-                    Image(systemName: "clock")
-                        .foregroundColor(.gray)
-                    Text(DateFormatter.localizedString(from: item.time, dateStyle: .none, timeStyle: .short))
-                        .font(.body)
-                        .foregroundColor(.gray)
+        ScrollView {
+            VStack(spacing: 24) {
+                // Event Icon and Color
+                ZStack {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color(item.color))
+                        .frame(width: 80, height: 120)
+                    Image(systemName: item.icon)
+                        .font(.title)
+                        .foregroundColor(.white)
                 }
+                .padding(.top)
                 
-                if item.isRepeating {
-                    HStack {
-                        Image(systemName: "repeat")
-                            .foregroundColor(.gray)
-                        Text("Repeating")
-                            .font(.body)
-                            .foregroundColor(.gray)
+                // Event Title
+                VStack(spacing: 8) {
+                    Text(item.title)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .multilineTextAlignment(.center)
+                    
+                    if !item.category.isEmpty {
+                        Text(item.category)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(Color.gray.opacity(0.2))
+                            .cornerRadius(8)
                     }
                 }
                 
+                // Time and Date Information
+                VStack(spacing: 16) {
+                    // All-day or time-specific
+                    HStack {
+                        Image(systemName: "clock")
+                            .foregroundColor(.blue)
+                            .frame(width: 20)
+                        
+                        if item.allDay {
+                            Text("All Day")
+                                .font(.body)
+                        } else {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(timeFormatter.string(from: item.startTime)) - \(timeFormatter.string(from: item.endTime))")
+                                    .font(.body)
+                                if !Calendar.current.isDate(item.startTime, inSameDayAs: item.endTime) {
+                                    Text("\(dateFormatter.string(from: item.startTime)) - \(dateFormatter.string(from: item.endTime))")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    // Frequency/Repeat Information
+                    if item.frequency != .never {
+                        HStack {
+                            Image(systemName: "repeat")
+                                .foregroundColor(.green)
+                                .frame(width: 20)
+                            Text(item.frequency.displayName)
+                                .font(.body)
+                            Spacer()
+                        }
+                    }
+                    
+                    // Location
+                    if !item.location.isEmpty {
+                        HStack(alignment: .top) {
+                            Image(systemName: "location")
+                                .foregroundColor(.red)
+                                .frame(width: 20)
+                            Text(item.location)
+                                .font(.body)
+                                .multilineTextAlignment(.leading)
+                            Spacer()
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                
+                // Description
+                if !String(item.description.characters).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "text.alignleft")
+                                .foregroundColor(.purple)
+                                .frame(width: 20)
+                            Text("Description")
+                                .font(.headline)
+                            Spacer()
+                        }
+                        
+                        Text(item.description)
+                            .font(.body)
+                            .padding()
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // Checklist
                 if !item.checklist.isEmpty {
-                    HStack {
-                        Image(systemName: "checklist")
-                            .foregroundColor(.gray)
-                        Text("\(item.checklist.filter(\.isCompleted).count)/\(item.checklist.count) tasks completed")
-                            .font(.body)
-                            .foregroundColor(.gray)
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "checklist")
+                                .foregroundColor(.orange)
+                                .frame(width: 20)
+                            Text("Checklist")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(item.checklist.filter(\.isCompleted).count)/\(item.checklist.count)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(6)
+                        }
+                        
+                        VStack(spacing: 8) {
+                            ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
+                                HStack {
+                                    Button(action: {
+                                        // Toggle completion and save changes
+                                        item.checklist[index].isCompleted.toggle()
+                                        onSave(item)
+                                    }) {
+                                        Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(checklistItem.isCompleted ? .green : .gray)
+                                            .font(.title3)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    Text(checklistItem.text)
+                                        .strikethrough(checklistItem.isCompleted)
+                                        .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                                        .font(.body)
+                                    
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.gray.opacity(0.05))
+                                .cornerRadius(8)
+                                .animation(.easeInOut(duration: 0.2), value: checklistItem.isCompleted)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // Event Type and Completion Status
+                HStack(spacing: 16) {
+                    if !item.type.isEmpty && item.type != "Schedule" {
+                        VStack {
+                            Image(systemName: "tag")
+                                .foregroundColor(.blue)
+                            Text("Type")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(item.type)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(12)
+                    }
+                    
+                    if item.isCompleted {
+                        VStack {
+                            Image(systemName: "checkmark.seal")
+                                .foregroundColor(.green)
+                            Text("Status")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("Completed")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .padding()
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(12)
                     }
                 }
-            }
-            
-            Spacer()
-            
-            // Edit Button
-            Button(action: {
-                onEdit()
-            }) {
-                HStack {
-                    Image(systemName: "pencil")
-                    Text("Edit Event")
+                
+                Spacer(minLength: 20)
+                
+                // Edit Button
+                Button(action: {
+                    onEdit()
+                }) {
+                    HStack {
+                        Image(systemName: "pencil")
+                        Text("Edit Event")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .cornerRadius(12)
                 }
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .cornerRadius(12)
+                .padding(.horizontal)
+                .padding(.bottom)
             }
-            .padding(.horizontal)
         }
-        .padding()
         .navigationTitle("Event Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -624,6 +855,13 @@ struct ScheduleEditView: View {
     }
 }
 
+// MARK: - Supporting Types for Map Picker
+
+struct IdentifiableMapItem: Identifiable, Hashable {
+    let id = UUID()
+    let mapItem: MKMapItem
+}
+
 // MARK: - Previews
 
 #Preview("Schedule View") {
@@ -644,7 +882,7 @@ struct ScheduleEditView: View {
                 isRepeating: true,
                 frequency: .everyWeek,
                 description: "Sample description",
-                location: "Sample location",
+                location: "123 Main St, Anytown, USA",
                 startTime: Date(),
                 endTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date(),
                 checklist: [
