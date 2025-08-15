@@ -90,16 +90,15 @@ struct RoutineView: View {
                                             .frame(width: 36, height: 36)
                                             .font(.largeTitle)
                                             .foregroundColor(Color(UIColor.lightGray).opacity(0.25))
-                                           // .background(.red)
                                 
-                                        
-                                      
                                     }
                                     .padding(.horizontal, 8)
+                                    
+                                    // Added animation to progress view
                                     ProgressView(value: routines[index].progress, total: 1.0)
                                         .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
                                         .padding(.top, 8)
-                                     //  .frame(width: 124)
+                                        .animation(.easeInOut(duration: 0.3), value: routines[index].progress)
                                 }
                                 .frame(width: 136)
                             }
@@ -146,9 +145,11 @@ struct RoutineDetailView: View {
                         .font(.title2)
                         .fontWeight(.semibold)
                     
+                    // Added animation to progress view in detail
                     ProgressView(value: routine.progress, total: 1.0)
                         .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
                         .frame(maxWidth: 200)
+                        .animation(.easeInOut(duration: 0.3), value: routine.progress)
                 }
             }
             }
@@ -164,15 +165,20 @@ struct RoutineDetailView: View {
                         VStack(spacing: 0) {
                             ForEach(routine.items.indices, id: \.self) { index in
                                 Button(action: {
-                                    routine.toggleItem(routine.items[index])
+                                    // Use withAnimation to synchronize all visual changes
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        routine.toggleItem(routine.items[index])
+                                    }
                                 }) {
                                     HStack {
                                         Image(systemName: routine.completedItems.contains(routine.items[index]) ? "checkmark.circle.fill" : "circle")
                                             .foregroundColor(routine.completedItems.contains(routine.items[index]) ? .primary : .gray)
+                                            .animation(.easeInOut(duration: 0.3), value: routine.completedItems.contains(routine.items[index]))
                                         
                                         Text(routine.items[index])
                                             .strikethrough(routine.completedItems.contains(routine.items[index]))
                                             .foregroundColor(routine.completedItems.contains(routine.items[index]) ? .secondary : .primary)
+                                            .animation(.easeInOut(duration: 0.3), value: routine.completedItems.contains(routine.items[index]))
                                         
                                         Spacer()
                                     }
