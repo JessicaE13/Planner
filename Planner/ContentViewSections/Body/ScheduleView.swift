@@ -349,7 +349,7 @@ struct ScheduleView: View {
     }
 }
 
-// MARK: - Enhanced Schedule Detail View
+// MARK: - Enhanced Schedule Detail View with Full Row Tap
 
 struct ScheduleDetailView: View {
     @State private var item: ScheduleItem
@@ -486,7 +486,7 @@ struct ScheduleDetailView: View {
                             .padding(.horizontal)
                         }
                         
-                        // Checklist
+                        // Checklist - MODIFIED for full row tap
                         if !item.checklist.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
@@ -507,28 +507,30 @@ struct ScheduleDetailView: View {
                                 
                                 VStack(spacing: 8) {
                                     ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
-                                        HStack {
-                                            Button(action: {
-                                                item.checklist[index].isCompleted.toggle()
-                                                onSave(item)
-                                            }) {
+                                        // MODIFIED: Wrap entire row in button instead of just the circle
+                                        Button(action: {
+                                            item.checklist[index].isCompleted.toggle()
+                                            onSave(item)
+                                        }) {
+                                            HStack {
                                                 Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
                                                     .foregroundColor(checklistItem.isCompleted ? .green : .gray)
                                                     .font(.title3)
+                                                
+                                                Text(checklistItem.text)
+                                                    .strikethrough(checklistItem.isCompleted)
+                                                    .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                                                    .font(.body)
+                                                
+                                                Spacer()
                                             }
-                                            .buttonStyle(PlainButtonStyle())
-                                            
-                                            Text(checklistItem.text)
-                                                .strikethrough(checklistItem.isCompleted)
-                                                .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
-                                                .font(.body)
-                                            
-                                            Spacer()
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .background(Color.gray.opacity(0.05))
+                                            .cornerRadius(8)
+                                            .contentShape(Rectangle()) // Ensures entire area is tappable
                                         }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(Color.gray.opacity(0.05))
-                                        .cornerRadius(8)
+                                        .buttonStyle(PlainButtonStyle()) // Removes default button styling
                                         .animation(.easeInOut(duration: 0.2), value: checklistItem.isCompleted)
                                     }
                                 }
