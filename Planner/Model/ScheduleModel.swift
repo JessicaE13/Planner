@@ -78,6 +78,17 @@ class ScheduleDataManager: ObservableObject {
         saveData()
     }
     
+    // MARK: - Recurring Event Deletion Support
+    
+    func excludeDateFromRecurring(item: ScheduleItem, excludeDate: Date) {
+        if let index = scheduleItems.firstIndex(where: { $0.id == item.id }) {
+            let calendar = Calendar.current
+            let dateKey = calendar.startOfDay(for: excludeDate)
+            scheduleItems[index].excludedDates.insert(dateKey)
+            saveData()
+        }
+    }
+    
     // MARK: - Default Checklists
     
     private func getDefaultChecklist(for title: String) -> [ChecklistItem] {
@@ -188,6 +199,9 @@ struct ScheduleItem: Identifiable, Codable {
     var endRepeatOption: EndRepeatOption = .never
     var endRepeatDate: Date = Date()
     
+    // New property to track excluded dates for recurring events
+    var excludedDates: Set<Date> = []
+    
     // Computed property for AttributedString compatibility
     var description: AttributedString {
         get { AttributedString(descriptionText) }
@@ -212,7 +226,7 @@ struct ScheduleItem: Identifiable, Codable {
     
     // Custom Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, title, time, icon, color, frequency, descriptionText, location, allDay, category, type, isCompleted, startTime, endTime, checklist, uniqueKey, endRepeatOption, endRepeatDate
+        case id, title, time, icon, color, frequency, descriptionText, location, allDay, category, type, isCompleted, startTime, endTime, checklist, uniqueKey, endRepeatOption, endRepeatDate, excludedDates
     }
     
     init(from decoder: Decoder) throws {
@@ -235,6 +249,7 @@ struct ScheduleItem: Identifiable, Codable {
         uniqueKey = try container.decode(String.self, forKey: .uniqueKey)
         endRepeatOption = try container.decode(EndRepeatOption.self, forKey: .endRepeatOption)
         endRepeatDate = try container.decode(Date.self, forKey: .endRepeatDate)
+        excludedDates = try container.decodeIfPresent(Set<Date>.self, forKey: .excludedDates) ?? []
     }
     
     func encode(to encoder: Encoder) throws {
@@ -257,13 +272,22 @@ struct ScheduleItem: Identifiable, Codable {
         try container.encode(uniqueKey, forKey: .uniqueKey)
         try container.encode(endRepeatOption, forKey: .endRepeatOption)
         try container.encode(endRepeatDate, forKey: .endRepeatDate)
+        try container.encode(excludedDates, forKey: .excludedDates)
     }
     
     // Helper method to check if this event should appear on a given date
     func shouldAppear(on date: Date) -> Bool {
+        let calendar = Calendar.current
+        let dateKey = calendar.startOfDay(for: date)
+        
+        // Check if this specific date is excluded
+        if excludedDates.contains(dateKey) {
+            return false
+        }
+        
         // If frequency is never, only show on the exact date
         if frequency == .never {
-            return Calendar.current.isDate(startTime, inSameDayAs: date)
+            return calendar.isDate(startTime, inSameDayAs: date)
         }
         
         // Check if the event should trigger based on frequency

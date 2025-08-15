@@ -23,6 +23,14 @@ enum SheetContent: Identifiable {
     }
 }
 
+// MARK: - Delete Confirmation Types
+enum DeleteOption: String, CaseIterable {
+    case thisEvent = "This Event Only"
+    case allEvents = "All Events in Series"
+    
+    var title: String { self.rawValue }
+}
+
 // MARK: - Schedule View
 
 struct ScheduleView: View {
@@ -90,11 +98,11 @@ struct ScheduleView: View {
             case .detail(let item):
                 ScheduleDetailView(
                     item: item,
+                    selectedDate: selectedDate,
                     onEdit: { editItem in
                         sheetContent = .edit(editItem)
                     },
                     onSave: { updatedItem in
-                        // Use Task to avoid publishing changes during view updates
                         Task {
                             await MainActor.run {
                                 dataManager.addOrUpdateItem(updatedItem)
@@ -103,30 +111,56 @@ struct ScheduleView: View {
                     }
                 )
             case .edit(let item):
-                ScheduleEditView(item: item) { updatedItem in
-                    // Use Task to avoid publishing changes during view updates
-                    Task {
-                        await MainActor.run {
-                            dataManager.addOrUpdateItem(updatedItem)
-                            sheetContent = nil
+                ScheduleEditView(
+                    item: item,
+                    selectedDate: selectedDate,
+                    onSave: { updatedItem in
+                        Task {
+                            await MainActor.run {
+                                dataManager.addOrUpdateItem(updatedItem)
+                                sheetContent = nil
+                            }
+                        }
+                    },
+                    onDelete: { deleteOption in
+                        Task {
+                            await MainActor.run {
+                                handleDelete(item: item, option: deleteOption)
+                                sheetContent = nil
+                            }
                         }
                     }
-                }
+                )
             case .create:
-                ScheduleEditView(item: createNewScheduleItem()) { newItem in
-                    // Use Task to avoid publishing changes during view updates
-                    Task {
-                        await MainActor.run {
-                            dataManager.addOrUpdateItem(newItem)
-                            sheetContent = nil
+                ScheduleEditView(
+                    item: createNewScheduleItem(),
+                    selectedDate: selectedDate,
+                    onSave: { newItem in
+                        Task {
+                            await MainActor.run {
+                                dataManager.addOrUpdateItem(newItem)
+                                sheetContent = nil
+                            }
                         }
-                    }
-                }
+                    },
+                    onDelete: nil
+                )
             }
         }
     }
     
     // MARK: - Helper Methods
+    
+    private func handleDelete(item: ScheduleItem, option: DeleteOption) {
+        switch option {
+        case .thisEvent:
+            // For single event deletion from a recurring series, we add this date to excluded dates
+            dataManager.excludeDateFromRecurring(item: item, excludeDate: selectedDate)
+        case .allEvents:
+            // Delete the entire series
+            dataManager.deleteItem(item)
+        }
+    }
     
     private func getScheduleItemsForDate(_ date: Date) -> [ScheduleItem] {
         return dataManager.scheduleItems.filter { item in
@@ -306,13 +340,15 @@ struct ScheduleRowView: View {
 // MARK: - Enhanced Schedule Detail View with Repeat Icon
 struct ScheduleDetailView: View {
     @State private var item: ScheduleItem
+    let selectedDate: Date
     let onEdit: (ScheduleItem) -> Void
     let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var showingMapOptions = false
     
-    init(item: ScheduleItem, onEdit: @escaping (ScheduleItem) -> Void, onSave: @escaping (ScheduleItem) -> Void) {
+    init(item: ScheduleItem, selectedDate: Date, onEdit: @escaping (ScheduleItem) -> Void, onSave: @escaping (ScheduleItem) -> Void) {
         self._item = State(initialValue: item)
+        self.selectedDate = selectedDate
         self.onEdit = onEdit
         self.onSave = onSave
     }
@@ -536,17 +572,6 @@ struct ScheduleDetailView: View {
                     .foregroundColor(.gray.opacity(0.6))
                     .font(.caption)
                     .padding(.leading, 2)
-//
-//                Text(item.frequency.displayName.lowercased())
-//                    .font(.caption)
-//                    .foregroundColor(.gray)
-//                
-//                // Add end date info if applicable
-//                if item.endRepeatOption == .onDate {
-//                    Text("through \(dateFormatter.string(from: item.endRepeatDate))")
-//                        .font(.caption)
-//                        .foregroundColor(.gray)
-//                }
             }
         }
     }
@@ -576,16 +601,23 @@ struct ScheduleDetailView: View {
         }
     }
 }
-// MARK: - Schedule Edit View with End Repeat Functionality
+
+// MARK: - Schedule Edit View with Delete Functionality
 
 struct ScheduleEditView: View {
     @State private var item: ScheduleItem
+    let selectedDate: Date
     let onSave: (ScheduleItem) -> Void
+    let onDelete: ((DeleteOption) -> Void)?
     @Environment(\.dismiss) private var dismiss
     @State private var locationSearchResults: [IdentifiableMapItem] = []
     @State private var isSearchingLocation = false
     @State private var locationSearchTask: Task<Void, Never>? = nil
     @FocusState private var descriptionIsFocused: Bool
+    
+    // Delete confirmation states
+    @State private var showingDeleteConfirmation = false
+    @State private var showingRecurringDeleteOptions = false
     
     // String representation of the description for editing
     @State private var descriptionText: String = ""
@@ -595,9 +627,11 @@ struct ScheduleEditView: View {
     @State private var newChecklistItem: String = ""
     @FocusState private var checklistInputFocused: Bool
     
-    init(item: ScheduleItem, onSave: @escaping (ScheduleItem) -> Void) {
+    init(item: ScheduleItem, selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void, onDelete: ((DeleteOption) -> Void)?) {
         self._item = State(initialValue: item)
+        self.selectedDate = selectedDate
         self.onSave = onSave
+        self.onDelete = onDelete
         self._descriptionText = State(initialValue: item.descriptionText)
         self._checklistItems = State(initialValue: item.checklist)
     }
@@ -813,6 +847,22 @@ struct ScheduleEditView: View {
                         }
                         .padding(.vertical, 4)
                     }
+                    
+                    // Delete Section - Only show if onDelete closure is provided (not for new events)
+                    if onDelete != nil {
+                        Section {
+                            Button("Delete Event") {
+                                if item.frequency == .never {
+                                    // Single event - show simple confirmation
+                                    showingDeleteConfirmation = true
+                                } else {
+                                    // Recurring event - show options
+                                    showingRecurringDeleteOptions = true
+                                }
+                            }
+                            .foregroundColor(.red)
+                        }
+                    }
                 }
                 .scrollContentBackground(.hidden)
             }
@@ -847,6 +897,27 @@ struct ScheduleEditView: View {
             if newFrequency == .never {
                 item.endRepeatOption = .never
             }
+        }
+        // Simple delete confirmation for single events
+        .alert("Delete Event", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                onDelete?(.thisEvent)
+            }
+        } message: {
+            Text("Are you sure you want to delete this event? This action cannot be undone.")
+        }
+        // Recurring event delete options
+        .confirmationDialog("Delete Recurring Event", isPresented: $showingRecurringDeleteOptions) {
+            Button("Delete This Event Only") {
+                onDelete?(.thisEvent)
+            }
+            Button("Delete All Events in Series", role: .destructive) {
+                onDelete?(.allEvents)
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This is a recurring event. Would you like to delete only this occurrence or all events in the series?")
         }
     }
     
