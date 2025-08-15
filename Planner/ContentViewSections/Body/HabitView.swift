@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct Habit: Identifiable {
+struct Habit: Identifiable, Codable {
     let id = UUID()
     var name: String
     var frequency: Frequency = .everyDay
@@ -30,20 +30,85 @@ struct Habit: Identifiable {
     }
     
     func shouldAppear(on date: Date) -> Bool {
-
         let startDate = Date()
         return frequency.shouldTrigger(on: date, from: startDate)
     }
 }
 
+// MARK: - Habit Data Manager
+class HabitDataManager: ObservableObject {
+    @Published var habits: [Habit] = []
+    
+    static let shared = HabitDataManager()
+    
+    private init() {
+        loadHabits()
+    }
+    
+    func addHabit(_ habit: Habit) {
+        habits.append(habit)
+        saveHabits()
+    }
+    
+    func updateHabit(_ habit: Habit) {
+        if let index = habits.firstIndex(where: { $0.id == habit.id }) {
+            habits[index] = habit
+            saveHabits()
+        }
+    }
+    
+    func deleteHabit(at index: Int) {
+        guard index < habits.count else { return }
+        habits.remove(at: index)
+        saveHabits()
+    }
+    
+    func toggleHabit(at index: Int, for date: Date) {
+        guard index < habits.count else { return }
+        habits[index].toggle(for: date)
+        saveHabits()
+    }
+    
+    private func saveHabits() {
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(habits)
+            UserDefaults.standard.set(data, forKey: "SavedHabits")
+        } catch {
+            print("Failed to save habits: \(error)")
+        }
+    }
+    
+    private func loadHabits() {
+        guard let data = UserDefaults.standard.data(forKey: "SavedHabits") else {
+            // Load default habits if no saved data exists
+            loadDefaultHabits()
+            return
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            habits = try decoder.decode([Habit].self, from: data)
+        } catch {
+            print("Failed to load habits: \(error)")
+            loadDefaultHabits()
+        }
+    }
+    
+    private func loadDefaultHabits() {
+        habits = [
+            Habit(name: "Drink Water", completion: [:]),
+            Habit(name: "Exercise", completion: [:]),
+            Habit(name: "Read", completion: [:]),
+            Habit(name: "Meditate", completion: [:]),
+            Habit(name: "Journal", completion: [:])
+        ]
+        saveHabits()
+    }
+}
+
 struct HabitView: View {
-    @State private var habits = [
-        Habit(name: "Habit 1", completion: [:]),
-        Habit(name: "Habit 2", completion: [:]),
-        Habit(name: "Habit 3", completion: [:]),
-        Habit(name: "Habit 4", completion: [:]),
-        Habit(name: "Habit 5", completion: [:])
-    ]
+    @StateObject private var habitManager = HabitDataManager.shared
     var selectedDate: Date
     @State private var showManageHabits = false
     
@@ -66,24 +131,24 @@ struct HabitView: View {
             .padding(.bottom, 24)
             
             VStack(spacing: 0) {
-                ForEach(habits.indices, id: \.self) { index in
-                    if habits[index].shouldAppear(on: selectedDate) {
+                ForEach(habitManager.habits.indices, id: \.self) { index in
+                    if habitManager.habits[index].shouldAppear(on: selectedDate) {
                         Button(action: {
-                            habits[index].toggle(for: selectedDate)
+                            habitManager.toggleHabit(at: index, for: selectedDate)
                         }) {
                             HStack {
-                                Image(systemName: habits[index].isCompleted(for: selectedDate) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .primary : .gray)
-                                Text(habits[index].name)
-                                    .strikethrough(habits[index].isCompleted(for: selectedDate))
-                                    .foregroundColor(habits[index].isCompleted(for: selectedDate) ? .secondary : .primary)
+                                Image(systemName: habitManager.habits[index].isCompleted(for: selectedDate) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(habitManager.habits[index].isCompleted(for: selectedDate) ? .primary : .gray)
+                                Text(habitManager.habits[index].name)
+                                    .strikethrough(habitManager.habits[index].isCompleted(for: selectedDate))
+                                    .foregroundColor(habitManager.habits[index].isCompleted(for: selectedDate) ? .secondary : .primary)
                                 Spacer()
                             }
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
                     
-                        if index < habits.count - 1 && habits[(index + 1)...].contains(where: { $0.shouldAppear(on: selectedDate) }) {
+                        if index < habitManager.habits.count - 1 && habitManager.habits[(index + 1)...].contains(where: { $0.shouldAppear(on: selectedDate) }) {
                             Divider()
                                 .padding(.horizontal, 24)
                                 .padding(.vertical, 8)
@@ -97,13 +162,14 @@ struct HabitView: View {
         }
         .padding()
         .sheet(isPresented: $showManageHabits) {
-            ManageHabitsView(habits: $habits)
+            ManageHabitsView(habitManager: habitManager)
         }
     }
 }
 
 struct HabitDetailView: View {
     @Binding var habit: Habit
+    var habitManager: HabitDataManager
     var onDelete: (() -> Void)?
     @Environment(\.dismiss) var dismiss
     
@@ -113,10 +179,16 @@ struct HabitDetailView: View {
             Form {
                 Section(header: Text("Habit Details")) {
                     TextField("Habit Name", text: $habit.name)
+                        .onChange(of: habit.name) { _, _ in
+                            habitManager.updateHabit(habit)
+                        }
                     Picker("Frequency", selection: $habit.frequency) {
                         ForEach(Frequency.allCases) { frequency in
                             Text(frequency.displayName).tag(frequency)
                         }
+                    }
+                    .onChange(of: habit.frequency) { _, _ in
+                        habitManager.updateHabit(habit)
                     }
                 }
                 Section {
@@ -134,15 +206,14 @@ struct HabitDetailView: View {
 }
 
 struct ManageHabitsView: View {
-    @Binding var habits: [Habit]
+    @ObservedObject var habitManager: HabitDataManager
     @Environment(\.dismiss) var dismiss
     @State private var newHabitName = ""
-    @State private var selectedIndex: Int? = nil
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                if !habits.isEmpty {
+                if !habitManager.habits.isEmpty {
                     VStack(spacing: 0) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -150,12 +221,16 @@ struct ManageHabitsView: View {
                                 .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                             
                             VStack(spacing: 0) {
-                                ForEach(habits.indices, id: \.self) { index in
-                                    NavigationLink(destination: HabitDetailView(habit: $habits[index], onDelete: {
-                                        habits.remove(at: index)
-                                    })) {
+                                ForEach(habitManager.habits.indices, id: \.self) { index in
+                                    NavigationLink(destination: HabitDetailView(
+                                        habit: .constant(habitManager.habits[index]),
+                                        habitManager: habitManager,
+                                        onDelete: {
+                                            habitManager.deleteHabit(at: index)
+                                        }
+                                    )) {
                                         HStack {
-                                            Text(habits[index].name)
+                                            Text(habitManager.habits[index].name)
                                             Spacer()
                                             Image(systemName: "chevron.right")
                                                 .foregroundColor(.secondary)
@@ -163,11 +238,11 @@ struct ManageHabitsView: View {
                                         }
                                         .padding(.vertical, 12)
                                         .padding(.horizontal, 16)
-                                        .contentShape(Rectangle()) // Make the whole row tappable
+                                        .contentShape(Rectangle())
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                     
-                                    if index < habits.count - 1 {
+                                    if index < habitManager.habits.count - 1 {
                                         Divider()
                                             .padding(.leading, 16)
                                     }
@@ -190,12 +265,13 @@ struct ManageHabitsView: View {
                     HStack {
                         TextField("New Habit", text: $newHabitName)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
-                        Button("Add") {
-                            if !newHabitName.isEmpty {
-                                habits.append(Habit(name: newHabitName, completion: [:]))
-                                newHabitName = ""
+                            .onSubmit {
+                                addNewHabit()
                             }
+                        Button("Add") {
+                            addNewHabit()
                         }
+                        .disabled(newHabitName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding(.horizontal)
                 }
@@ -212,19 +288,34 @@ struct ManageHabitsView: View {
         }
         .background(Color("Background"))
     }
+    
+    private func addNewHabit() {
+        let trimmedName = newHabitName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedName.isEmpty {
+            let newHabit = Habit(name: trimmedName, completion: [:])
+            habitManager.addHabit(newHabit)
+            newHabitName = ""
+        }
+    }
 }
 
 struct EditableHabitRow: View {
-    @Binding var habits: [Habit]
+    @ObservedObject var habitManager: HabitDataManager
     let index: Int
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                TextField("Habit Name", text: $habits[index].name)
+                TextField("Habit Name", text: Binding(
+                    get: { habitManager.habits[index].name },
+                    set: { newValue in
+                        habitManager.habits[index].name = newValue
+                        habitManager.updateHabit(habitManager.habits[index])
+                    }
+                ))
                 Spacer()
                 Button(action: {
-                    habits.remove(at: index)
+                    habitManager.deleteHabit(at: index)
                 }) {
                     Image(systemName: "trash")
                         .foregroundColor(.red)
@@ -232,8 +323,13 @@ struct EditableHabitRow: View {
             }
             
             HStack {
-        
-                Picker("", selection: $habits[index].frequency) {
+                Picker("", selection: Binding(
+                    get: { habitManager.habits[index].frequency },
+                    set: { newValue in
+                        habitManager.habits[index].frequency = newValue
+                        habitManager.updateHabit(habitManager.habits[index])
+                    }
+                )) {
                     ForEach(Frequency.allCases) { frequency in
                         Text(frequency.displayName)
                             .tag(frequency)
