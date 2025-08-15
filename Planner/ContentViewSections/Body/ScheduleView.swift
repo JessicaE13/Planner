@@ -333,39 +333,77 @@ struct ScheduleDetailView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color("Background").opacity(0.2)
-                    .ignoresSafeArea()
-                
+               
                 ScrollView {
                     VStack(spacing: 24) {
                         // Event Icon and Color
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(Color(item.color))
-                                .frame(width: 80, height: 120)
-                            Image(systemName: item.icon)
-                                .font(.title)
-                                .foregroundColor(.white)
+                        HStack {
+                       
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 24)
+                                    .fill(Color(item.color))
+                                    .frame(width: 80, height: 120)
+                                Image(systemName: item.icon)
+                                    .font(.title)
+                                    .foregroundColor(.white)
+                            }
+                            
+                            VStack {
+                                // Event Title
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(item.title)
+                                        .font(.title2)
+                                        .fontWeight(.semibold)
+                                        .multilineTextAlignment(.center)
+                                    
+                                    if !item.category.isEmpty {
+                                        Text(item.category)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 4)
+                                            .background(Color.gray.opacity(0.2))
+                                            .cornerRadius(8)
+                                    }
+                                    
+                                    
+                                }
+                                
+                                
+                                // UPDATED: Clickable Location
+                                if !item.location.isEmpty {
+                                    Button(action: {
+                                        showingMapOptions = true
+                                    }) {
+                                        HStack(alignment: .top) {
+                                            //                                        Image(systemName: "location")
+                                            //                                            .foregroundColor(.red)
+                                            //                                            .frame(width: 20)
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(item.location)
+                                                    .font(.body)
+                                                    .multilineTextAlignment(.leading)
+                                                    .foregroundColor(.blue)
+                                                
+                                                //                                            Text("Tap to navigate")
+                                                //                                                .font(.caption)
+                                                //                                                .foregroundColor(.blue)
+                                            }
+                                            Spacer()
+                                            Image(systemName: "chevron.right")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                            
                         }
                         .padding(.top)
                         
-                        // Event Title
-                        VStack(spacing: 8) {
-                            Text(item.title)
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .multilineTextAlignment(.center)
-                            
-                            if !item.category.isEmpty {
-                                Text(item.category)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 4)
-                                    .background(Color.gray.opacity(0.2))
-                                    .cornerRadius(8)
-                            }
-                        }
+        
                         
                         // Time and Date Information
                         VStack(spacing: 16) {
@@ -417,35 +455,7 @@ struct ScheduleDetailView: View {
                                     Spacer()
                                 }
                             }
-                            
-                            // UPDATED: Clickable Location
-                            if !item.location.isEmpty {
-                                Button(action: {
-                                    showingMapOptions = true
-                                }) {
-                                    HStack(alignment: .top) {
-                                        Image(systemName: "location")
-                                            .foregroundColor(.red)
-                                            .frame(width: 20)
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(item.location)
-                                                .font(.body)
-                                                .multilineTextAlignment(.leading)
-                                                .foregroundColor(.primary)
-                                            
-                                            Text("Tap to navigate")
-                                                .font(.caption)
-                                                .foregroundColor(.blue)
-                                        }
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
+    
                         }
                         .padding(.horizontal)
                         
