@@ -135,19 +135,45 @@ class ScheduleDataManager: ObservableObject {
 // MARK: - Updated Models for Codable Support
 
 struct ChecklistItem: Identifiable, Hashable, Codable {
-    let id = UUID()
+    let id: UUID // Back to let - immutable as it should be
     var text: String
     var isCompleted: Bool = false
+    
+    // Custom initializer
+    init(text: String, isCompleted: Bool = false) {
+        self.id = UUID()
+        self.text = text
+        self.isCompleted = isCompleted
+    }
+    
+    // Custom Codable implementation
+    enum CodingKeys: String, CodingKey {
+        case id, text, isCompleted
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        text = try container.decode(String.self, forKey: .text)
+        isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(text, forKey: .text)
+        try container.encode(isCompleted, forKey: .isCompleted)
+    }
 }
 
 struct ScheduleItem: Identifiable, Codable {
-    let id = UUID()
+    let id: UUID // Back to let - immutable as it should be
     var title: String
     var time: Date
     var icon: String
     var color: String
     var frequency: Frequency = .never
-    var descriptionText: String = "" // Changed from AttributedString for Codable
+    var descriptionText: String = ""
     var location: String = ""
     var allDay: Bool = false
     var category: String = ""
@@ -156,7 +182,7 @@ struct ScheduleItem: Identifiable, Codable {
     var startTime: Date = Date()
     var endTime: Date = Date()
     var checklist: [ChecklistItem] = []
-    var uniqueKey: String = "" // Added unique key for better identification
+    var uniqueKey: String = ""
     
     // New properties for end repeat functionality
     var endRepeatOption: EndRepeatOption = .never
@@ -170,6 +196,7 @@ struct ScheduleItem: Identifiable, Codable {
     
     // Initialize with uniqueKey and end repeat options
     init(title: String, time: Date, icon: String, color: String, frequency: Frequency = .never, startTime: Date, endTime: Date, checklist: [ChecklistItem] = [], uniqueKey: String = "", endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Date()) {
+        self.id = UUID()
         self.title = title
         self.time = time
         self.icon = icon
@@ -181,6 +208,55 @@ struct ScheduleItem: Identifiable, Codable {
         self.uniqueKey = uniqueKey
         self.endRepeatOption = endRepeatOption
         self.endRepeatDate = endRepeatDate
+    }
+    
+    // Custom Codable implementation
+    enum CodingKeys: String, CodingKey {
+        case id, title, time, icon, color, frequency, descriptionText, location, allDay, category, type, isCompleted, startTime, endTime, checklist, uniqueKey, endRepeatOption, endRepeatDate
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        time = try container.decode(Date.self, forKey: .time)
+        icon = try container.decode(String.self, forKey: .icon)
+        color = try container.decode(String.self, forKey: .color)
+        frequency = try container.decode(Frequency.self, forKey: .frequency)
+        descriptionText = try container.decode(String.self, forKey: .descriptionText)
+        location = try container.decode(String.self, forKey: .location)
+        allDay = try container.decode(Bool.self, forKey: .allDay)
+        category = try container.decode(String.self, forKey: .category)
+        type = try container.decode(String.self, forKey: .type)
+        isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
+        startTime = try container.decode(Date.self, forKey: .startTime)
+        endTime = try container.decode(Date.self, forKey: .endTime)
+        checklist = try container.decode([ChecklistItem].self, forKey: .checklist)
+        uniqueKey = try container.decode(String.self, forKey: .uniqueKey)
+        endRepeatOption = try container.decode(EndRepeatOption.self, forKey: .endRepeatOption)
+        endRepeatDate = try container.decode(Date.self, forKey: .endRepeatDate)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(time, forKey: .time)
+        try container.encode(icon, forKey: .icon)
+        try container.encode(color, forKey: .color)
+        try container.encode(frequency, forKey: .frequency)
+        try container.encode(descriptionText, forKey: .descriptionText)
+        try container.encode(location, forKey: .location)
+        try container.encode(allDay, forKey: .allDay)
+        try container.encode(category, forKey: .category)
+        try container.encode(type, forKey: .type)
+        try container.encode(isCompleted, forKey: .isCompleted)
+        try container.encode(startTime, forKey: .startTime)
+        try container.encode(endTime, forKey: .endTime)
+        try container.encode(checklist, forKey: .checklist)
+        try container.encode(uniqueKey, forKey: .uniqueKey)
+        try container.encode(endRepeatOption, forKey: .endRepeatOption)
+        try container.encode(endRepeatDate, forKey: .endRepeatDate)
     }
     
     // Helper method to check if this event should appear on a given date

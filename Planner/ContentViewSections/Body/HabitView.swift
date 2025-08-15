@@ -8,10 +8,39 @@
 import SwiftUI
 
 struct Habit: Identifiable, Codable {
-    let id = UUID()
+    let id: UUID // Back to let - immutable as it should be
     var name: String
     var frequency: Frequency = .everyDay
     var completion: [String: Bool] // date string (yyyy-MM-dd) to completion status
+    
+    // Custom initializer for creating new habits
+    init(name: String, frequency: Frequency = .everyDay, completion: [String: Bool] = [:]) {
+        self.id = UUID()
+        self.name = name
+        self.frequency = frequency
+        self.completion = completion
+    }
+    
+    // Custom Codable implementation
+    enum CodingKeys: String, CodingKey {
+        case id, name, frequency, completion
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        frequency = try container.decode(Frequency.self, forKey: .frequency)
+        completion = try container.decode([String: Bool].self, forKey: .completion)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(frequency, forKey: .frequency)
+        try container.encode(completion, forKey: .completion)
+    }
     
     func isCompleted(for date: Date) -> Bool {
         let key = Habit.dateKey(for: date)
