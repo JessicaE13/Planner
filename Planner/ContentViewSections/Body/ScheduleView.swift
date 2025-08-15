@@ -347,6 +347,7 @@ struct ScheduleDetailView: View {
     let onEdit: (ScheduleItem) -> Void
     let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var showingMapOptions = false
     
     init(item: ScheduleItem, onEdit: @escaping (ScheduleItem) -> Void, onSave: @escaping (ScheduleItem) -> Void) {
         self._item = State(initialValue: item)
@@ -454,17 +455,33 @@ struct ScheduleDetailView: View {
                                 }
                             }
                             
-                            // Location
+                            // UPDATED: Clickable Location
                             if !item.location.isEmpty {
-                                HStack(alignment: .top) {
-                                    Image(systemName: "location")
-                                        .foregroundColor(.red)
-                                        .frame(width: 20)
-                                    Text(item.location)
-                                        .font(.body)
-                                        .multilineTextAlignment(.leading)
-                                    Spacer()
+                                Button(action: {
+                                    showingMapOptions = true
+                                }) {
+                                    HStack(alignment: .top) {
+                                        Image(systemName: "location")
+                                            .foregroundColor(.red)
+                                            .frame(width: 20)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(item.location)
+                                                .font(.body)
+                                                .multilineTextAlignment(.leading)
+                                                .foregroundColor(.primary)
+                                            
+                                            Text("Tap to navigate")
+                                                .font(.caption)
+                                                .foregroundColor(.blue)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .contentShape(Rectangle())
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.horizontal)
@@ -490,7 +507,7 @@ struct ScheduleDetailView: View {
                             .padding(.horizontal)
                         }
                         
-                        // Checklist - MODIFIED for full row tap
+                        // Checklist - Full row tap functionality
                         if !item.checklist.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
@@ -511,7 +528,6 @@ struct ScheduleDetailView: View {
                                 
                                 VStack(spacing: 8) {
                                     ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
-                                        // MODIFIED: Wrap entire row in button instead of just the circle
                                         Button(action: {
                                             item.checklist[index].isCompleted.toggle()
                                             onSave(item)
@@ -532,9 +548,9 @@ struct ScheduleDetailView: View {
                                             .padding(.vertical, 8)
                                             .background(Color.gray.opacity(0.05))
                                             .cornerRadius(8)
-                                            .contentShape(Rectangle()) // Ensures entire area is tappable
+                                            .contentShape(Rectangle())
                                         }
-                                        .buttonStyle(PlainButtonStyle()) // Removes default button styling
+                                        .buttonStyle(PlainButtonStyle())
                                         .animation(.easeInOut(duration: 0.2), value: checklistItem.isCompleted)
                                     }
                                 }
@@ -570,6 +586,46 @@ struct ScheduleDetailView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+        }
+        .actionSheet(isPresented: $showingMapOptions) {
+            ActionSheet(
+                title: Text("Navigate to Location"),
+                message: Text(item.location),
+                buttons: [
+                    .default(Text("Open in Apple Maps")) {
+                        openInAppleMaps()
+                    },
+                    .default(Text("Open in Google Maps")) {
+                        openInGoogleMaps()
+                    },
+                    .cancel()
+                ]
+            )
+        }
+    }
+    
+    // MARK: - Navigation Helper Methods
+    
+    private func openInAppleMaps() {
+        let encodedLocation = item.location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        
+        if let url = URL(string: "http://maps.apple.com/?q=\(encodedLocation)") {
+            UIApplication.shared.open(url)
+        }
+    }
+    
+    private func openInGoogleMaps() {
+        let encodedLocation = item.location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        
+        // Try to open Google Maps app first
+        if let googleMapsURL = URL(string: "comgooglemaps://?q=\(encodedLocation)"),
+           UIApplication.shared.canOpenURL(googleMapsURL) {
+            UIApplication.shared.open(googleMapsURL)
+        } else {
+            // Fall back to Google Maps web version
+            if let webURL = URL(string: "https://www.google.com/maps/search/?api=1&query=\(encodedLocation)") {
+                UIApplication.shared.open(webURL)
             }
         }
     }
