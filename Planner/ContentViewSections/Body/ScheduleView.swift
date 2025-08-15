@@ -333,7 +333,7 @@ struct ScheduleDetailView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color("Background")
+                Color("Background").opacity(0.2)
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -647,7 +647,7 @@ struct ScheduleEditView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color("Background")
+                Color("Background").opacity(0.2)
                     .ignoresSafeArea()
                 
                 Form {

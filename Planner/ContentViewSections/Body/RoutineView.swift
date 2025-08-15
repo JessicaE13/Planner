@@ -40,6 +40,19 @@ struct RoutineView: View {
         return formatter
     }()
     
+    // Computed binding for sheet presentation
+    private var showSheet: Binding<Bool> {
+        Binding(
+            get: { selectedRoutineIndex != nil },
+            set: { isPresented in
+                if !isPresented {
+                    selectedRoutineIndex = nil
+                    showRoutineDetail = false
+                }
+            }
+        )
+    }
+    
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
@@ -60,9 +73,7 @@ struct RoutineView: View {
                     ForEach(routines.indices, id: \.self) { index in
                         Button(action: {
                             selectedRoutineIndex = index
-                            withAnimation {
-                                showRoutineDetail = true
-                            }
+                            showRoutineDetail = true
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10)
@@ -111,11 +122,115 @@ struct RoutineView: View {
             }
         }
         .padding()
+        .sheet(isPresented: showSheet) {
+            if let index = selectedRoutineIndex {
+                RoutineDetailBottomSheetView(routine: $routines[index])
+                    .presentationDetents([.fraction(0.85), .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(28)
+            }
+        }
     }
 }
 
+// New Bottom Sheet View for Routine Details
+struct RoutineDetailBottomSheetView: View {
+    @Binding var routine: Routine
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color("Background").opacity(0.2)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Header Section
+                    VStack(spacing: 16) {
+                        Image(systemName: routine.icon)
+                            .font(.system(size: 48))
+                            .foregroundColor(.primary)
+                        
+                        Text(routine.name + " Routine")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        // Progress view with animation
+                        ProgressView(value: routine.progress, total: 1.0)
+                            .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
+                            .frame(maxWidth: 200)
+                            .animation(.easeInOut(duration: 0.3), value: routine.progress)
+                    }
+                    .padding(.top, 24)
+                    .padding(.bottom, 32)
 
-// Popup?
+                    // Routine Items List
+                    if !routine.items.isEmpty {
+                        VStack(spacing: 0) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.white)
+                                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                                
+                                VStack(spacing: 0) {
+                                    ForEach(routine.items.indices, id: \.self) { index in
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                routine.toggleItem(routine.items[index])
+                                            }
+                                        }) {
+                                            HStack {
+                                                Image(systemName: routine.completedItems.contains(routine.items[index]) ? "checkmark.circle.fill" : "circle")
+                                                    .foregroundColor(routine.completedItems.contains(routine.items[index]) ? .primary : .gray)
+                                                    .animation(.easeInOut(duration: 0.3), value: routine.completedItems.contains(routine.items[index]))
+                                                
+                                                Text(routine.items[index])
+                                                    .strikethrough(routine.completedItems.contains(routine.items[index]))
+                                                    .foregroundColor(routine.completedItems.contains(routine.items[index]) ? .secondary : .primary)
+                                                    .animation(.easeInOut(duration: 0.3), value: routine.completedItems.contains(routine.items[index]))
+                                                
+                                                Spacer()
+                                            }
+                                            .padding(.vertical, 12)
+                                            .padding(.horizontal, 16)
+                                            .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        
+                                        if index < routine.items.count - 1 {
+                                            Divider()
+                                                .padding(.leading, 16)
+                                        }
+                                    }
+                                }
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 16)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Done Button
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .font(.headline)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+                    .background(Color("Color1").opacity(0.9))
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 24)
+                }
+            }
+            .navigationBarHidden(true)
+        }
+    }
+}
+
+// Keep the old RoutineDetailView for reference/backup
 struct RoutineDetailView: View {
     @Binding var routine: Routine
     var dismissAction: (() -> Void)? = nil
