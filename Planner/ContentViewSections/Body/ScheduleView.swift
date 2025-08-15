@@ -41,6 +41,7 @@ struct ScheduleView: View {
     var selectedDate: Date
     @State private var selectedItem: ScheduleItem?
     @State private var showEdit: Bool = false
+    @State private var itemToEdit: ScheduleItem? // Separate state for editing
     @State private var scheduleItems: [ScheduleItem] = [] // Store schedule items with their state
     
     private let dateFormatter: DateFormatter = {
@@ -162,25 +163,24 @@ struct ScheduleView: View {
                 ScheduleDetailView(
                     item: item,
                     onEdit: {
+                        // Store the item for editing and dismiss the detail view
+                        itemToEdit = item
                         selectedItem = nil
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            showEdit = true
-                        }
+                        showEdit = true
                     },
                     onSave: { updatedItem in
-                        // Update the item in our local storage
                         updateScheduleItem(updatedItem)
                     }
                 )
             }
         }
         .sheet(isPresented: $showEdit) {
-            if let item = selectedItem {
+            if let item = itemToEdit {
                 NavigationView {
                     ScheduleEditView(item: item) { updatedItem in
                         updateScheduleItem(updatedItem)
                         showEdit = false
-                        selectedItem = nil
+                        itemToEdit = nil
                     }
                 }
             }
