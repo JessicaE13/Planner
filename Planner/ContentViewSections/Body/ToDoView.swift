@@ -154,53 +154,10 @@ struct ToDoView: View {
                 }
                 .padding()
                 
-                // Quick add section
-                VStack(spacing: 12) {
-                    HStack {
-                        TextField("What's on your mind?", text: $newItemText, axis: .vertical)
-                            .focused($isTextFieldFocused)
-                            .lineLimit(1...5)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(Color.white)
-                            .cornerRadius(12)
-                            .onSubmit {
-                                addNewItem()
-                            }
-                        
-                        Button(action: addNewItem) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : .blue)
-                        }
-                        .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                    
-                    // Quick add buttons for common items
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(quickAddSuggestions, id: \.self) { suggestion in
-                                Button(suggestion) {
-                                    newItemText = suggestion
-                                    addNewItem()
-                                }
-                                .font(.caption)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.blue.opacity(0.1))
-                                .foregroundColor(.blue)
-                                .cornerRadius(16)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom)
-                
-                // Items list
+                // Items list or empty state
                 if dataManager.items.isEmpty {
-                    // Empty state
+                    // Empty state - centered
+                    Spacer()
                     VStack(spacing: 16) {
                         Image(systemName: "brain.head.profile")
                             .font(.system(size: 60))
@@ -216,9 +173,9 @@ struct ToDoView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.clear)
+                    Spacer()
                 } else {
+                    // Items list
                     ScrollView {
                         LazyVStack(spacing: 8) {
                             ForEach(dataManager.items.indices, id: \.self) { index in
@@ -242,9 +199,61 @@ struct ToDoView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 100) // Extra padding for tab bar
+                        .padding(.bottom, 140) // Extra padding for bottom input area
                     }
                 }
+                
+                // Bottom input section - always at bottom
+                VStack(spacing: 12) {
+                    // Quick add buttons for common items
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(quickAddSuggestions, id: \.self) { suggestion in
+                                Button(suggestion) {
+                                    newItemText = suggestion
+                                    addNewItem()
+                                }
+                                .font(.caption)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.blue.opacity(0.1))
+                                .foregroundColor(.blue)
+                                .cornerRadius(16)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    
+                    // Main input field
+                    HStack {
+                        TextField("What's on your mind?", text: $newItemText, axis: .vertical)
+                            .focused($isTextFieldFocused)
+                            .lineLimit(1...5)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .onSubmit {
+                                addNewItem()
+                            }
+                        
+                        Button(action: addNewItem) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : .blue)
+                        }
+                        .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical)
+                .background(
+                    // Background for bottom input area
+                    Rectangle()
+                        .fill(Color("Background").opacity(0.95))
+                        .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: -2)
+                        .ignoresSafeArea(.container, edges: .bottom)
+                )
             }
         }
         .onTapGesture {
