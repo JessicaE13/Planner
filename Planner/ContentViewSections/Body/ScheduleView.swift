@@ -29,6 +29,7 @@ struct ScheduleView: View {
     var selectedDate: Date
     @StateObject private var dataManager = ScheduleDataManager.shared
     @State private var sheetContent: SheetContent? = nil
+    @State private var defaultItems: [ScheduleItem] = []
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -58,164 +59,32 @@ struct ScheduleView: View {
             
             VStack(spacing: 12) {
                 // Display all schedule items for the selected date, sorted by start time
-                ForEach(getScheduleItemsForDate(selectedDate).sorted { $0.startTime < $1.startTime }, id: \.id) { item in
-                    HStack {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(Color(item.color))
-                                .frame(width: 50, height: 75)
-                            Image(systemName: item.icon)
-                                .foregroundColor(.white)
-                        }
-                        
-                        Text(formatTime(item.startTime))
-                            .font(.body)
-                            .foregroundColor(Color.gray)
-                        Text(item.title)
-                            .font(.body)
-                        if item.frequency != .never {
-                            Image(systemName: "repeat")
-                                .foregroundColor(Color.gray.opacity(0.6))
-                        }
-                        Spacer()
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                let scheduleItems = getScheduleItemsForDate(selectedDate).sorted { $0.startTime < $1.startTime }
+                
+                ForEach(scheduleItems, id: \.id) { item in
+                    ScheduleRowView(item: item) {
                         sheetContent = .detail(item)
                     }
                 }
                 
-                // If no items exist, still show the default items for demo purposes
-                if getScheduleItemsForDate(selectedDate).isEmpty {
-                    HStack {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(Color("Color1"))
-                                .frame(width: 50, height: 75)
-                            Image(systemName: getScheduleIcon(for: selectedDate))
+                // Show default items if no custom items exist
+                if scheduleItems.isEmpty {
+                    ForEach(defaultItems, id: \.id) { item in
+                        ScheduleRowView(item: item) {
+                            sheetContent = .detail(item)
                         }
-                        
-                        let scheduleItem = dataManager.getOrCreateItem(
-                            uniqueKey: "daily-routine",
-                            title: getScheduleTitle(for: selectedDate),
-                            time: getScheduleTimeAsDate(for: selectedDate),
-                            icon: getScheduleIcon(for: selectedDate),
-                            color: "Color1",
-                            frequency: .everyDay,
-                            startTime: getScheduleStartTime(for: selectedDate)
-                        )
-                        
-                        Text(formatTime(scheduleItem.startTime))
-                            .font(.body)
-                            .foregroundColor(Color.gray)
-                        Text(scheduleItem.title)
-                            .font(.body)
-                        if scheduleItem.frequency != .never {
-                            Image(systemName: "repeat")
-                                .foregroundColor(Color.gray.opacity(0.6))
-                        }
-                        Spacer()
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        let item = dataManager.getOrCreateItem(
-                            uniqueKey: "daily-routine",
-                            title: getScheduleTitle(for: selectedDate),
-                            time: getScheduleTimeAsDate(for: selectedDate),
-                            icon: getScheduleIcon(for: selectedDate),
-                            color: "Color1",
-                            frequency: .everyDay,
-                            startTime: getScheduleStartTime(for: selectedDate)
-                        )
-                        sheetContent = .detail(item)
-                    }
-                    
-                    HStack {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(Color("Color2"))
-                                .frame(width: 50, height: 75)
-                            Image(systemName: "figure.walk")
-                        }
-                        
-                        let morningWalkItem = dataManager.getOrCreateItem(
-                            uniqueKey: "morning-walk",
-                            title: "Morning Walk",
-                            time: getFixedTime(hour: 12, minute: 0),
-                            icon: "figure.walk",
-                            color: "Color2",
-                            frequency: .never,
-                            startTime: getFixedTime(hour: 12, minute: 0)
-                        )
-                        
-                        Text(formatTime(morningWalkItem.startTime))
-                            .font(.body)
-                            .foregroundColor(Color.gray)
-                        Text(morningWalkItem.title)
-                            .font(.body)
-                        Spacer()
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        let item = dataManager.getOrCreateItem(
-                            uniqueKey: "morning-walk",
-                            title: "Morning Walk",
-                            time: getFixedTime(hour: 12, minute: 0),
-                            icon: "figure.walk",
-                            color: "Color2",
-                            frequency: .never,
-                            startTime: getFixedTime(hour: 12, minute: 0)
-                        )
-                        sheetContent = .detail(item)
-                    }
-                    
-                    HStack {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(Color("Color3"))
-                                .frame(width: 50, height: 75)
-                            Image(systemName: "person.3.fill")
-                        }
-                        
-                        let teamMeetingItem = dataManager.getOrCreateItem(
-                            uniqueKey: "team-meeting",
-                            title: "Team Meeting",
-                            time: getFixedTime(hour: 12, minute: 0),
-                            icon: "person.3.fill",
-                            color: "Color3",
-                            frequency: .everyWeek,
-                            startTime: getFixedTime(hour: 12, minute: 0)
-                        )
-                        
-                        Text(formatTime(teamMeetingItem.startTime))
-                            .font(.body)
-                            .foregroundColor(Color.gray)
-                        Text(teamMeetingItem.title)
-                            .font(.body)
-                        if teamMeetingItem.frequency != .never {
-                            Image(systemName: "repeat")
-                                .foregroundColor(Color.gray.opacity(0.6))
-                        }
-                        Spacer()
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        let item = dataManager.getOrCreateItem(
-                            uniqueKey: "team-meeting",
-                            title: "Team Meeting",
-                            time: getFixedTime(hour: 12, minute: 0),
-                            icon: "person.3.fill",
-                            color: "Color3",
-                            frequency: .everyWeek,
-                            startTime: getFixedTime(hour: 12, minute: 0)
-                        )
-                        sheetContent = .detail(item)
                     }
                 }
             }
             .padding(.horizontal, 16)
         }
         .padding()
+        .onAppear {
+            initializeDefaultItems()
+        }
+        .onChange(of: selectedDate) { _, _ in
+            initializeDefaultItems()
+        }
         .sheet(item: $sheetContent) { content in
             switch content {
             case .detail(let item):
@@ -225,18 +94,33 @@ struct ScheduleView: View {
                         sheetContent = .edit(editItem)
                     },
                     onSave: { updatedItem in
-                        dataManager.addOrUpdateItem(updatedItem)
+                        // Use Task to avoid publishing changes during view updates
+                        Task {
+                            await MainActor.run {
+                                dataManager.addOrUpdateItem(updatedItem)
+                            }
+                        }
                     }
                 )
             case .edit(let item):
                 ScheduleEditView(item: item) { updatedItem in
-                    dataManager.addOrUpdateItem(updatedItem)
-                    sheetContent = nil
+                    // Use Task to avoid publishing changes during view updates
+                    Task {
+                        await MainActor.run {
+                            dataManager.addOrUpdateItem(updatedItem)
+                            sheetContent = nil
+                        }
+                    }
                 }
             case .create:
                 ScheduleEditView(item: createNewScheduleItem()) { newItem in
-                    dataManager.addOrUpdateItem(newItem)
-                    sheetContent = nil
+                    // Use Task to avoid publishing changes during view updates
+                    Task {
+                        await MainActor.run {
+                            dataManager.addOrUpdateItem(newItem)
+                            sheetContent = nil
+                        }
+                    }
                 }
             }
         }
@@ -248,6 +132,46 @@ struct ScheduleView: View {
         return dataManager.scheduleItems.filter { item in
             item.shouldAppear(on: date)
         }
+    }
+    
+    private func initializeDefaultItems() {
+        // Create default items without immediately saving them to the data manager
+        let calendar = Calendar.current
+        
+        let dailyRoutineItem = ScheduleItem(
+            title: getScheduleTitle(for: selectedDate),
+            time: getScheduleTimeAsDate(for: selectedDate),
+            icon: getScheduleIcon(for: selectedDate),
+            color: "Color1",
+            frequency: .everyDay,
+            startTime: getScheduleStartTime(for: selectedDate),
+            endTime: calendar.date(byAdding: .hour, value: 1, to: getScheduleStartTime(for: selectedDate)) ?? getScheduleStartTime(for: selectedDate),
+            uniqueKey: "daily-routine"
+        )
+        
+        let morningWalkItem = ScheduleItem(
+            title: "Morning Walk",
+            time: getFixedTime(hour: 12, minute: 0),
+            icon: "figure.walk",
+            color: "Color2",
+            frequency: .never,
+            startTime: getFixedTime(hour: 12, minute: 0),
+            endTime: calendar.date(byAdding: .hour, value: 1, to: getFixedTime(hour: 12, minute: 0)) ?? getFixedTime(hour: 12, minute: 0),
+            uniqueKey: "morning-walk"
+        )
+        
+        let teamMeetingItem = ScheduleItem(
+            title: "Team Meeting",
+            time: getFixedTime(hour: 12, minute: 0),
+            icon: "person.3.fill",
+            color: "Color3",
+            frequency: .everyWeek,
+            startTime: getFixedTime(hour: 12, minute: 0),
+            endTime: calendar.date(byAdding: .hour, value: 1, to: getFixedTime(hour: 12, minute: 0)) ?? getFixedTime(hour: 12, minute: 0),
+            uniqueKey: "team-meeting"
+        )
+        
+        defaultItems = [dailyRoutineItem, morningWalkItem, teamMeetingItem]
     }
     
     private func createNewScheduleItem() -> ScheduleItem {
@@ -330,6 +254,45 @@ struct ScheduleView: View {
         case 1, 7: return getFixedTime(hour: 10, minute: 0)
         case 2, 4, 6: return getFixedTime(hour: 6, minute: 0)
         default: return getFixedTime(hour: 12, minute: 0)
+        }
+    }
+    
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - Schedule Row View Component
+struct ScheduleRowView: View {
+    let item: ScheduleItem
+    let onTap: () -> Void
+    
+    var body: some View {
+        HStack {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color(item.color))
+                    .frame(width: 50, height: 75)
+                Image(systemName: item.icon)
+                    .foregroundColor(.white)
+            }
+            
+            Text(formatTime(item.startTime))
+                .font(.body)
+                .foregroundColor(Color.gray)
+            Text(item.title)
+                .font(.body)
+            if item.frequency != .never {
+                Image(systemName: "repeat")
+                    .foregroundColor(Color.gray.opacity(0.6))
+            }
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
         }
     }
     
