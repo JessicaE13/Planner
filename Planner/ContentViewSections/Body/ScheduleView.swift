@@ -349,66 +349,21 @@ struct ScheduleDetailView: View {
                             .padding(.leading)
                             
                             // Title and Location Section
-                            VStack(alignment: .leading, spacing: 12) {
-                                
-                                // Time and Date Information
-                                VStack(spacing: 16) {
-                                    // All-day or time-specific
+                            VStack(alignment: .leading, spacing: 8) {
+                                // Single row time information (NEW FORMAT)
+                                HStack(spacing: 4) {
+                                    Image(systemName: "clock")
+                                        .foregroundColor(.gray)
+                                        .font(.caption)
                                     
-                                    HStack{
-                                        HStack {
-                                            Image(systemName: "clock")
-                                                .foregroundColor(.gray)
-                                      
-                                            
-                                            if item.allDay {
-                                                Text("All Day")
-                                                    .foregroundColor(.gray)
-                                                    .font(.caption)
-                                            } else {
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text("\(timeFormatter.string(from: item.startTime)) - \(timeFormatter.string(from: item.endTime))")
-                                                        .font(.caption)
-                                                        .foregroundColor(.gray)
-                                                    if !Calendar.current.isDate(item.startTime, inSameDayAs: item.endTime) {
-                                                        Text("\(dateFormatter.string(from: item.startTime)) - \(dateFormatter.string(from: item.endTime))")
-                                                            .font(.caption)
-                                                            .foregroundColor(.secondary)
-                                                            .foregroundColor(.gray)
-                                                    }
-                                                }
-                                            }
-                                            
-                                            Spacer()
-                                        }
-                                        
-                                        // Frequency/Repeat Information
-                                        if item.frequency != .never {
-                                            HStack {
-                                                Image(systemName: "repeat")
-                                                    .foregroundColor(.green)
-                                                    .frame(width: 20)
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text(item.frequency.displayName)
-                                                        .font(.caption)
-                                                    
-                                                    // Show end repeat information
-                                                    if item.endRepeatOption == .onDate {
-                                                        Text("Ends on \(dateFormatter.string(from: item.endRepeatDate))")
-                                                            .font(.caption)
-                                                            .foregroundColor(.secondary)
-                                                    } else {
-                                                        Text("Never ends")
-                                                            .font(.caption)
-                                                            .foregroundColor(.secondary)
-                                                    }
-                                                }
-                                                Spacer()
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal)
+                                    Text(createTimeString())
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .multilineTextAlignment(.leading)
+                                    
+                                    Spacer()
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 
                                 // Event Title - Left Aligned
                                 VStack(alignment: .leading, spacing: 8) {
@@ -573,6 +528,28 @@ struct ScheduleDetailView: View {
                 ]
             )
         }
+    }
+    
+    // MARK: - Time String Creation Helper
+    private func createTimeString() -> String {
+        var timeString = ""
+
+        if item.allDay {
+            timeString += "All Day"
+        } else {
+            timeString += "\(timeFormatter.string(from: item.startTime)) - \(timeFormatter.string(from: item.endTime))"
+        }
+        
+        if item.frequency != .never {
+            timeString += "  \(item.frequency.displayName.lowercased())"
+            
+            if item.endRepeatOption == .onDate {
+                let endDateString = dateFormatter.string(from: item.endRepeatDate)
+                timeString += " through \(endDateString)"
+            }
+        }
+        
+        return timeString
     }
     
     // MARK: - Navigation Helper Methods
