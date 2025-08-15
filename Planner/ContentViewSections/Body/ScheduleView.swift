@@ -12,11 +12,13 @@ import MapKit
 enum SheetContent: Identifiable {
     case detail(ScheduleItem)
     case edit(ScheduleItem)
+    case create // Added case for creating new items
     
     var id: String {
         switch self {
         case .detail(let item): return "detail-\(item.id)"
         case .edit(let item): return "edit-\(item.id)"
+        case .create: return "create-new"
         }
     }
 }
@@ -42,141 +44,173 @@ struct ScheduleView: View {
                 
                 Spacer()
                 
-                Image(systemName: "plus")
-                    .font(.title2)
-                    .foregroundColor(.primary)
-                    .contentShape(Rectangle())
+                Button(action: {
+                    sheetContent = .create
+                }) {
+                    Image(systemName: "plus")
+                        .font(.title2)
+                        .foregroundColor(.primary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             .padding(.bottom, 16)
             
-            VStack {
-                
-                HStack {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(Color("Color1"))
-                            .frame(width: 50, height: 75)
-                        Image(systemName: getScheduleIcon(for: selectedDate))
+            VStack(spacing: 12) {
+                // Display all schedule items for the selected date, sorted by start time
+                ForEach(getScheduleItemsForDate(selectedDate).sorted { $0.startTime < $1.startTime }, id: \.id) { item in
+                    HStack {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color(item.color))
+                                .frame(width: 50, height: 75)
+                            Image(systemName: item.icon)
+                                .foregroundColor(.white)
+                        }
+                        
+                        Text(formatTime(item.startTime))
+                            .font(.body)
+                            .foregroundColor(Color.gray)
+                        Text(item.title)
+                            .font(.body)
+                        if item.frequency != .never {
+                            Image(systemName: "repeat")
+                                .foregroundColor(Color.gray.opacity(0.6))
+                        }
+                        Spacer()
                     }
-                    
-                    // Get or create the schedule item and display its actual start time
-                    let scheduleItem = dataManager.getOrCreateItem(
-                        uniqueKey: "daily-routine",
-                        title: getScheduleTitle(for: selectedDate),
-                        time: getScheduleTimeAsDate(for: selectedDate),
-                        icon: getScheduleIcon(for: selectedDate),
-                        color: "Color1",
-                        frequency: .everyDay,
-                        startTime: getScheduleStartTime(for: selectedDate)
-                    )
-                    
-                    Text(formatTime(scheduleItem.startTime))
-                        .font(.body)
-                        .foregroundColor(Color.gray)
-                    Text(scheduleItem.title)
-                        .font(.body)
-                    if scheduleItem.frequency != .never {
-                        Image(systemName: "repeat")
-                            .foregroundColor(Color.gray.opacity(0.6))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        sheetContent = .detail(item)
                     }
-                    Spacer()
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    let item = dataManager.getOrCreateItem(
-                        uniqueKey: "daily-routine",
-                        title: getScheduleTitle(for: selectedDate),
-                        time: getScheduleTimeAsDate(for: selectedDate),
-                        icon: getScheduleIcon(for: selectedDate),
-                        color: "Color1",
-                        frequency: .everyDay,  // ← Add this line
-                        startTime: getScheduleStartTime(for: selectedDate)
-                    )
-                    sheetContent = .detail(item)
                 }
                 
-                HStack {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(Color("Color2"))
-                            .frame(width: 50, height: 75)
-                        Image(systemName: "figure.walk")
+                // If no items exist, still show the default items for demo purposes
+                if getScheduleItemsForDate(selectedDate).isEmpty {
+                    HStack {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color("Color1"))
+                                .frame(width: 50, height: 75)
+                            Image(systemName: getScheduleIcon(for: selectedDate))
+                        }
+                        
+                        let scheduleItem = dataManager.getOrCreateItem(
+                            uniqueKey: "daily-routine",
+                            title: getScheduleTitle(for: selectedDate),
+                            time: getScheduleTimeAsDate(for: selectedDate),
+                            icon: getScheduleIcon(for: selectedDate),
+                            color: "Color1",
+                            frequency: .everyDay,
+                            startTime: getScheduleStartTime(for: selectedDate)
+                        )
+                        
+                        Text(formatTime(scheduleItem.startTime))
+                            .font(.body)
+                            .foregroundColor(Color.gray)
+                        Text(scheduleItem.title)
+                            .font(.body)
+                        if scheduleItem.frequency != .never {
+                            Image(systemName: "repeat")
+                                .foregroundColor(Color.gray.opacity(0.6))
+                        }
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        let item = dataManager.getOrCreateItem(
+                            uniqueKey: "daily-routine",
+                            title: getScheduleTitle(for: selectedDate),
+                            time: getScheduleTimeAsDate(for: selectedDate),
+                            icon: getScheduleIcon(for: selectedDate),
+                            color: "Color1",
+                            frequency: .everyDay,
+                            startTime: getScheduleStartTime(for: selectedDate)
+                        )
+                        sheetContent = .detail(item)
                     }
                     
-                    // Get or create the morning walk item and display its actual start time
-                    let morningWalkItem = dataManager.getOrCreateItem(
-                        uniqueKey: "morning-walk",
-                        title: "Morning Walk",
-                        time: getFixedTime(hour: 12, minute: 0),
-                        icon: "figure.walk",
-                        color: "Color2",
-                        frequency: .never,
-                        startTime: getFixedTime(hour: 12, minute: 0)
-                    )
-                    
-                    Text(formatTime(morningWalkItem.startTime))
-                        .font(.body)
-                        .foregroundColor(Color.gray)
-                    Text(morningWalkItem.title)
-                        .font(.body)
-                    Spacer()
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    let item = dataManager.getOrCreateItem(
-                        uniqueKey: "morning-walk",
-                        title: "Morning Walk",
-                        time: getFixedTime(hour: 12, minute: 0),
-                        icon: "figure.walk",
-                        color: "Color2",
-                        frequency: .never,
-                        startTime: getFixedTime(hour: 12, minute: 0)
-                    )
-                    sheetContent = .detail(item)
-                }
-                
-                HStack {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(Color("Color3"))
-                            .frame(width: 50, height: 75)
-                        Image(systemName: "person.3.fill")
+                    HStack {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color("Color2"))
+                                .frame(width: 50, height: 75)
+                            Image(systemName: "figure.walk")
+                        }
+                        
+                        let morningWalkItem = dataManager.getOrCreateItem(
+                            uniqueKey: "morning-walk",
+                            title: "Morning Walk",
+                            time: getFixedTime(hour: 12, minute: 0),
+                            icon: "figure.walk",
+                            color: "Color2",
+                            frequency: .never,
+                            startTime: getFixedTime(hour: 12, minute: 0)
+                        )
+                        
+                        Text(formatTime(morningWalkItem.startTime))
+                            .font(.body)
+                            .foregroundColor(Color.gray)
+                        Text(morningWalkItem.title)
+                            .font(.body)
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        let item = dataManager.getOrCreateItem(
+                            uniqueKey: "morning-walk",
+                            title: "Morning Walk",
+                            time: getFixedTime(hour: 12, minute: 0),
+                            icon: "figure.walk",
+                            color: "Color2",
+                            frequency: .never,
+                            startTime: getFixedTime(hour: 12, minute: 0)
+                        )
+                        sheetContent = .detail(item)
                     }
                     
-                    // Get or create the team meeting item and display its actual start time
-                    let teamMeetingItem = dataManager.getOrCreateItem(
-                        uniqueKey: "team-meeting",
-                        title: "Team Meeting",
-                        time: getFixedTime(hour: 12, minute: 0),
-                        icon: "person.3.fill",
-                        color: "Color3",
-                        frequency: .everyWeek,
-                        startTime: getFixedTime(hour: 12, minute: 0)
-                    )
-                    
-                    Text(formatTime(teamMeetingItem.startTime))
-                        .font(.body)
-                        .foregroundColor(Color.gray)
-                    Text(teamMeetingItem.title)
-                        .font(.body)
-                    if teamMeetingItem.frequency != .never {
-                        Image(systemName: "repeat")
-                            .foregroundColor(Color.gray.opacity(0.6))
+                    HStack {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color("Color3"))
+                                .frame(width: 50, height: 75)
+                            Image(systemName: "person.3.fill")
+                        }
+                        
+                        let teamMeetingItem = dataManager.getOrCreateItem(
+                            uniqueKey: "team-meeting",
+                            title: "Team Meeting",
+                            time: getFixedTime(hour: 12, minute: 0),
+                            icon: "person.3.fill",
+                            color: "Color3",
+                            frequency: .everyWeek,
+                            startTime: getFixedTime(hour: 12, minute: 0)
+                        )
+                        
+                        Text(formatTime(teamMeetingItem.startTime))
+                            .font(.body)
+                            .foregroundColor(Color.gray)
+                        Text(teamMeetingItem.title)
+                            .font(.body)
+                        if teamMeetingItem.frequency != .never {
+                            Image(systemName: "repeat")
+                                .foregroundColor(Color.gray.opacity(0.6))
+                        }
+                        Spacer()
                     }
-                    Spacer()
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    let item = dataManager.getOrCreateItem(
-                        uniqueKey: "team-meeting",
-                        title: "Team Meeting",
-                        time: getFixedTime(hour: 12, minute: 0),
-                        icon: "person.3.fill",
-                        color: "Color3",
-                        frequency: .everyWeek,
-                        startTime: getFixedTime(hour: 12, minute: 0)
-                    )
-                    sheetContent = .detail(item)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        let item = dataManager.getOrCreateItem(
+                            uniqueKey: "team-meeting",
+                            title: "Team Meeting",
+                            time: getFixedTime(hour: 12, minute: 0),
+                            icon: "person.3.fill",
+                            color: "Color3",
+                            frequency: .everyWeek,
+                            startTime: getFixedTime(hour: 12, minute: 0)
+                        )
+                        sheetContent = .detail(item)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -199,11 +233,51 @@ struct ScheduleView: View {
                     dataManager.addOrUpdateItem(updatedItem)
                     sheetContent = nil
                 }
+            case .create:
+                ScheduleEditView(item: createNewScheduleItem()) { newItem in
+                    dataManager.addOrUpdateItem(newItem)
+                    sheetContent = nil
+                }
             }
         }
     }
     
     // MARK: - Helper Methods
+    
+    private func getScheduleItemsForDate(_ date: Date) -> [ScheduleItem] {
+        let calendar = Calendar.current
+        return dataManager.scheduleItems.filter { item in
+            // Show items that are scheduled for this specific date
+            if calendar.isDate(item.startTime, inSameDayAs: date) {
+                return true
+            }
+            
+            // Show recurring items that should appear on this date
+            if item.frequency != .never {
+                return item.frequency.shouldTrigger(on: date, from: item.startTime)
+            }
+            
+            return false
+        }
+    }
+    
+    private func createNewScheduleItem() -> ScheduleItem {
+        let calendar = Calendar.current
+        let defaultStartTime = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+        let defaultEndTime = calendar.date(byAdding: .hour, value: 1, to: defaultStartTime) ?? defaultStartTime
+        
+        return ScheduleItem(
+            title: "",
+            time: defaultStartTime,
+            icon: "calendar",
+            color: "Color1",
+            frequency: .never,
+            startTime: defaultStartTime,
+            endTime: defaultEndTime,
+            checklist: [],
+            uniqueKey: UUID().uuidString // Generate unique key for new items
+        )
+    }
     
     private func getScheduleIcon(for date: Date) -> String {
         let calendar = Calendar.current
@@ -711,7 +785,7 @@ struct ScheduleEditView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Edit Event")
+            .navigationTitle(item.title.isEmpty ? "New Event" : "Edit Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
