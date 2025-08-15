@@ -245,19 +245,8 @@ struct ScheduleView: View {
     // MARK: - Helper Methods
     
     private func getScheduleItemsForDate(_ date: Date) -> [ScheduleItem] {
-        let calendar = Calendar.current
         return dataManager.scheduleItems.filter { item in
-            // Show items that are scheduled for this specific date
-            if calendar.isDate(item.startTime, inSameDayAs: date) {
-                return true
-            }
-            
-            // Show recurring items that should appear on this date
-            if item.frequency != .never {
-                return item.frequency.shouldTrigger(on: date, from: item.startTime)
-            }
-            
-            return false
+            item.shouldAppear(on: date)
         }
     }
     
@@ -275,7 +264,9 @@ struct ScheduleView: View {
             startTime: defaultStartTime,
             endTime: defaultEndTime,
             checklist: [],
-            uniqueKey: UUID().uuidString // Generate unique key for new items
+            uniqueKey: UUID().uuidString,
+            endRepeatOption: .never,
+            endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStartTime) ?? defaultStartTime
         )
     }
     
@@ -444,8 +435,21 @@ struct ScheduleDetailView: View {
                                     Image(systemName: "repeat")
                                         .foregroundColor(.green)
                                         .frame(width: 20)
-                                    Text(item.frequency.displayName)
-                                        .font(.body)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.frequency.displayName)
+                                            .font(.body)
+                                        
+                                        // Show end repeat information
+                                        if item.endRepeatOption == .onDate {
+                                            Text("Ends on \(dateFormatter.string(from: item.endRepeatDate))")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        } else {
+                                            Text("Never ends")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
                                     Spacer()
                                 }
                             }
@@ -571,7 +575,7 @@ struct ScheduleDetailView: View {
     }
 }
 
-// MARK: - Schedule Edit View
+// MARK: - Schedule Edit View with End Repeat Functionality
 
 struct ScheduleEditView: View {
     @State private var item: ScheduleItem
@@ -711,6 +715,30 @@ struct ScheduleEditView: View {
                             }
                             .pickerStyle(MenuPickerStyle())
                         }
+                        
+                        // Show end repeat options when frequency is not "Never"
+                        if item.frequency != .never {
+                            HStack {
+                                Text("End Repeat")
+                                Spacer()
+                                Picker("", selection: $item.endRepeatOption) {
+                                    ForEach(EndRepeatOption.allCases) { option in
+                                        Text(option.displayName).tag(option)
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                            }
+                            
+                            // Show date picker when "On Date" is selected
+                            if item.endRepeatOption == .onDate {
+                                HStack {
+                                    Text("End Date")
+                                    Spacer()
+                                    DatePicker("", selection: $item.endRepeatDate, displayedComponents: .date)
+                                        .labelsHidden()
+                                }
+                            }
+                        }
                     }
                     
                     Section(header: Text("Description")) {
@@ -812,6 +840,12 @@ struct ScheduleEditView: View {
         }
         .onDisappear {
             locationSearchTask?.cancel()
+        }
+        .onChange(of: item.frequency) { _, newFrequency in
+            // Reset end repeat options when frequency changes to "Never"
+            if newFrequency == .never {
+                item.endRepeatOption = .never
+            }
         }
     }
     

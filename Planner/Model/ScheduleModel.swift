@@ -1,6 +1,18 @@
 import SwiftUI
 import Foundation
 
+// MARK: - End Repeat Options
+enum EndRepeatOption: String, CaseIterable, Identifiable, Codable {
+    case never = "Never"
+    case onDate = "On Date"
+    
+    var id: String { self.rawValue }
+    
+    var displayName: String {
+        return self.rawValue
+    }
+}
+
 // MARK: - Schedule Data Manager
 class ScheduleDataManager: ObservableObject {
     @Published var scheduleItems: [ScheduleItem] = []
@@ -146,14 +158,18 @@ struct ScheduleItem: Identifiable, Codable {
     var checklist: [ChecklistItem] = []
     var uniqueKey: String = "" // Added unique key for better identification
     
+    // New properties for end repeat functionality
+    var endRepeatOption: EndRepeatOption = .never
+    var endRepeatDate: Date = Date()
+    
     // Computed property for AttributedString compatibility
     var description: AttributedString {
         get { AttributedString(descriptionText) }
         set { descriptionText = String(newValue.characters) }
     }
     
-    // Initialize with uniqueKey
-    init(title: String, time: Date, icon: String, color: String, frequency: Frequency = .never, startTime: Date, endTime: Date, checklist: [ChecklistItem] = [], uniqueKey: String = "") {
+    // Initialize with uniqueKey and end repeat options
+    init(title: String, time: Date, icon: String, color: String, frequency: Frequency = .never, startTime: Date, endTime: Date, checklist: [ChecklistItem] = [], uniqueKey: String = "", endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Date()) {
         self.title = title
         self.time = time
         self.icon = icon
@@ -163,5 +179,31 @@ struct ScheduleItem: Identifiable, Codable {
         self.endTime = endTime
         self.checklist = checklist
         self.uniqueKey = uniqueKey
+        self.endRepeatOption = endRepeatOption
+        self.endRepeatDate = endRepeatDate
+    }
+    
+    // Helper method to check if this event should appear on a given date
+    func shouldAppear(on date: Date) -> Bool {
+        // If frequency is never, only show on the exact date
+        if frequency == .never {
+            return Calendar.current.isDate(startTime, inSameDayAs: date)
+        }
+        
+        // Check if the event should trigger based on frequency
+        let shouldTrigger = frequency.shouldTrigger(on: date, from: startTime)
+        
+        // If it shouldn't trigger based on frequency, don't show
+        if !shouldTrigger {
+            return false
+        }
+        
+        // Check end repeat conditions
+        if endRepeatOption == .onDate {
+            return date <= endRepeatDate
+        }
+        
+        // If endRepeatOption is .never, show indefinitely
+        return true
     }
 }
