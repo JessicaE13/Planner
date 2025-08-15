@@ -7,13 +7,59 @@
 
 import SwiftUI
 
-struct Routine: Identifiable {
+struct Routine: Identifiable, Codable {
     let id = UUID()
     var name: String
     var icon: String
     var items: [String]
     // Changed from Set<String> to [String: Set<String>] to track completion per date
     var completedItemsByDate: [String: Set<String>] = [:]
+    
+    // New frequency properties
+    var frequency: Frequency = .everyDay
+    var endRepeatOption: EndRepeatOption = .never
+    var endRepeatDate: Date = Date()
+    var startDate: Date = Date()
+    
+    // Custom initializer
+    init(name: String, icon: String, items: [String], frequency: Frequency = .everyDay, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Date(), startDate: Date = Date()) {
+        self.name = name
+        self.icon = icon
+        self.items = items
+        self.frequency = frequency
+        self.endRepeatOption = endRepeatOption
+        self.endRepeatDate = endRepeatDate
+        self.startDate = startDate
+    }
+    
+    // Custom Codable implementation
+    enum CodingKeys: String, CodingKey {
+        case id, name, icon, items, completedItemsByDate, frequency, endRepeatOption, endRepeatDate, startDate
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        icon = try container.decode(String.self, forKey: .icon)
+        items = try container.decode([String].self, forKey: .items)
+        completedItemsByDate = try container.decode([String: Set<String>].self, forKey: .completedItemsByDate)
+        frequency = try container.decodeIfPresent(Frequency.self, forKey: .frequency) ?? .everyDay
+        endRepeatOption = try container.decodeIfPresent(EndRepeatOption.self, forKey: .endRepeatOption) ?? .never
+        endRepeatDate = try container.decodeIfPresent(Date.self, forKey: .endRepeatDate) ?? Date()
+        startDate = try container.decodeIfPresent(Date.self, forKey: .startDate) ?? Date()
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(icon, forKey: .icon)
+        try container.encode(items, forKey: .items)
+        try container.encode(completedItemsByDate, forKey: .completedItemsByDate)
+        try container.encode(frequency, forKey: .frequency)
+        try container.encode(endRepeatOption, forKey: .endRepeatOption)
+        try container.encode(endRepeatDate, forKey: .endRepeatDate)
+        try container.encode(startDate, forKey: .startDate)
+    }
     
     // Helper method to get date key
     private func dateKey(for date: Date) -> String {
@@ -54,9 +100,33 @@ struct Routine: Identifiable {
         let completed = completedItems(for: date)
         return completed.contains(item)
     }
+    
+    // Check if routine should appear on a given date based on frequency
+    func shouldAppear(on date: Date) -> Bool {
+        // If frequency is never, only show on the exact date
+        if frequency == .never {
+            return Calendar.current.isDate(startDate, inSameDayAs: date)
+        }
+        
+        // Check if the routine should trigger based on frequency
+        let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate)
+        
+        // If it shouldn't trigger based on frequency, don't show
+        if !shouldTrigger {
+            return false
+        }
+        
+        // Check end repeat conditions
+        if endRepeatOption == .onDate {
+            return date <= endRepeatDate
+        }
+        
+        // If endRepeatOption is .never, show indefinitely
+        return true
+    }
 }
 
-// MARK: - Create Routine View
+// MARK: - Create Routine View with Frequency Support
 struct CreateRoutineView: View {
     @Binding var routines: [Routine]
     @Environment(\.dismiss) private var dismiss
@@ -64,6 +134,10 @@ struct CreateRoutineView: View {
     @State private var routineName = ""
     @State private var selectedIcon = "sunrise"
     @State private var routineItems: [String] = [""]
+    @State private var frequency: Frequency = .everyDay
+    @State private var endRepeatOption: EndRepeatOption = .never
+    @State private var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+    @State private var startDate: Date = Date()
     
     // Available icons for routines
     private let availableIcons = [
@@ -110,6 +184,50 @@ struct CreateRoutineView: View {
                             }
                         }
                         .padding(.vertical, 8)
+                    }
+                    
+                    Section(header: Text("Schedule")) {
+                        HStack {
+                            Text("Start Date")
+                            Spacer()
+                            DatePicker("", selection: $startDate, displayedComponents: .date)
+                                .labelsHidden()
+                        }
+                        
+                        HStack {
+                            Text("Repeat")
+                            Spacer()
+                            Picker("", selection: $frequency) {
+                                ForEach(Frequency.allCases) { freq in
+                                    Text(freq.displayName).tag(freq)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                        }
+                        
+                        // Show end repeat options when frequency is not "Never"
+                        if frequency != .never {
+                            HStack {
+                                Text("End Repeat")
+                                Spacer()
+                                Picker("", selection: $endRepeatOption) {
+                                    ForEach(EndRepeatOption.allCases) { option in
+                                        Text(option.displayName).tag(option)
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                            }
+                            
+                            // Show date picker when "On Date" is selected
+                            if endRepeatOption == .onDate {
+                                HStack {
+                                    Text("End Date")
+                                    Spacer()
+                                    DatePicker("", selection: $endRepeatDate, displayedComponents: .date)
+                                        .labelsHidden()
+                                }
+                            }
+                        }
                     }
                     
                     Section(header: Text("Routine Items")) {
@@ -160,6 +278,12 @@ struct CreateRoutineView: View {
                 }
             }
         }
+        .onChange(of: frequency) { _, newFrequency in
+            // Reset end repeat options when frequency changes to "Never"
+            if newFrequency == .never {
+                endRepeatOption = .never
+            }
+        }
     }
     
     private func saveRoutine() {
@@ -175,7 +299,10 @@ struct CreateRoutineView: View {
             name: trimmedName,
             icon: selectedIcon,
             items: filteredItems,
-            completedItemsByDate: [:]
+            frequency: frequency,
+            endRepeatOption: endRepeatOption,
+            endRepeatDate: endRepeatDate,
+            startDate: startDate
         )
         
         routines.append(newRoutine)
@@ -209,6 +336,16 @@ struct RoutineView: View {
         )
     }
     
+    // Filter routines that should appear on the selected date
+    private var visibleRoutines: [(routine: Routine, index: Int)] {
+        return routines.enumerated().compactMap { index, routine in
+            if routine.shouldAppear(on: selectedDate) {
+                return (routine: routine, index: index)
+            }
+            return nil
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
@@ -231,9 +368,9 @@ struct RoutineView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack (spacing: 16) {
-                    ForEach(routines.indices, id: \.self) { index in
+                    ForEach(visibleRoutines, id: \.routine.id) { routineData in
                         Button(action: {
-                            selectedRoutineIndex = index
+                            selectedRoutineIndex = routineData.index
                             showRoutineDetail = true
                         }) {
                             ZStack {
@@ -244,10 +381,19 @@ struct RoutineView: View {
                                     HStack(alignment: .bottom) {
                         
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text(routines[index].name)
-                                                .font(.system(size: 16, weight: .medium, design: .default))
-                                                .kerning(1)
-                                                .foregroundColor(.primary)
+                                            HStack(spacing: 4) {
+                                                Text(routineData.routine.name)
+                                                    .font(.system(size: 16, weight: .medium, design: .default))
+                                                    .kerning(1)
+                                                    .foregroundColor(.primary)
+                                                
+                                                // Add repeat icon if routine has frequency other than never
+//                                                if routineData.routine.frequency != .never {
+//                                                    Image(systemName: "repeat")
+//                                                        .foregroundColor(.gray.opacity(0.6))
+//                                                        .font(.caption)
+//                                                }
+                                            }
                                                
                                             Text("Routine")
                                                 .font(.system(size: 10, weight: .regular, design: .default))
@@ -258,7 +404,7 @@ struct RoutineView: View {
                                         }
                                         Spacer()
                                         
-                                        Image(systemName: routines[index].icon)
+                                        Image(systemName: routineData.routine.icon)
                                             .frame(width: 36, height: 36)
                                             .font(.largeTitle)
                                             .foregroundColor(Color(UIColor.lightGray).opacity(0.25))
@@ -267,11 +413,11 @@ struct RoutineView: View {
                                     .padding(.horizontal, 8)
                                     
                                     // Updated to use progress for specific date
-                                    ProgressView(value: routines[index].progress(for: selectedDate), total: 1.0)
+                                    ProgressView(value: routineData.routine.progress(for: selectedDate), total: 1.0)
                                         .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
                                         .scaleEffect(y: 1.5) // Makes the progress bar taller
                                         .padding(.top, 8)
-                                        .animation(.easeInOut(duration: 0.3), value: routines[index].progress(for: selectedDate))
+                                        .animation(.easeInOut(duration: 0.3), value: routineData.routine.progress(for: selectedDate))
                                 }
                                 .frame(width: 136)
                             }
@@ -320,9 +466,18 @@ struct RoutineDetailBottomSheetView: View {
                             .font(.system(size: 48))
                             .foregroundColor(.primary)
                         
-                        Text(routine.name + " Routine")
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                        HStack(spacing: 4) {
+                            Text(routine.name + " Routine")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            
+                            // Add repeat icon if routine has frequency other than never
+                            if routine.frequency != .never {
+                                Image(systemName: "repeat")
+                                    .foregroundColor(.gray.opacity(0.6))
+                                    .font(.title3)
+                            }
+                        }
                         
                         // Progress view with animation for selected date
                         ProgressView(value: routine.progress(for: selectedDate), total: 1.0)
