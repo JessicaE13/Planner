@@ -1,5 +1,5 @@
 //
-//  BrainDumpView.swift
+//  ToDoView.swift
 //  Planner
 //
 //  Created by Assistant on 8/15/25.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct BrainDumpItem: Identifiable, Codable {
+struct ToDoItem: Identifiable, Codable {
     let id: UUID
     var text: String
     var isCompleted: Bool
@@ -43,21 +43,21 @@ struct BrainDumpItem: Identifiable, Codable {
 }
 
 // MARK: - Brain Dump Data Manager
-class BrainDumpDataManager: ObservableObject {
-    @Published var items: [BrainDumpItem] = []
+class ToDoDataManager: ObservableObject {
+    @Published var items: [ToDoItem] = []
     
-    static let shared = BrainDumpDataManager()
+    static let shared = ToDoDataManager()
     
     private init() {
         loadItems()
     }
     
-    func addItem(_ item: BrainDumpItem) {
+    func addItem(_ item: ToDoItem) {
         items.append(item)
         saveItems()
     }
     
-    func updateItem(_ item: BrainDumpItem) {
+    func updateItem(_ item: ToDoItem) {
         if let index = items.firstIndex(where: { $0.id == item.id }) {
             items[index] = item
             saveItems()
@@ -85,20 +85,20 @@ class BrainDumpDataManager: ObservableObject {
         do {
             let encoder = JSONEncoder()
             let data = try encoder.encode(items)
-            UserDefaults.standard.set(data, forKey: "BrainDumpItems")
+            UserDefaults.standard.set(data, forKey: "ToDoItems")
         } catch {
             print("Failed to save brain dump items: \(error)")
         }
     }
     
     private func loadItems() {
-        guard let data = UserDefaults.standard.data(forKey: "BrainDumpItems") else {
+        guard let data = UserDefaults.standard.data(forKey: "ToDoItems") else {
             return
         }
         
         do {
             let decoder = JSONDecoder()
-            items = try decoder.decode([BrainDumpItem].self, from: data)
+            items = try decoder.decode([ToDoItem].self, from: data)
         } catch {
             print("Failed to load brain dump items: \(error)")
             items = []
@@ -106,8 +106,8 @@ class BrainDumpDataManager: ObservableObject {
     }
 }
 
-struct BrainDumpView: View {
-    @StateObject private var dataManager = BrainDumpDataManager.shared
+struct ToDoView: View {
+    @StateObject private var dataManager = ToDoDataManager.shared
     @State private var newItemText = ""
     @State private var isAddingItem = false
     @FocusState private var isTextFieldFocused: Bool
@@ -222,7 +222,7 @@ struct BrainDumpView: View {
                     ScrollView {
                         LazyVStack(spacing: 8) {
                             ForEach(dataManager.items.indices, id: \.self) { index in
-                                BrainDumpItemRow(
+                                ToDoItemRow(
                                     item: dataManager.items[index],
                                     onToggle: {
                                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -270,7 +270,7 @@ struct BrainDumpView: View {
         let trimmedText = newItemText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         
-        let newItem = BrainDumpItem(text: trimmedText)
+        let newItem = ToDoItem(text: trimmedText)
         withAnimation(.easeInOut(duration: 0.3)) {
             dataManager.addItem(newItem)
         }
@@ -279,8 +279,8 @@ struct BrainDumpView: View {
     }
 }
 
-struct BrainDumpItemRow: View {
-    let item: BrainDumpItem
+struct ToDoItemRow: View {
+    let item: ToDoItem
     let onToggle: () -> Void
     let onUpdate: (String) -> Void
     let onDelete: () -> Void
@@ -388,5 +388,5 @@ struct BrainDumpItemRow: View {
 }
 
 #Preview {
-    BrainDumpView()
+    ToDoView()
 }

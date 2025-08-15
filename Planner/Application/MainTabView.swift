@@ -15,16 +15,16 @@ struct MainTabView: View {
             // Main Planner View
             ContentView()
                 .tabItem {
-                    Image(systemName: "calendar")
-                    Text("Planner")
+                    Image(systemName: "text.rectangle.page")
+                    Text("Today")
                 }
                 .tag(0)
             
-            // Brain Dump View
-            BrainDumpView()
+            // To Do View
+            ToDoView()
                 .tabItem {
-                    Image(systemName: "brain.head.profile")
-                    Text("Brain Dump")
+                    Image(systemName: "checklist.unchecked")
+                    Text("To Do")
                 }
                 .tag(1)
             
