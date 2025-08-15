@@ -304,7 +304,6 @@ struct ScheduleRowView: View {
 }
 
 // MARK: - Enhanced Schedule Detail View with Full Row Tap
-
 struct ScheduleDetailView: View {
     @State private var item: ScheduleItem
     let onEdit: (ScheduleItem) -> Void
@@ -336,58 +335,111 @@ struct ScheduleDetailView: View {
                
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Event Icon and Color
-                        HStack {
-                       
+                        // Event Icon and Header Section
+                        HStack(alignment: .center, spacing: 16) {
+                            // Icon
                             ZStack {
                                 RoundedRectangle(cornerRadius: 24)
                                     .fill(Color(item.color))
-                                    .frame(width: 80, height: 120)
+                                    .frame(width: 56, height: 80)
                                 Image(systemName: item.icon)
                                     .font(.title)
                                     .foregroundColor(.white)
                             }
+                            .padding(.leading)
                             
-                            VStack {
-                                // Event Title
+                            // Title and Location Section
+                            VStack(alignment: .leading, spacing: 12) {
+                                
+                                // Time and Date Information
+                                VStack(spacing: 16) {
+                                    // All-day or time-specific
+                                    
+                                    HStack{
+                                        HStack {
+                                            Image(systemName: "clock")
+                                                .foregroundColor(.gray)
+                                      
+                                            
+                                            if item.allDay {
+                                                Text("All Day")
+                                                    .foregroundColor(.gray)
+                                                    .font(.caption)
+                                            } else {
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text("\(timeFormatter.string(from: item.startTime)) - \(timeFormatter.string(from: item.endTime))")
+                                                        .font(.caption)
+                                                        .foregroundColor(.gray)
+                                                    if !Calendar.current.isDate(item.startTime, inSameDayAs: item.endTime) {
+                                                        Text("\(dateFormatter.string(from: item.startTime)) - \(dateFormatter.string(from: item.endTime))")
+                                                            .font(.caption)
+                                                            .foregroundColor(.secondary)
+                                                            .foregroundColor(.gray)
+                                                    }
+                                                }
+                                            }
+                                            
+                                            Spacer()
+                                        }
+                                        
+                                        // Frequency/Repeat Information
+                                        if item.frequency != .never {
+                                            HStack {
+                                                Image(systemName: "repeat")
+                                                    .foregroundColor(.green)
+                                                    .frame(width: 20)
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(item.frequency.displayName)
+                                                        .font(.caption)
+                                                    
+                                                    // Show end repeat information
+                                                    if item.endRepeatOption == .onDate {
+                                                        Text("Ends on \(dateFormatter.string(from: item.endRepeatDate))")
+                                                            .font(.caption)
+                                                            .foregroundColor(.secondary)
+                                                    } else {
+                                                        Text("Never ends")
+                                                            .font(.caption)
+                                                            .foregroundColor(.secondary)
+                                                    }
+                                                }
+                                                Spacer()
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                                
+                                // Event Title - Left Aligned
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(item.title)
                                         .font(.title2)
                                         .fontWeight(.semibold)
-                                        .multilineTextAlignment(.center)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     
                                     if !item.category.isEmpty {
                                         Text(item.category)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                             .padding(.horizontal, 12)
-                                            .padding(.vertical, 4)
                                             .background(Color.gray.opacity(0.2))
                                             .cornerRadius(8)
                                     }
-                                    
-                                    
                                 }
                                 
-                                
-                                // UPDATED: Clickable Location
+                                // Location - Clickable and Left Aligned
                                 if !item.location.isEmpty {
                                     Button(action: {
                                         showingMapOptions = true
                                     }) {
                                         HStack(alignment: .top) {
-                                            //                                        Image(systemName: "location")
-                                            //                                            .foregroundColor(.red)
-                                            //                                            .frame(width: 20)
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text(item.location)
                                                     .font(.body)
                                                     .multilineTextAlignment(.leading)
                                                     .foregroundColor(.blue)
-                                                
-                                                //                                            Text("Tap to navigate")
-                                                //                                                .font(.caption)
-                                                //                                                .foregroundColor(.blue)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
                                             }
                                             Spacer()
                                             Image(systemName: "chevron.right")
@@ -399,65 +451,10 @@ struct ScheduleDetailView: View {
                                     .buttonStyle(PlainButtonStyle())
                                 }
                             }
-                            
                         }
                         .padding(.top)
                         
-        
-                        
-                        // Time and Date Information
-                        VStack(spacing: 16) {
-                            // All-day or time-specific
-                            HStack {
-                                Image(systemName: "clock")
-                                    .foregroundColor(.blue)
-                                    .frame(width: 20)
-                                
-                                if item.allDay {
-                                    Text("All Day")
-                                        .font(.body)
-                                } else {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("\(timeFormatter.string(from: item.startTime)) - \(timeFormatter.string(from: item.endTime))")
-                                            .font(.body)
-                                        if !Calendar.current.isDate(item.startTime, inSameDayAs: item.endTime) {
-                                            Text("\(dateFormatter.string(from: item.startTime)) - \(dateFormatter.string(from: item.endTime))")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                }
-                                
-                                Spacer()
-                            }
-                            
-                            // Frequency/Repeat Information
-                            if item.frequency != .never {
-                                HStack {
-                                    Image(systemName: "repeat")
-                                        .foregroundColor(.green)
-                                        .frame(width: 20)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(item.frequency.displayName)
-                                            .font(.body)
-                                        
-                                        // Show end repeat information
-                                        if item.endRepeatOption == .onDate {
-                                            Text("Ends on \(dateFormatter.string(from: item.endRepeatDate))")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        } else {
-                                            Text("Never ends")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                    Spacer()
-                                }
-                            }
-    
-                        }
-                        .padding(.horizontal)
+                     
                         
                         // Description
                         if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
