@@ -127,10 +127,10 @@ struct ToDoView: View {
                 // Header
                 HStack {
                     VStack(alignment: .leading) {
-                        Text("Brain Dump")
+                        Text("To Do")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                        Text("Capture all your thoughts and to-dos")
+                        Text("Move your items to the todo list")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
