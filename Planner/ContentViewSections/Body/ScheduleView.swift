@@ -58,13 +58,27 @@ struct ScheduleView: View {
                             .frame(width: 50, height: 75)
                         Image(systemName: getScheduleIcon(for: selectedDate))
                     }
-                    Text(formatTime(getScheduleStartTime(for: selectedDate)))
+                    
+                    // Get or create the schedule item and display its actual start time
+                    let scheduleItem = dataManager.getOrCreateItem(
+                        uniqueKey: "daily-routine",
+                        title: getScheduleTitle(for: selectedDate),
+                        time: getScheduleTimeAsDate(for: selectedDate),
+                        icon: getScheduleIcon(for: selectedDate),
+                        color: "Color1",
+                        frequency: .everyDay,
+                        startTime: getScheduleStartTime(for: selectedDate)
+                    )
+                    
+                    Text(formatTime(scheduleItem.startTime))
                         .font(.body)
                         .foregroundColor(Color.gray)
-                    Text(getScheduleTitle(for: selectedDate))
+                    Text(scheduleItem.title)
                         .font(.body)
-                    Image(systemName: "repeat")
-                        .foregroundColor(Color.gray.opacity(0.6))
+                    if scheduleItem.frequency != .never {
+                        Image(systemName: "repeat")
+                            .foregroundColor(Color.gray.opacity(0.6))
+                    }
                     Spacer()
                 }
                 .contentShape(Rectangle())
@@ -75,7 +89,7 @@ struct ScheduleView: View {
                         time: getScheduleTimeAsDate(for: selectedDate),
                         icon: getScheduleIcon(for: selectedDate),
                         color: "Color1",
-                        isRepeating: true,
+                        frequency: .everyDay,  // ← Add this line
                         startTime: getScheduleStartTime(for: selectedDate)
                     )
                     sheetContent = .detail(item)
@@ -88,10 +102,22 @@ struct ScheduleView: View {
                             .frame(width: 50, height: 75)
                         Image(systemName: "figure.walk")
                     }
-                    Text(formatTime(getFixedTime(hour: 12, minute: 0)))
+                    
+                    // Get or create the morning walk item and display its actual start time
+                    let morningWalkItem = dataManager.getOrCreateItem(
+                        uniqueKey: "morning-walk",
+                        title: "Morning Walk",
+                        time: getFixedTime(hour: 12, minute: 0),
+                        icon: "figure.walk",
+                        color: "Color2",
+                        frequency: .never,
+                        startTime: getFixedTime(hour: 12, minute: 0)
+                    )
+                    
+                    Text(formatTime(morningWalkItem.startTime))
                         .font(.body)
                         .foregroundColor(Color.gray)
-                    Text("Morning Walk")
+                    Text(morningWalkItem.title)
                         .font(.body)
                     Spacer()
                 }
@@ -103,7 +129,7 @@ struct ScheduleView: View {
                         time: getFixedTime(hour: 12, minute: 0),
                         icon: "figure.walk",
                         color: "Color2",
-                        isRepeating: false,
+                        frequency: .never,
                         startTime: getFixedTime(hour: 12, minute: 0)
                     )
                     sheetContent = .detail(item)
@@ -116,13 +142,27 @@ struct ScheduleView: View {
                             .frame(width: 50, height: 75)
                         Image(systemName: "person.3.fill")
                     }
-                    Text(formatTime(getFixedTime(hour: 12, minute: 0)))
+                    
+                    // Get or create the team meeting item and display its actual start time
+                    let teamMeetingItem = dataManager.getOrCreateItem(
+                        uniqueKey: "team-meeting",
+                        title: "Team Meeting",
+                        time: getFixedTime(hour: 12, minute: 0),
+                        icon: "person.3.fill",
+                        color: "Color3",
+                        frequency: .everyWeek,
+                        startTime: getFixedTime(hour: 12, minute: 0)
+                    )
+                    
+                    Text(formatTime(teamMeetingItem.startTime))
                         .font(.body)
                         .foregroundColor(Color.gray)
-                    Text("Team Meeting")
+                    Text(teamMeetingItem.title)
                         .font(.body)
-                    Image(systemName: "repeat")
-                        .foregroundColor(Color.gray.opacity(0.6))
+                    if teamMeetingItem.frequency != .never {
+                        Image(systemName: "repeat")
+                            .foregroundColor(Color.gray.opacity(0.6))
+                    }
                     Spacer()
                 }
                 .contentShape(Rectangle())
@@ -133,7 +173,7 @@ struct ScheduleView: View {
                         time: getFixedTime(hour: 12, minute: 0),
                         icon: "person.3.fill",
                         color: "Color3",
-                        isRepeating: true,
+                        frequency: .everyWeek,
                         startTime: getFixedTime(hour: 12, minute: 0)
                     )
                     sheetContent = .detail(item)

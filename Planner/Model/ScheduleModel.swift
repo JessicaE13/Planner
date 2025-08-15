@@ -32,13 +32,12 @@ class ScheduleDataManager: ObservableObject {
         time: Date,
         icon: String,
         color: String,
-        isRepeating: Bool,
+        frequency: Frequency,
         startTime: Date
     ) -> ScheduleItem {
-        // Check if we already have this item by unique key
+        // Check if we already have this item by unique key (using a more specific match)
         if let existingItem = scheduleItems.first(where: { item in
-            // Create a unique identifier based on the key
-            return item.title == title && item.icon == icon && item.color == color
+            return item.uniqueKey == uniqueKey
         }) {
             return existingItem
         }
@@ -50,10 +49,11 @@ class ScheduleDataManager: ObservableObject {
             time: time,
             icon: icon,
             color: color,
-            isRepeating: isRepeating,
+            frequency: frequency,
             startTime: startTime,
             endTime: Calendar.current.date(byAdding: .hour, value: 1, to: startTime) ?? startTime,
-            checklist: defaultChecklist
+            checklist: defaultChecklist,
+            uniqueKey: uniqueKey
         )
         
         scheduleItems.append(newItem)
@@ -134,7 +134,6 @@ struct ScheduleItem: Identifiable, Codable {
     var time: Date
     var icon: String
     var color: String
-    var isRepeating: Bool
     var frequency: Frequency = .never
     var descriptionText: String = "" // Changed from AttributedString for Codable
     var location: String = ""
@@ -145,10 +144,24 @@ struct ScheduleItem: Identifiable, Codable {
     var startTime: Date = Date()
     var endTime: Date = Date()
     var checklist: [ChecklistItem] = []
+    var uniqueKey: String = "" // Added unique key for better identification
     
     // Computed property for AttributedString compatibility
     var description: AttributedString {
         get { AttributedString(descriptionText) }
         set { descriptionText = String(newValue.characters) }
+    }
+    
+    // Initialize with uniqueKey
+    init(title: String, time: Date, icon: String, color: String, frequency: Frequency = .never, startTime: Date, endTime: Date, checklist: [ChecklistItem] = [], uniqueKey: String = "") {
+        self.title = title
+        self.time = time
+        self.icon = icon
+        self.color = color
+        self.frequency = frequency
+        self.startTime = startTime
+        self.endTime = endTime
+        self.checklist = checklist
+        self.uniqueKey = uniqueKey
     }
 }
