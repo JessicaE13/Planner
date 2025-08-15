@@ -303,7 +303,7 @@ struct ScheduleRowView: View {
     }
 }
 
-// MARK: - Enhanced Schedule Detail View with Full Row Tap
+// MARK: - Enhanced Schedule Detail View with Repeat Icon
 struct ScheduleDetailView: View {
     @State private var item: ScheduleItem
     let onEdit: (ScheduleItem) -> Void
@@ -350,20 +350,6 @@ struct ScheduleDetailView: View {
                             
                             // Title and Location Section
                             VStack(alignment: .leading, spacing: 8) {
-                                // Single row time information (NEW FORMAT)
-                                HStack(spacing: 4) {
-                                    Image(systemName: "clock")
-                                        .foregroundColor(.gray)
-                                        .font(.caption)
-                                    
-                                    Text(createTimeString())
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                        .multilineTextAlignment(.leading)
-                                    
-                                    Spacer()
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
                                 
                                 // Event Title - Left Aligned
                                 VStack(alignment: .leading, spacing: 8) {
@@ -383,6 +369,22 @@ struct ScheduleDetailView: View {
                                     }
                                 }
                                 
+                                
+                                // Updated time information with repeat icon
+                                HStack(spacing: 4) {
+                                    Image(systemName: "clock")
+                                        .foregroundColor(.gray)
+                                        .font(.caption)
+                                    
+                                    // Create the time string with repeat icon using HStack
+                                    createTimeView()
+                                    
+                                    Spacer()
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                
+            
+                                
                                 // Location - Clickable and Left Aligned
                                 if !item.location.isEmpty {
                                     Button(action: {
@@ -391,15 +393,13 @@ struct ScheduleDetailView: View {
                                         HStack(alignment: .top) {
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text(item.location)
-                                                    .font(.body)
+                                                    .font(.caption)
                                                     .multilineTextAlignment(.leading)
                                                     .foregroundColor(.blue)
                                                     .frame(maxWidth: .infinity, alignment: .leading)
                                             }
                                             Spacer()
-                                            Image(systemName: "chevron.right")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
+                                   
                                         }
                                         .contentShape(Rectangle())
                                     }
@@ -435,21 +435,7 @@ struct ScheduleDetailView: View {
                         // Checklist - Full row tap functionality
                         if !item.checklist.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Image(systemName: "checklist")
-                                        .foregroundColor(.orange)
-                                        .frame(width: 20)
-                                    Text("Checklist")
-                                        .font(.headline)
-                                    Spacer()
-                                    Text("\(item.checklist.filter(\.isCompleted).count)/\(item.checklist.count)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.gray.opacity(0.2))
-                                        .cornerRadius(6)
-                                }
+                  
                                 
                                 VStack(spacing: 8) {
                                     ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
@@ -530,26 +516,39 @@ struct ScheduleDetailView: View {
         }
     }
     
-    // MARK: - Time String Creation Helper
-    private func createTimeString() -> String {
-        var timeString = ""
-
-        if item.allDay {
-            timeString += "All Day"
-        } else {
-            timeString += "\(timeFormatter.string(from: item.startTime)) - \(timeFormatter.string(from: item.endTime))"
-        }
-        
-        if item.frequency != .never {
-            timeString += "  \(item.frequency.displayName.lowercased())"
+    // MARK: - Updated Time View Creation Helper with Repeat Icon
+    private func createTimeView() -> some View {
+        HStack(spacing: 4) {
+            // Time part
+            if item.allDay {
+                Text("All Day")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            } else {
+                Text("\(timeFormatter.string(from: item.startTime)) - \(timeFormatter.string(from: item.endTime))")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
             
-            if item.endRepeatOption == .onDate {
-                let endDateString = dateFormatter.string(from: item.endRepeatDate)
-                timeString += " through \(endDateString)"
+            // Add repeat icon and frequency if not "never"
+            if item.frequency != .never {
+                Image(systemName: "repeat")
+                    .foregroundColor(.gray.opacity(0.6))
+                    .font(.caption)
+                    .padding(.leading, 2)
+//
+//                Text(item.frequency.displayName.lowercased())
+//                    .font(.caption)
+//                    .foregroundColor(.gray)
+//                
+//                // Add end date info if applicable
+//                if item.endRepeatOption == .onDate {
+//                    Text("through \(dateFormatter.string(from: item.endRepeatDate))")
+//                        .font(.caption)
+//                        .foregroundColor(.gray)
+//                }
             }
         }
-        
-        return timeString
     }
     
     // MARK: - Navigation Helper Methods
@@ -565,19 +564,18 @@ struct ScheduleDetailView: View {
     private func openInGoogleMaps() {
         let encodedLocation = item.location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         
-        // Try to open Google Maps app first
+
         if let googleMapsURL = URL(string: "comgooglemaps://?q=\(encodedLocation)"),
            UIApplication.shared.canOpenURL(googleMapsURL) {
             UIApplication.shared.open(googleMapsURL)
         } else {
-            // Fall back to Google Maps web version
+      
             if let webURL = URL(string: "https://www.google.com/maps/search/?api=1&query=\(encodedLocation)") {
                 UIApplication.shared.open(webURL)
             }
         }
     }
 }
-
 // MARK: - Schedule Edit View with End Repeat Functionality
 
 struct ScheduleEditView: View {
