@@ -16,6 +16,7 @@ struct HeaderView: View {
         formatter.dateFormat = "d"
         return formatter
     }()
+    
     private var weekDates: [Date] {
         let today = Date()
         let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
@@ -24,11 +25,13 @@ struct HeaderView: View {
             calendar.date(byAdding: .day, value: dayOffset, to: offsetWeekStart)
         }
     }
+    
     private func isSelected(_ date: Date) -> Bool {
         calendar.isDate(date, inSameDayAs: selectedDate)
     }
+    
     var body: some View {
-        VStack {
+        VStack(spacing: 20) {
             HStack {
                 Image(systemName: "person.circle.fill")
                 Text("Hello, Jessica")
@@ -44,8 +47,6 @@ struct HeaderView: View {
                 }
                 .padding(.trailing, 8)
                 
- 
-                
                 // Next week button
                 Button {
                     withAnimation(.easeInOut(duration: 0.3)) {
@@ -54,7 +55,7 @@ struct HeaderView: View {
                 } label: {
                     Image(systemName: "chevron.right")
                 }
-
+                
                 Button("Today") {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         currentWeekOffset = 0
@@ -76,19 +77,22 @@ struct HeaderView: View {
             
             HStack {
                 ForEach(weekDates, id: \.self) { date in
-                    VStack {
+                    VStack(spacing: 4) {
+                        // Weekday name - always in primary color (never highlighted)
                         Text(dateFormatter.string(from: date))
-                            .font(.caption)
-                            .foregroundColor(isSelected(date) ? Color.white : .primary)
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        
+                        // Date number - highlighted when selected
                         Text(dayFormatter.string(from: date))
-                            .font(.headline)
+                            .font(.title2)
+                            .fontWeight(.medium)
                             .foregroundColor(isSelected(date) ? Color.white : .primary)
-                            
+                            .frame(width: 40, height: 40)
+                            .background(isSelected(date) ? Color("AccentColor") : Color.clear)
+                            .clipShape(Circle())
                     }
-                    .frame(width: 28, height: 48)
-                    .padding(8)
-                    .background(isSelected(date) ? Color("AccentColor") : Color.clear)
-                    .cornerRadius(16)
+                    .frame(maxWidth: .infinity)
                     .onTapGesture {
                         selectedDate = date
                     }
@@ -99,10 +103,8 @@ struct HeaderView: View {
                     .onEnded { value in
                         withAnimation(.easeInOut(duration: 0.3)) {
                             if value.translation.width > 20 {
-                                // Swipe right - go to previous week
                                 currentWeekOffset -= 1
                             } else if value.translation.width < -20 {
-                                // Swipe left - go to next week
                                 currentWeekOffset += 1
                             }
                         }
