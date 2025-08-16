@@ -42,7 +42,7 @@ struct ToDoItem: Identifiable, Codable {
     }
 }
 
-// MARK: - Brain Dump Data Manager
+// MARK: - To Do Data Manager
 class ToDoDataManager: ObservableObject {
     @Published var items: [ToDoItem] = []
     
@@ -87,7 +87,7 @@ class ToDoDataManager: ObservableObject {
             let data = try encoder.encode(items)
             UserDefaults.standard.set(data, forKey: "ToDoItems")
         } catch {
-            print("Failed to save brain dump items: \(error)")
+            print("Failed to save to-do items: \(error)")
         }
     }
     
@@ -100,7 +100,7 @@ class ToDoDataManager: ObservableObject {
             let decoder = JSONDecoder()
             items = try decoder.decode([ToDoItem].self, from: data)
         } catch {
-            print("Failed to load brain dump items: \(error)")
+            print("Failed to load to-do items: \(error)")
             items = []
         }
     }
@@ -109,7 +109,6 @@ class ToDoDataManager: ObservableObject {
 struct ToDoView: View {
     @StateObject private var dataManager = ToDoDataManager.shared
     @State private var newItemText = ""
-    @State private var isAddingItem = false
     @FocusState private var isTextFieldFocused: Bool
     
     private let dateFormatter: DateFormatter = {
@@ -199,80 +198,44 @@ struct ToDoView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 140) // Extra padding for bottom input area
+                        .padding(.bottom, 100) // Extra padding for floating input
                     }
                 }
                 
-                // Bottom input section - always at bottom
-                VStack(spacing: 12) {
-                    // Quick add buttons for common items
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(quickAddSuggestions, id: \.self) { suggestion in
-                                Button(suggestion) {
-                                    newItemText = suggestion
-                                    addNewItem()
-                                }
-                                .font(.caption)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.blue.opacity(0.1))
-                                .foregroundColor(.blue)
-                                .cornerRadius(16)
-                            }
+                Spacer()
+            }
+            
+            // Floating input section at bottom
+            VStack {
+                Spacer()
+                
+                HStack {
+                    TextField("What's on your mind?", text: $newItemText, axis: .vertical)
+                        .focused($isTextFieldFocused)
+                        .lineLimit(1...5)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                        .onSubmit {
+                            addNewItem()
                         }
-                        .padding(.horizontal)
-                    }
                     
-                    // Main input field
-                    HStack {
-                        TextField("What's on your mind?", text: $newItemText, axis: .vertical)
-                            .focused($isTextFieldFocused)
-                            .lineLimit(1...5)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(Color.white)
-                            .cornerRadius(12)
-                            .onSubmit {
-                                addNewItem()
-                            }
-                        
-                        Button(action: addNewItem) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : .blue)
-                        }
-                        .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button(action: addNewItem) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : .blue)
                     }
-                    .padding(.horizontal)
+                    .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                .padding(.vertical)
-                .background(
-                    // Background for bottom input area
-                    Rectangle()
-                        .fill(Color("Background").opacity(0.95))
-                        .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: -2)
-                        .ignoresSafeArea(.container, edges: .bottom)
-                )
+                .padding(.horizontal)
+                .padding(.bottom)
             }
         }
         .onTapGesture {
             isTextFieldFocused = false
         }
-    }
-    
-    private var quickAddSuggestions: [String] {
-        [
-            "Call...",
-            "Buy...",
-            "Remember to...",
-            "Check...",
-            "Schedule...",
-            "Research...",
-            "Email...",
-            "Fix...",
-            "Plan..."
-        ]
     }
     
     private func addNewItem() {
