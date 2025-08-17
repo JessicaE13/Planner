@@ -17,7 +17,7 @@ struct CustomFrequencyPickerView: View {
         NavigationView {
             Form {
                 // Frequency Type Picker
-                Section(header: Text("Frequency Type")) {
+                Section {
                     HStack {
                         Text("Repeats")
                         
@@ -30,10 +30,8 @@ struct CustomFrequencyPickerView: View {
                         }
                         .pickerStyle(MenuPickerStyle())
                     }
-                }
-                
-                // Interval Section
-                Section(header: Text("Interval")) {
+             
+    
                     HStack {
                         Text("Every")
                         
@@ -47,6 +45,7 @@ struct CustomFrequencyPickerView: View {
                         Text(intervalLabel)
                     }
                 }
+                    
                 
                 // Type-specific selections
                 switch customConfig.type {
@@ -64,7 +63,7 @@ struct CustomFrequencyPickerView: View {
                 }
                 
                 // End Repeat Section
-                Section(header: Text("End Repeat")) {
+                Section{
                     HStack {
                         Text("End Repeat")
                         Spacer()
@@ -88,7 +87,7 @@ struct CustomFrequencyPickerView: View {
                 }
                 
                 // Preview Section
-                Section(header: Text("Preview")) {
+                Section {
                     Text("Repeats \(customConfig.displayDescription().lowercased())")
                         .foregroundColor(.secondary)
                 }

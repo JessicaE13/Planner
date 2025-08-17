@@ -804,22 +804,6 @@ struct ScheduleEditView: View {
                             }
                         }
                         
-                        // Custom frequency configuration button
-                        if item.frequency == .custom {
-                            Button(action: {
-                                showingCustomFrequencyPicker = true
-                            }) {
-                                HStack {
-                                    Text("Configure Custom Frequency")
-                                        .foregroundColor(.blue)
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.secondary)
-                                        .font(.caption)
-                                }
-                            }
-                        }
-                        
                         // Show end repeat options when frequency is not "Never"
                         if item.frequency != .never {
                             HStack {
