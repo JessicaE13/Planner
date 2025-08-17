@@ -338,6 +338,9 @@ struct ScheduleRowView: View {
 }
 
 // MARK: - Enhanced Schedule Detail View with Repeat Icon
+// Updated ScheduleDetailView with Category Display
+// This replaces the existing ScheduleDetailView in ScheduleView.swift
+
 struct ScheduleDetailView: View {
     @State private var item: ScheduleItem
     let selectedDate: Date
@@ -384,7 +387,7 @@ struct ScheduleDetailView: View {
                             }
                             .padding(.leading)
                             
-                            // Title and Location Section
+                            // Title and Details Section
                             VStack(alignment: .leading, spacing: 8) {
                                 
                                 // Event Title - Left Aligned
@@ -395,16 +398,22 @@ struct ScheduleDetailView: View {
                                         .multilineTextAlignment(.leading)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                     
-                                    if !item.category.isEmpty {
-                                        Text(item.category)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                            .padding(.horizontal, 12)
-                                            .background(Color.gray.opacity(0.2))
-                                            .cornerRadius(8)
+                                    // Category display
+                                    if let category = item.category {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: category.icon)
+                                                .foregroundColor(Color(category.color))
+                                                .font(.caption)
+                                            Text(category.name)
+                                                .font(.caption)
+                                                .foregroundColor(Color(category.color))
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color(category.color).opacity(0.1))
+                                        .cornerRadius(8)
                                     }
                                 }
-                                
                                 
                                 // Updated time information with repeat icon
                                 HStack(spacing: 4) {
@@ -418,8 +427,6 @@ struct ScheduleDetailView: View {
                                     Spacer()
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                
-            
                                 
                                 // Location - Clickable and Left Aligned
                                 if !item.location.isEmpty {
@@ -445,8 +452,6 @@ struct ScheduleDetailView: View {
                         }
                         .padding(.top)
                         
-                     
-                        
                         // Description
                         if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
@@ -471,7 +476,6 @@ struct ScheduleDetailView: View {
                         // Checklist - Full row tap functionality
                         if !item.checklist.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                  
                                 
                                 VStack(spacing: 8) {
                                     ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
@@ -604,6 +608,9 @@ struct ScheduleDetailView: View {
 
 // MARK: - Schedule Edit View with Delete Functionality
 
+// Updated ScheduleEditView with Category Support
+// This replaces the existing ScheduleEditView in ScheduleView.swift
+
 struct ScheduleEditView: View {
     @State private var item: ScheduleItem
     let selectedDate: Date
@@ -627,6 +634,9 @@ struct ScheduleEditView: View {
     @State private var newChecklistItem: String = ""
     @FocusState private var checklistInputFocused: Bool
     
+    // Category management
+    @State private var selectedCategory: Category?
+    
     init(item: ScheduleItem, selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void, onDelete: ((DeleteOption) -> Void)?) {
         self._item = State(initialValue: item)
         self.selectedDate = selectedDate
@@ -634,6 +644,7 @@ struct ScheduleEditView: View {
         self.onDelete = onDelete
         self._descriptionText = State(initialValue: item.descriptionText)
         self._checklistItems = State(initialValue: item.checklist)
+        self._selectedCategory = State(initialValue: item.category)
     }
     
     private func performLocationSearch() {
@@ -707,6 +718,11 @@ struct ScheduleEditView: View {
                                 }
                             }
                         }
+                    }
+                    
+                    // Category Section
+                    Section(header: Text("Category")) {
+                        CategoryPickerView(selectedCategory: $selectedCategory)
                     }
                     
                     Section {
@@ -873,6 +889,7 @@ struct ScheduleEditView: View {
                     Button("Save") {
                         item.descriptionText = descriptionText
                         item.checklist = checklistItems
+                        item.category = selectedCategory
                         onSave(item)
                         dismiss()
                     }
@@ -888,6 +905,7 @@ struct ScheduleEditView: View {
             performLocationSearch()
             descriptionText = item.descriptionText
             checklistItems = item.checklist
+            selectedCategory = item.category
         }
         .onDisappear {
             locationSearchTask?.cancel()

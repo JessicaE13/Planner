@@ -146,7 +146,7 @@ class ScheduleDataManager: ObservableObject {
 // MARK: - Updated Models for Codable Support
 
 struct ChecklistItem: Identifiable, Hashable, Codable {
-    let id: UUID // Back to let - immutable as it should be
+    let id: UUID
     var text: String
     var isCompleted: Bool = false
     
@@ -178,7 +178,7 @@ struct ChecklistItem: Identifiable, Hashable, Codable {
 }
 
 struct ScheduleItem: Identifiable, Codable {
-    let id: UUID // Back to let - immutable as it should be
+    let id: UUID
     var title: String
     var time: Date
     var icon: String
@@ -187,13 +187,15 @@ struct ScheduleItem: Identifiable, Codable {
     var descriptionText: String = ""
     var location: String = ""
     var allDay: Bool = false
-    var category: String = ""
     var type: String = "Schedule"
     var isCompleted: Bool = false
     var startTime: Date = Date()
     var endTime: Date = Date()
     var checklist: [ChecklistItem] = []
     var uniqueKey: String = ""
+    
+    // Updated to use Category instead of string
+    var category: Category?
     
     // New properties for end repeat functionality
     var endRepeatOption: EndRepeatOption = .never
@@ -208,8 +210,8 @@ struct ScheduleItem: Identifiable, Codable {
         set { descriptionText = String(newValue.characters) }
     }
     
-    // Initialize with uniqueKey and end repeat options
-    init(title: String, time: Date, icon: String, color: String, frequency: Frequency = .never, startTime: Date, endTime: Date, checklist: [ChecklistItem] = [], uniqueKey: String = "", endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Date()) {
+    // Initialize with category and end repeat options
+    init(title: String, time: Date, icon: String, color: String, frequency: Frequency = .never, startTime: Date, endTime: Date, checklist: [ChecklistItem] = [], uniqueKey: String = "", category: Category? = nil, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Date()) {
         self.id = UUID()
         self.title = title
         self.time = time
@@ -220,13 +222,14 @@ struct ScheduleItem: Identifiable, Codable {
         self.endTime = endTime
         self.checklist = checklist
         self.uniqueKey = uniqueKey
+        self.category = category
         self.endRepeatOption = endRepeatOption
         self.endRepeatDate = endRepeatDate
     }
     
     // Custom Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, title, time, icon, color, frequency, descriptionText, location, allDay, category, type, isCompleted, startTime, endTime, checklist, uniqueKey, endRepeatOption, endRepeatDate, excludedDates
+        case id, title, time, icon, color, frequency, descriptionText, location, allDay, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates
     }
     
     init(from decoder: Decoder) throws {
@@ -240,13 +243,13 @@ struct ScheduleItem: Identifiable, Codable {
         descriptionText = try container.decode(String.self, forKey: .descriptionText)
         location = try container.decode(String.self, forKey: .location)
         allDay = try container.decode(Bool.self, forKey: .allDay)
-        category = try container.decode(String.self, forKey: .category)
         type = try container.decode(String.self, forKey: .type)
         isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
         startTime = try container.decode(Date.self, forKey: .startTime)
         endTime = try container.decode(Date.self, forKey: .endTime)
         checklist = try container.decode([ChecklistItem].self, forKey: .checklist)
         uniqueKey = try container.decode(String.self, forKey: .uniqueKey)
+        category = try container.decodeIfPresent(Category.self, forKey: .category)
         endRepeatOption = try container.decode(EndRepeatOption.self, forKey: .endRepeatOption)
         endRepeatDate = try container.decode(Date.self, forKey: .endRepeatDate)
         excludedDates = try container.decodeIfPresent(Set<Date>.self, forKey: .excludedDates) ?? []
@@ -263,13 +266,13 @@ struct ScheduleItem: Identifiable, Codable {
         try container.encode(descriptionText, forKey: .descriptionText)
         try container.encode(location, forKey: .location)
         try container.encode(allDay, forKey: .allDay)
-        try container.encode(category, forKey: .category)
         try container.encode(type, forKey: .type)
         try container.encode(isCompleted, forKey: .isCompleted)
         try container.encode(startTime, forKey: .startTime)
         try container.encode(endTime, forKey: .endTime)
         try container.encode(checklist, forKey: .checklist)
         try container.encode(uniqueKey, forKey: .uniqueKey)
+        try container.encode(category, forKey: .category)
         try container.encode(endRepeatOption, forKey: .endRepeatOption)
         try container.encode(endRepeatDate, forKey: .endRepeatDate)
         try container.encode(excludedDates, forKey: .excludedDates)
