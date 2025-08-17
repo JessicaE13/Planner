@@ -114,7 +114,6 @@ struct ToDoView: View {
     @StateObject private var dataManager = ToDoDataManager.shared
     @State private var newItemText = ""
     @State private var selectedCategory: Category?
-    @State private var showingCategoryPicker = false
     @State private var filterCategory: Category?
     @State private var showingFilterOptions = false
     @FocusState private var isTextFieldFocused: Bool
@@ -247,61 +246,79 @@ struct ToDoView: View {
             VStack {
                 Spacer()
                 
-                // Category selector (when focused)
-                if isTextFieldFocused && showingCategoryPicker {
-                    VStack {
-                        CategoryPickerView(selectedCategory: $selectedCategory)
-                            .padding()
-                            .background(Color(.systemBackground))
-                            .cornerRadius(12)
-                            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: -2)
-                            .padding(.horizontal)
+                // Horizontal scrolling category pills
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        // None/Clear category pill
+                        Button(action: {
+                            selectedCategory = nil
+                        }) {
+                            Text("None")
+                                .font(.caption)
+                                .foregroundColor(selectedCategory == nil ? .white : .primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(selectedCategory == nil ? Color.gray : Color.gray.opacity(0.2))
+                                .cornerRadius(16)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Category pills
+                        ForEach(CategoryDataManager.shared.categories) { category in
+                            Button(action: {
+                                selectedCategory = category
+                            }) {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(Color(category.color))
+                                        .frame(width: 8, height: 8)
+                                    Text(category.name)
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                }
+                                .foregroundColor(selectedCategory?.id == category.id ? .white : .primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(selectedCategory?.id == category.id ? Color(category.color) : Color.gray.opacity(0.2))
+                                .cornerRadius(16)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
                     }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .padding(.horizontal, 16)
                 }
+                .padding(.bottom, 8)
                 
+                // Input field
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        // Category indicator
+                        // Selected category indicator (small)
                         if let selectedCategory = selectedCategory {
                             HStack(spacing: 4) {
-                                Image(systemName: selectedCategory.icon)
-                                    .foregroundColor(Color(selectedCategory.color))
-                                    .font(.caption)
+                                Circle()
+                                    .fill(Color(selectedCategory.color))
+                                    .frame(width: 8, height: 8)
                                 Text(selectedCategory.name)
-                                    .font(.caption)
+                                    .font(.caption2)
                                     .foregroundColor(.secondary)
                                 
                                 Button(action: {
                                     self.selectedCategory = nil
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
-                                        .font(.caption)
+                                        .font(.caption2)
                                         .foregroundColor(.gray)
                                 }
                             }
                             .padding(.horizontal, 8)
                         }
                         
-                        HStack {
-                            TextField("What's on your mind?", text: $newItemText, axis: .vertical)
-                                .focused($isTextFieldFocused)
-                                .lineLimit(1...5)
-                                .onSubmit {
-                                    addNewItem()
-                                }
-                            
-                            // Category picker toggle
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    showingCategoryPicker.toggle()
-                                }
-                            }) {
-                                Image(systemName: showingCategoryPicker ? "folder.badge.minus" : "folder.badge.plus")
-                                    .font(.title3)
-                                    .foregroundColor(showingCategoryPicker ? .orange : .blue)
+                        TextField("What's on your mind?", text: $newItemText, axis: .vertical)
+                            .focused($isTextFieldFocused)
+                            .lineLimit(1...5)
+                            .onSubmit {
+                                addNewItem()
                             }
-                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -322,14 +339,6 @@ struct ToDoView: View {
         }
         .onTapGesture {
             isTextFieldFocused = false
-            showingCategoryPicker = false
-        }
-        .onChange(of: isTextFieldFocused) { _, focused in
-            if !focused {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showingCategoryPicker = false
-                }
-            }
         }
         .actionSheet(isPresented: $showingFilterOptions) {
             ActionSheet(
@@ -370,7 +379,6 @@ struct ToDoView: View {
         newItemText = ""
         selectedCategory = nil
         isTextFieldFocused = false
-        showingCategoryPicker = false
     }
 }
 
@@ -386,13 +394,6 @@ struct ToDoItemRow: View {
     @State private var showingCategoryEdit = false
     @State private var editingCategory: Category?
     @FocusState private var isTextFieldFocused: Bool
-    
-    private let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter
-    }()
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -427,28 +428,20 @@ struct ToDoItemRow: View {
                         }
                 }
                 
-                HStack {
-                    // Category indicator
-                    if let category = item.category {
-                        HStack(spacing: 4) {
-                            Image(systemName: category.icon)
-                                .foregroundColor(Color(category.color))
-                                .font(.caption2)
-                            Text(category.name)
-                                .font(.caption2)
-                                .foregroundColor(Color(category.color))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(category.color).opacity(0.1))
-                        .cornerRadius(8)
+                // Category indicator (if present)
+                if let category = item.category {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(category.color))
+                            .frame(width: 8, height: 8)
+                        Text(category.name)
+                            .font(.caption2)
+                            .foregroundColor(Color(category.color))
                     }
-                    
-                    Spacer()
-                    
-                    Text(dateFormatter.string(from: item.dateCreated))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color(category.color).opacity(0.1))
+                    .cornerRadius(8)
                 }
             }
             

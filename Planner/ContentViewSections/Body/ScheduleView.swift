@@ -397,13 +397,13 @@ struct ScheduleDetailView: View {
                                         .fontWeight(.semibold)
                                         .multilineTextAlignment(.leading)
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                    
+
                                     // Category display
                                     if let category = item.category {
                                         HStack(spacing: 4) {
-                                            Image(systemName: category.icon)
-                                                .foregroundColor(Color(category.color))
-                                                .font(.caption)
+                                            Circle()
+                                                .fill(Color(category.color))
+                                                .frame(width: 12, height: 12)
                                             Text(category.name)
                                                 .font(.caption)
                                                 .foregroundColor(Color(category.color))

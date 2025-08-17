@@ -13,24 +13,22 @@ struct Category: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
     var name: String
     var color: String
-    var icon: String
     
-    init(name: String, color: String = "Color1", icon: String = "folder") {
+    init(name: String, color: String = "Color1") {
         self.id = UUID()
         self.name = name
         self.color = color
-        self.icon = icon
     }
     
     // Pre-defined categories
-    static let work = Category(name: "Work", color: "Color1", icon: "briefcase")
-    static let personal = Category(name: "Personal", color: "Color2", icon: "person")
-    static let health = Category(name: "Health", color: "Color3", icon: "heart")
-    static let home = Category(name: "Home", color: "Color4", icon: "house")
-    static let finance = Category(name: "Finance", color: "Color5", icon: "dollarsign.circle")
-    static let learning = Category(name: "Learning", color: "Color1", icon: "book")
-    static let social = Category(name: "Social", color: "Color2", icon: "person.2")
-    static let travel = Category(name: "Travel", color: "Color3", icon: "airplane")
+    static let work = Category(name: "Work", color: "Color1")
+    static let personal = Category(name: "Personal", color: "Color2")
+    static let health = Category(name: "Health", color: "Color3")
+    static let home = Category(name: "Home", color: "Color4")
+    static let finance = Category(name: "Finance", color: "Color5")
+    static let learning = Category(name: "Learning", color: "Color1")
+    static let social = Category(name: "Social", color: "Color2")
+    static let travel = Category(name: "Travel", color: "Color3")
     
     // Default categories
     static let defaultCategories: [Category] = [
@@ -121,23 +119,18 @@ struct CategoryPickerView: View {
                 .foregroundColor(.blue)
             }
             
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
                 // None option
                 Button(action: {
                     selectedCategory = nil
                 }) {
-                    VStack(spacing: 4) {
-                        Image(systemName: "minus.circle")
-                            .font(.title2)
-                            .foregroundColor(selectedCategory == nil ? .white : .gray)
-                            .frame(width: 40, height: 40)
-                            .background(selectedCategory == nil ? Color.gray : Color.gray.opacity(0.2))
-                            .cornerRadius(8)
-                        
-                        Text("None")
-                            .font(.caption2)
-                            .foregroundColor(.primary)
-                    }
+                    Text("None")
+                        .font(.body)
+                        .foregroundColor(selectedCategory == nil ? .white : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(selectedCategory == nil ? Color.gray : Color.gray.opacity(0.2))
+                        .cornerRadius(8)
                 }
                 .buttonStyle(PlainButtonStyle())
                 
@@ -146,19 +139,14 @@ struct CategoryPickerView: View {
                     Button(action: {
                         selectedCategory = category
                     }) {
-                        VStack(spacing: 4) {
-                            Image(systemName: category.icon)
-                                .font(.title2)
-                                .foregroundColor(selectedCategory?.id == category.id ? .white : .primary)
-                                .frame(width: 40, height: 40)
-                                .background(selectedCategory?.id == category.id ? Color(category.color) : Color.gray.opacity(0.2))
-                                .cornerRadius(8)
-                            
-                            Text(category.name)
-                                .font(.caption2)
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                        }
+                        Text(category.name)
+                            .font(.body)
+                            .foregroundColor(selectedCategory?.id == category.id ? .white : .primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(selectedCategory?.id == category.id ? Color(category.color) : Color.gray.opacity(0.2))
+                            .cornerRadius(8)
+                            .lineLimit(1)
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -176,14 +164,8 @@ struct ManageCategoriesView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var newCategoryName = ""
     @State private var newCategoryColor = "Color1"
-    @State private var newCategoryIcon = "folder"
     
     private let availableColors = ["Color1", "Color2", "Color3", "Color4", "Color5"]
-    private let availableIcons = [
-        "folder", "briefcase", "person", "heart", "house", "dollarsign.circle",
-        "book", "person.2", "airplane", "car", "gamecontroller", "music.note",
-        "camera", "paintbrush", "wrench", "star", "flag", "bell"
-    ]
     
     var body: some View {
         NavigationView {
@@ -191,9 +173,9 @@ struct ManageCategoriesView: View {
                 Section(header: Text("Existing Categories")) {
                     ForEach(categoryManager.categories.indices, id: \.self) { index in
                         HStack {
-                            Image(systemName: categoryManager.categories[index].icon)
-                                .foregroundColor(Color(categoryManager.categories[index].color))
-                                .frame(width: 30)
+                            Circle()
+                                .fill(Color(categoryManager.categories[index].color))
+                                .frame(width: 20, height: 20)
                             
                             Text(categoryManager.categories[index].name)
                             
@@ -232,21 +214,6 @@ struct ManageCategoriesView: View {
                         }
                     }
                     
-                    HStack {
-                        Text("Icon")
-                        Spacer()
-                        
-                        Picker("", selection: $newCategoryIcon) {
-                            ForEach(availableIcons, id: \.self) { icon in
-                                HStack {
-                                    Image(systemName: icon)
-                                    Text(icon)
-                                }.tag(icon)
-                            }
-                        }
-                        .pickerStyle(MenuPickerStyle())
-                    }
-                    
                     Button("Add Category") {
                         addNewCategory()
                     }
@@ -267,12 +234,11 @@ struct ManageCategoriesView: View {
         let trimmedName = newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
         
-        let newCategory = Category(name: trimmedName, color: newCategoryColor, icon: newCategoryIcon)
+        let newCategory = Category(name: trimmedName, color: newCategoryColor)
         categoryManager.addCategory(newCategory)
         
         // Reset form
         newCategoryName = ""
         newCategoryColor = "Color1"
-        newCategoryIcon = "folder"
     }
 }
