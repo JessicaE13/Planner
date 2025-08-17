@@ -150,6 +150,7 @@ struct RoutineItem: Identifiable, Codable {
 
 // MARK: - Create Routine View (Simplified)
 
+
 struct CreateRoutineView: View {
     @Binding var routines: [Routine]
     @Environment(\.dismiss) private var dismiss
@@ -166,9 +167,14 @@ struct CreateRoutineView: View {
     @State private var showingCustomFrequencyPicker = false
     @State private var customFrequencyConfig = CustomFrequencyConfig()
     
+    // Track if user has manually selected an icon
+    @State private var hasManuallySelectedIcon = false
+    
     private let availableColors: [String] = [
         "Color1", "Color2", "Color3", "Color4", "Color5"
     ]
+    
+    private let iconDataSource = IconDataSource.shared
     
     var body: some View {
         NavigationView {
@@ -187,13 +193,18 @@ struct CreateRoutineView: View {
                                     .frame(width: 30)
                             }
                             TextField("Routine Name", text: $routineName)
+                                .onChange(of: routineName) { _, newValue in
+                                    // Only auto-update icon if user hasn't manually selected one
+                                    if !hasManuallySelectedIcon {
+                                        updateIconBasedOnName(newValue)
+                                    }
+                                }
                         }
                         
                         // Color Picker - Updated to HStack
                         HStack {
                             Text("Choose Color")
-                                .font(.headline)
-                            
+                
                             Spacer()
                             
                             HStack(spacing: 12) {
@@ -327,6 +338,10 @@ struct CreateRoutineView: View {
             }
             .sheet(isPresented: $showingIconPicker) {
                 IconPickerView(selectedIcon: $selectedIcon, initialSearchText: routineName)
+                    .onDisappear {
+                        // Mark that user has manually selected an icon
+                        hasManuallySelectedIcon = true
+                    }
             }
             .sheet(isPresented: $showingCustomFrequencyPicker) {
                 CustomFrequencyPickerView(
@@ -347,6 +362,28 @@ struct CreateRoutineView: View {
             }
         }
     }
+    
+    // MARK: - Icon Auto-Selection Logic
+    
+    private func updateIconBasedOnName(_ name: String) {
+        // Don't update if the name is empty or too short
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        
+        // Use the enhanced word-by-word matching from IconDataSource
+        let matchedIcon = iconDataSource.getFirstMatchingIconByWords(
+            searchText: name,
+            defaultIcon: selectedIcon // Keep current icon if no match found
+        )
+        
+        // Only update if we found a different icon
+        if matchedIcon != selectedIcon {
+            selectedIcon = matchedIcon
+        }
+    }
+    
+    // MARK: - Helper Methods
     
     private func deleteChecklistItems(offsets: IndexSet) {
         routineItems.remove(atOffsets: offsets)
