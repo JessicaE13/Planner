@@ -148,12 +148,15 @@ struct RoutineItem: Identifiable, Codable {
     }
 }
 
-// MARK: - Create Routine View (Simplified)
-
+// MARK: - Create Routine View (Updated to be reusable for both create and edit)
 
 struct CreateRoutineView: View {
     @Binding var routines: [Routine]
     @Environment(\.dismiss) private var dismiss
+    
+    // New properties for edit functionality
+    let isEditing: Bool
+    let editingIndex: Int?
     
     @State private var routineName = ""
     @State private var selectedIcon = "sunrise"
@@ -166,6 +169,7 @@ struct CreateRoutineView: View {
     @State private var showingIconPicker = false
     @State private var showingCustomFrequencyPicker = false
     @State private var customFrequencyConfig = CustomFrequencyConfig()
+    @State private var showingDeleteConfirmation = false
     
     // Track if user has manually selected an icon
     @State private var hasManuallySelectedIcon = false
@@ -175,6 +179,31 @@ struct CreateRoutineView: View {
     ]
     
     private let iconDataSource = IconDataSource.shared
+    
+    // Initializers for create and edit modes
+    init(routines: Binding<[Routine]>) {
+        self._routines = routines
+        self.isEditing = false
+        self.editingIndex = nil
+    }
+    
+    init(routines: Binding<[Routine]>, editingRoutine: Routine, editingIndex: Int) {
+        self._routines = routines
+        self.isEditing = true
+        self.editingIndex = editingIndex
+        
+        // Initialize state with existing routine data
+        self._routineName = State(initialValue: editingRoutine.name)
+        self._selectedIcon = State(initialValue: editingRoutine.icon)
+        self._selectedColor = State(initialValue: "Color1") // Default since color isn't stored as string
+        self._routineItems = State(initialValue: editingRoutine.items.isEmpty ? [""] : editingRoutine.items)
+        self._frequency = State(initialValue: editingRoutine.frequency)
+        self._endRepeatOption = State(initialValue: editingRoutine.endRepeatOption)
+        self._endRepeatDate = State(initialValue: editingRoutine.endRepeatDate)
+        self._startDate = State(initialValue: editingRoutine.startDate)
+        self._customFrequencyConfig = State(initialValue: editingRoutine.customFrequencyConfig ?? CustomFrequencyConfig())
+        self._hasManuallySelectedIcon = State(initialValue: true) // Assume manually selected when editing
+    }
     
     var body: some View {
         NavigationView {
@@ -194,8 +223,8 @@ struct CreateRoutineView: View {
                             }
                             TextField("Routine Name", text: $routineName)
                                 .onChange(of: routineName) { _, newValue in
-                                    // Only auto-update icon if user hasn't manually selected one
-                                    if !hasManuallySelectedIcon {
+                                    // Only auto-update icon if user hasn't manually selected one and we're not editing
+                                    if !hasManuallySelectedIcon && !isEditing {
                                         updateIconBasedOnName(newValue)
                                     }
                                 }
@@ -317,10 +346,20 @@ struct CreateRoutineView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
+                    
+                    // Delete Section - Only show when editing
+                    if isEditing {
+                        Section {
+                            Button("Delete Routine") {
+                                showingDeleteConfirmation = true
+                            }
+                            .foregroundColor(.red)
+                        }
+                    }
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("New Routine")
+            .navigationTitle(isEditing ? "Edit Routine" : "New Routine")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -349,6 +388,14 @@ struct CreateRoutineView: View {
                     endRepeatOption: $endRepeatOption,
                     endRepeatDate: $endRepeatDate
                 )
+            }
+            .alert("Delete Routine", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    deleteRoutine()
+                }
+            } message: {
+                Text("Are you sure you want to delete this routine? This action cannot be undone.")
             }
         }
         .onChange(of: frequency) { _, newFrequency in
@@ -398,30 +445,56 @@ struct CreateRoutineView: View {
         
         guard !trimmedName.isEmpty, !filteredItems.isEmpty else { return }
         
-        let newRoutine = Routine(
-            name: trimmedName,
-            icon: selectedIcon,
-            items: filteredItems,
-            color: Color(selectedColor),
-            frequency: frequency,
-            customFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil,
-            endRepeatOption: endRepeatOption,
-            endRepeatDate: endRepeatDate,
-            startDate: startDate
-        )
+        if isEditing, let index = editingIndex {
+            // Update existing routine
+            var updatedRoutine = routines[index]
+            updatedRoutine.name = trimmedName
+            updatedRoutine.icon = selectedIcon
+            updatedRoutine.items = filteredItems
+            updatedRoutine.frequency = frequency
+            updatedRoutine.customFrequencyConfig = frequency == .custom ? customFrequencyConfig : nil
+            updatedRoutine.endRepeatOption = endRepeatOption
+            updatedRoutine.endRepeatDate = endRepeatDate
+            updatedRoutine.startDate = startDate
+            
+            routines[index] = updatedRoutine
+        } else {
+            // Create new routine
+            let newRoutine = Routine(
+                name: trimmedName,
+                icon: selectedIcon,
+                items: filteredItems,
+                color: Color(selectedColor),
+                frequency: frequency,
+                customFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil,
+                endRepeatOption: endRepeatOption,
+                endRepeatDate: endRepeatDate,
+                startDate: startDate
+            )
+            
+            routines.append(newRoutine)
+        }
         
-        routines.append(newRoutine)
         dismiss()
+    }
+    
+    private func deleteRoutine() {
+        if let index = editingIndex {
+            routines.remove(at: index)
+            dismiss()
+        }
     }
 }
 
-// MARK: - Main Routine View
+// MARK: - Main Routine View (Updated with Edit functionality)
 struct RoutineView: View {
     var selectedDate: Date
     @Binding var routines: [Routine]
     @Binding var showRoutineDetail: Bool
     @Binding var selectedRoutineIndex: Int?
     @State private var showCreateRoutine = false
+    @State private var editingRoutine: Routine?
+    @State private var editingRoutineIndex: Int?
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -429,14 +502,27 @@ struct RoutineView: View {
         return formatter
     }()
     
-    // Computed binding for sheet presentation
-    private var showSheet: Binding<Bool> {
+    // Computed binding for detail sheet presentation
+    private var showDetailSheet: Binding<Bool> {
         Binding(
-            get: { selectedRoutineIndex != nil },
+            get: { selectedRoutineIndex != nil && editingRoutine == nil },
             set: { isPresented in
                 if !isPresented {
                     selectedRoutineIndex = nil
                     showRoutineDetail = false
+                }
+            }
+        )
+    }
+    
+    // Computed binding for edit sheet presentation
+    private var showEditSheet: Binding<Bool> {
+        Binding(
+            get: { editingRoutine != nil },
+            set: { isPresented in
+                if !isPresented {
+                    editingRoutine = nil
+                    editingRoutineIndex = nil
                 }
             }
         )
@@ -526,11 +612,20 @@ struct RoutineView: View {
             }
         }
         .padding()
-        .sheet(isPresented: showSheet) {
+        .sheet(isPresented: showDetailSheet) {
             if let index = selectedRoutineIndex {
                 RoutineDetailBottomSheetView(
                     routine: $routines[index],
-                    selectedDate: selectedDate
+                    selectedDate: selectedDate,
+                    onEdit: {
+                        // Set up edit state
+                        editingRoutineIndex = index
+                        editingRoutine = routines[index]
+                        
+                        // Close the detail sheet
+                        selectedRoutineIndex = nil
+                        showRoutineDetail = false
+                    }
                 )
                 .presentationDetents([.fraction(0.85), .large])
                 .presentationDragIndicator(.visible)
@@ -539,6 +634,20 @@ struct RoutineView: View {
         }
         .sheet(isPresented: $showCreateRoutine) {
             CreateRoutineView(routines: $routines)
+        }
+        .sheet(isPresented: showEditSheet) {
+            if let routine = editingRoutine, let editIndex = editingRoutineIndex {
+                CreateRoutineView(
+                    routines: $routines,
+                    editingRoutine: routine,
+                    editingIndex: editIndex
+                )
+                .onDisappear {
+                    // Clean up edit state when sheet is dismissed
+                    editingRoutine = nil
+                    editingRoutineIndex = nil
+                }
+            }
         }
         .onAppear {
             updateDefaultRoutinesStartDate()
@@ -556,18 +665,20 @@ struct RoutineView: View {
     }
 }
 
-// MARK: - Bottom Sheet View for Routine Details
+// MARK: - Bottom Sheet View for Routine Details (Updated with Edit button)
 struct RoutineDetailBottomSheetView: View {
     @Binding var routine: Routine
     let selectedDate: Date
+    let onEdit: () -> Void
     @Environment(\.dismiss) private var dismiss
     
     @State private var originalRoutine: Routine
     @State private var workingRoutine: Routine
     
-    init(routine: Binding<Routine>, selectedDate: Date) {
+    init(routine: Binding<Routine>, selectedDate: Date, onEdit: @escaping () -> Void) {
         self._routine = routine
         self.selectedDate = selectedDate
+        self.onEdit = onEdit
         self._originalRoutine = State(initialValue: routine.wrappedValue)
         self._workingRoutine = State(initialValue: routine.wrappedValue)
     }
@@ -660,6 +771,13 @@ struct RoutineDetailBottomSheetView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
+                    }
+                    .foregroundColor(.primary)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Edit") {
+                        onEdit()
                     }
                     .foregroundColor(.primary)
                 }
