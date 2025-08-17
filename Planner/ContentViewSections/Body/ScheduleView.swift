@@ -990,7 +990,11 @@ struct ScheduleEditView: View {
             ManageCategoriesView()
         }
         .sheet(isPresented: $showingCustomFrequencyPicker) {
-            CustomFrequencyPickerView(customConfig: $customFrequencyConfig)
+            CustomFrequencyPickerView(
+                customConfig: $customFrequencyConfig,
+                endRepeatOption: $item.endRepeatOption,
+                endRepeatDate: $item.endRepeatDate
+            )
         }
         // Simple delete confirmation for single events
         .alert("Delete Event", isPresented: $showingDeleteConfirmation) {

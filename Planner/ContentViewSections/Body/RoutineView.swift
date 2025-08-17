@@ -383,8 +383,7 @@ struct RoutineView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             // Removed the repeat icon from here
                                             Text(routineData.routine.name)
-                                                .font(.system(size: 16, weight: .medium, design: .default))
-                                                .kerning(1)
+                                                .font(.system(size: 18, weight: .medium, design: .default))
                                                 .foregroundColor(.primary)
                                                
                                             Text("Routine")

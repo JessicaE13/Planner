@@ -9,6 +9,8 @@ import SwiftUI
 
 struct CustomFrequencyPickerView: View {
     @Binding var customConfig: CustomFrequencyConfig
+    @Binding var endRepeatOption: EndRepeatOption
+    @Binding var endRepeatDate: Date
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -16,12 +18,18 @@ struct CustomFrequencyPickerView: View {
             Form {
                 // Frequency Type Picker
                 Section(header: Text("Frequency Type")) {
-                    Picker("Type", selection: $customConfig.type) {
-                        ForEach(CustomFrequencyType.allCases, id: \.self) { type in
-                            Text(type.displayName).tag(type)
+                    HStack {
+                        Text("Repeats")
+                        
+                        Spacer()
+                        
+                        Picker("", selection: $customConfig.type) {
+                            ForEach(CustomFrequencyType.allCases, id: \.self) { type in
+                                Text(type.displayName).tag(type)
+                            }
                         }
+                        .pickerStyle(MenuPickerStyle())
                     }
-                    .pickerStyle(SegmentedPickerStyle())
                 }
                 
                 // Interval Section
@@ -55,15 +63,45 @@ struct CustomFrequencyPickerView: View {
                     YearlySelectionSection(selectedMonths: $customConfig.selectedMonths)
                 }
                 
+                // End Repeat Section
+                Section(header: Text("End Repeat")) {
+                    HStack {
+                        Text("End Repeat")
+                        Spacer()
+                        Picker("", selection: $endRepeatOption) {
+                            ForEach(EndRepeatOption.allCases) { option in
+                                Text(option.displayName).tag(option)
+                            }
+                        }
+                        .pickerStyle(MenuPickerStyle())
+                    }
+                    
+                    // Show date picker when "On Date" is selected
+                    if endRepeatOption == .onDate {
+                        HStack {
+                            Text("End Date")
+                            Spacer()
+                            DatePicker("", selection: $endRepeatDate, displayedComponents: .date)
+                                .labelsHidden()
+                        }
+                    }
+                }
+                
                 // Preview Section
                 Section(header: Text("Preview")) {
-                    Text(customConfig.displayDescription())
+                    Text("Repeats \(customConfig.displayDescription().lowercased())")
                         .foregroundColor(.secondary)
                 }
+                .listRowBackground(Color.clear)
             }
             .navigationTitle("Custom Frequency")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
@@ -205,5 +243,9 @@ struct YearlySelectionSection: View {
 }
 
 #Preview {
-    CustomFrequencyPickerView(customConfig: .constant(CustomFrequencyConfig()))
+    CustomFrequencyPickerView(
+        customConfig: .constant(CustomFrequencyConfig()),
+        endRepeatOption: .constant(.never),
+        endRepeatDate: .constant(Date())
+    )
 }
