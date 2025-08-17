@@ -665,7 +665,7 @@ struct RoutineView: View {
     }
 }
 
-// MARK: - Bottom Sheet View for Routine Details (Updated with Edit button)
+// MARK: - Bottom Sheet View for Routine Details (Updated with Auto-save)
 struct RoutineDetailBottomSheetView: View {
     @Binding var routine: Routine
     let selectedDate: Date
@@ -718,6 +718,8 @@ struct RoutineDetailBottomSheetView: View {
                                     Button(action: {
                                         withAnimation(.easeInOut(duration: 0.3)) {
                                             workingRoutine.toggleItem(workingRoutine.items[index], for: selectedDate)
+                                            // Auto-save changes immediately
+                                            routine = workingRoutine
                                         }
                                     }) {
                                         HStack {
@@ -752,9 +754,8 @@ struct RoutineDetailBottomSheetView: View {
                 
                 Spacer()
                 
-                // Done Button
+                // Done Button - Now just closes the sheet since changes are auto-saved
                 Button("Done") {
-                    routine = workingRoutine
                     dismiss()
                 }
                 .font(.headline)
@@ -770,6 +771,8 @@ struct RoutineDetailBottomSheetView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
+                        // Revert to original state when canceling
+                        routine = originalRoutine
                         dismiss()
                     }
                     .foregroundColor(.primary)
@@ -777,6 +780,8 @@ struct RoutineDetailBottomSheetView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Edit") {
+                        // Save current state before editing
+                        routine = workingRoutine
                         onEdit()
                     }
                     .foregroundColor(.primary)
