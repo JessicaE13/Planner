@@ -1051,14 +1051,14 @@ struct RoutineView: View {
                                         Image(systemName: routineData.routine.icon)
                                             .frame(width: 36, height: 36)
                                             .font(.largeTitle)
-                                            .foregroundColor(Color(UIColor.lightGray).opacity(0.25))
+                                            .foregroundColor(Color(routineData.routine.color).opacity(0.75))
                                 
                                     }
                                     .padding(.horizontal, 8)
                                     
                                     // Updated to use progress for specific date (with item-level frequency support)
                                     ProgressView(value: routineData.routine.progress(for: selectedDate), total: 1.0)
-                                        .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
+                                        .progressViewStyle(LinearProgressViewStyle(tint: Color(routineData.routine.color)))
                                         .scaleEffect(y: 1.5) // Makes the progress bar taller
                                         .padding(.top, 8)
                                         .animation(.easeInOut(duration: 0.3), value: routineData.routine.progress(for: selectedDate))
