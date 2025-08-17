@@ -1,5 +1,5 @@
 //
-//  RoutinesView.swift
+//  RoutineView.swift
 //  Planner
 //
 //  Created by Jessica Estes on 8/11/25.
@@ -12,6 +12,13 @@ struct Routine: Identifiable, Codable {
     var name: String
     var icon: String
     var items: [String]
+    
+    // Add missing properties for compatibility
+    var iconName: String {
+        return icon
+    }
+    var color: Color = .blue
+    
     // Changed from Set<String> to [String: Set<String>] to track completion per date
     var completedItemsByDate: [String: Set<String>] = [:]
     
@@ -22,10 +29,11 @@ struct Routine: Identifiable, Codable {
     var startDate: Date = Date()
     
     // Custom initializer with updated default start date
-    init(name: String, icon: String, items: [String], frequency: Frequency = .everyDay, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(), startDate: Date = Date()) {
+    init(name: String, icon: String, items: [String], color: Color = .blue, frequency: Frequency = .everyDay, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(), startDate: Date = Date()) {
         self.name = name
         self.icon = icon
         self.items = items
+        self.color = color
         self.frequency = frequency
         self.endRepeatOption = endRepeatOption
         self.endRepeatDate = endRepeatDate
@@ -34,7 +42,7 @@ struct Routine: Identifiable, Codable {
     
     // Custom Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, name, icon, items, completedItemsByDate, frequency, endRepeatOption, endRepeatDate, startDate
+        case id, name, icon, items, completedItemsByDate, frequency, endRepeatOption, endRepeatDate, startDate, colorData
     }
     
     init(from decoder: Decoder) throws {
@@ -47,6 +55,9 @@ struct Routine: Identifiable, Codable {
         endRepeatOption = try container.decodeIfPresent(EndRepeatOption.self, forKey: .endRepeatOption) ?? .never
         endRepeatDate = try container.decodeIfPresent(Date.self, forKey: .endRepeatDate) ?? Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
         startDate = try container.decodeIfPresent(Date.self, forKey: .startDate) ?? Date()
+        
+        // Handle color - default to blue if not available
+        color = .blue
     }
     
     func encode(to encoder: Encoder) throws {
@@ -121,18 +132,43 @@ struct Routine: Identifiable, Codable {
     }
 }
 
-// MARK: - Create Routine View with Enhanced Frequency Support
+// MARK: - Supporting structs for compatibility
+struct RoutineItem: Identifiable, Codable {
+    let id = UUID()
+    var name: String
+    var isCompleted: Bool = false
+    
+    init(name: String, isCompleted: Bool = false) {
+        self.name = name
+        self.isCompleted = isCompleted
+    }
+}
+
+// MARK: - Extension for Color compatibility
+extension Color {
+    static let routineColors: [Color] = [
+        .blue, .green, .orange, .red, .purple, .pink, .yellow, .cyan
+    ]
+    
+    func isApproximatelyEqual(to other: Color) -> Bool {
+        return self == other
+    }
+}
+
+// MARK: - Create Routine View (Simplified)
 struct CreateRoutineView: View {
     @Binding var routines: [Routine]
     @Environment(\.dismiss) private var dismiss
     
     @State private var routineName = ""
     @State private var selectedIcon = "sunrise"
+    @State private var selectedColor = Color.blue
     @State private var routineItems: [String] = [""]
     @State private var frequency: Frequency = .everyDay
     @State private var endRepeatOption: EndRepeatOption = .never
     @State private var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     @State private var startDate: Date = Date()
+    @State private var showingIconPicker = false
     
     // Available icons for routines
     private let availableIcons = [
@@ -140,6 +176,10 @@ struct CreateRoutineView: View {
         "heart.fill", "book.fill", "music.note", "gamecontroller.fill",
         "cup.and.saucer.fill", "fork.knife", "car.fill", "house.fill",
         "laptopcomputer", "phone.fill", "camera.fill", "paintbrush.fill"
+    ]
+    
+    private let availableColors: [Color] = [
+        .blue, .green, .orange, .red, .purple, .pink, .yellow, .cyan
     ]
     
     var body: some View {
@@ -151,11 +191,39 @@ struct CreateRoutineView: View {
                 Form {
                     Section(header: Text("Routine Details")) {
                         HStack {
-                            Image(systemName: selectedIcon)
-                                .foregroundColor(.blue)
-                                .frame(width: 30)
+                            Button(action: {
+                                showingIconPicker = true
+                            }) {
+                                Image(systemName: selectedIcon)
+                                    .foregroundColor(selectedColor)
+                                    .frame(width: 30)
+                            }
                             TextField("Routine Name", text: $routineName)
                         }
+                        
+                        // Color Picker
+                        VStack(alignment: .leading) {
+                            Text("Choose Color")
+                                .font(.headline)
+                            
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 10) {
+                                ForEach(Array(availableColors.enumerated()), id: \.offset) { index, color in
+                                    Button(action: {
+                                        selectedColor = color
+                                    }) {
+                                        Circle()
+                                            .fill(color)
+                                            .frame(width: 30, height: 30)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(selectedColor == color ? Color.primary : Color.clear, lineWidth: 2)
+                                            )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                        }
+                        .padding(.vertical, 8)
                         
                         // Icon Picker
                         VStack(alignment: .leading) {
@@ -169,9 +237,9 @@ struct CreateRoutineView: View {
                                     }) {
                                         Image(systemName: icon)
                                             .font(.title2)
-                                            .foregroundColor(selectedIcon == icon ? .white : .primary)
+                                            .foregroundColor(selectedIcon == icon ? .white : selectedColor)
                                             .frame(width: 40, height: 40)
-                                            .background(selectedIcon == icon ? Color.blue : Color.gray.opacity(0.2))
+                                            .background(selectedIcon == icon ? selectedColor : Color.gray.opacity(0.2))
                                             .cornerRadius(8)
                                     }
                                     .buttonStyle(PlainButtonStyle())
@@ -200,7 +268,6 @@ struct CreateRoutineView: View {
                             .pickerStyle(MenuPickerStyle())
                         }
                         
-                        // Show end repeat options when frequency is not "Never"
                         if frequency != .never {
                             HStack {
                                 Text("End Repeat")
@@ -213,7 +280,6 @@ struct CreateRoutineView: View {
                                 .pickerStyle(MenuPickerStyle())
                             }
                             
-                            // Show date picker when "On Date" is selected
                             if endRepeatOption == .onDate {
                                 HStack {
                                     Text("End Date")
@@ -273,9 +339,11 @@ struct CreateRoutineView: View {
                     .disabled(routineName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+            .sheet(isPresented: $showingIconPicker) {
+                IconPickerView(selectedIcon: $selectedIcon, initialSearchText: routineName)
+            }
         }
         .onChange(of: frequency) { _, newFrequency in
-            // Reset end repeat options when frequency changes to "Never"
             if newFrequency == .never {
                 endRepeatOption = .never
             }
@@ -299,6 +367,7 @@ struct CreateRoutineView: View {
             name: trimmedName,
             icon: selectedIcon,
             items: filteredItems,
+            color: selectedColor,
             frequency: frequency,
             endRepeatOption: endRepeatOption,
             endRepeatDate: endRepeatDate,
@@ -310,6 +379,7 @@ struct CreateRoutineView: View {
     }
 }
 
+// MARK: - Main Routine View
 struct RoutineView: View {
     var selectedDate: Date
     @Binding var routines: [Routine]
@@ -381,7 +451,6 @@ struct RoutineView: View {
                                     HStack(alignment: .bottom) {
                         
                                         VStack(alignment: .leading, spacing: 4) {
-                                            // Removed the repeat icon from here
                                             Text(routineData.routine.name)
                                                 .font(.system(size: 18, weight: .medium, design: .default))
                                                 .foregroundColor(.primary)
@@ -436,7 +505,6 @@ struct RoutineView: View {
             CreateRoutineView(routines: $routines)
         }
         .onAppear {
-            // Update default routines to start from a week ago for backwards compatibility
             updateDefaultRoutinesStartDate()
         }
     }
@@ -445,7 +513,6 @@ struct RoutineView: View {
         let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         
         for index in routines.indices {
-            // Only update if the start date is today (meaning it's a default routine)
             if Calendar.current.isDate(routines[index].startDate, inSameDayAs: Date()) {
                 routines[index].startDate = weekAgo
             }
@@ -453,21 +520,18 @@ struct RoutineView: View {
     }
 }
 
-
-// Updated Bottom Sheet View for Routine Details with Cancel Button
+// MARK: - Bottom Sheet View for Routine Details
 struct RoutineDetailBottomSheetView: View {
     @Binding var routine: Routine
     let selectedDate: Date
     @Environment(\.dismiss) private var dismiss
     
-    // Store the original state to revert changes on cancel
     @State private var originalRoutine: Routine
     @State private var workingRoutine: Routine
     
     init(routine: Binding<Routine>, selectedDate: Date) {
         self._routine = routine
         self.selectedDate = selectedDate
-        // Store the original state
         self._originalRoutine = State(initialValue: routine.wrappedValue)
         self._workingRoutine = State(initialValue: routine.wrappedValue)
     }
@@ -489,10 +553,9 @@ struct RoutineDetailBottomSheetView: View {
                             .font(.title2)
                             .fontWeight(.semibold)
                         
-                        // Progress view with animation for selected date
                         ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
                             .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
-                            .scaleEffect(y: 1.5) // Makes the progress bar taller
+                            .scaleEffect(y: 1.5)
                             .frame(maxWidth: 200)
                             .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
                     }
@@ -548,7 +611,6 @@ struct RoutineDetailBottomSheetView: View {
                     
                     // Done Button
                     Button("Done") {
-                        // Save changes to the original routine
                         routine = workingRoutine
                         dismiss()
                     }
@@ -575,123 +637,13 @@ struct RoutineDetailBottomSheetView: View {
     }
 }
 
-
-// Keep the old RoutineDetailView for reference/backup
-struct RoutineDetailView: View {
-    @Binding var routine: Routine
-    let selectedDate: Date
-    var dismissAction: (() -> Void)? = nil
-    
-    var body: some View {
-        VStack(spacing: 0) {
-  
-            ZStack {
-                VStack (spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button(action: { dismissAction?() }) {
-                        Image(systemName: "xmark")
-                            .font(.title2)
-                            .foregroundColor(.primary)
-                            .padding(12)
-                    }
-                    .padding()
-                }
-                
-                VStack(spacing: 16) {
-                    Image(systemName: routine.icon)
-                        .font(.system(size: 48))
-                        .foregroundColor(.primary)
-                    
-                    Text(routine.name + " Routine")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    
-                    // Updated to use progress for specific date
-                    ProgressView(value: routine.progress(for: selectedDate), total: 1.0)
-                        .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
-                        .scaleEffect(y: 1.5) // Makes the progress bar taller
-                        .frame(maxWidth: 200)
-                        .animation(.easeInOut(duration: 0.3), value: routine.progress(for: selectedDate))
-                }
-            }
-            }
-            .padding(.top, 24)
-            .padding(.bottom, 32)
-
-            if !routine.items.isEmpty {
-                VStack(spacing: 0) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color("Background"))
-                        
-                        VStack(spacing: 0) {
-                            ForEach(routine.items.indices, id: \.self) { index in
-                                Button(action: {
-                                    // Use withAnimation to synchronize all visual changes
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        routine.toggleItem(routine.items[index], for: selectedDate)
-                                    }
-                                }) {
-                                    HStack {
-                                        Image(systemName: routine.isItemCompleted(routine.items[index], for: selectedDate) ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(routine.isItemCompleted(routine.items[index], for: selectedDate) ? .primary : .gray)
-                                            .animation(.easeInOut(duration: 0.3), value: routine.isItemCompleted(routine.items[index], for: selectedDate))
-                                        
-                                        Text(routine.items[index])
-                                            .strikethrough(routine.isItemCompleted(routine.items[index], for: selectedDate))
-                                            .foregroundColor(routine.isItemCompleted(routine.items[index], for: selectedDate) ? .secondary : .primary)
-                                            .animation(.easeInOut(duration: 0.3), value: routine.isItemCompleted(routine.items[index], for: selectedDate))
-                                        
-                                        Spacer()
-                                    }
-                                    .padding(.vertical, 12)
-                                    .padding(.horizontal, 16)
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                
-                                if index < routine.items.count {
-                                    Divider()
-                                        .padding(.leading, 16)
-                                }
-                            }
-                        }
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 16)
-                }
-            }
-            
-            Spacer()
-            
-            Button("Done") {
-                dismissAction?()
-            }
-            .font(.headline)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity)
-            .background(Color("Color1").opacity(0.9))
-            .foregroundColor(.white)
-            .cornerRadius(12)
-            .padding(.horizontal, 32)
-            .padding(.bottom, 24)
-        }
-        .background(Color("Background"))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-}
-
 #Preview {
     ZStack {
-       // BackgroundView()
         RoutineView(
             selectedDate: Date(),
             routines: .constant([
                 Routine(name: "Morning", icon: "sunrise.fill", items: ["Wake up", "Brush teeth", "Exercise"]),
-                Routine(name: "Evening", icon: "moon.stars.fill", items: ["Read", "Meditate", "Sleep"]),
-                Routine(name: "Afternoon", icon: "cloud.sun_fill", items: ["Lunch", "Walk", "Check email"]),
-                Routine(name: "Workout", icon: "figure.walk", items: ["Warm up", "Run", "Stretch"])
+                Routine(name: "Evening", icon: "moon.stars.fill", items: ["Read", "Meditate", "Sleep"])
             ]),
             showRoutineDetail: .constant(false),
             selectedRoutineIndex: .constant(nil)

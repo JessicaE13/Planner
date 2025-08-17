@@ -1,3 +1,10 @@
+//
+//  IconPickerView.swift
+//  Planner
+//
+//  Simple version without problematic references
+//
+
 import SwiftUI
 
 struct IconPickerView: View {
@@ -19,24 +26,59 @@ struct IconPickerView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-
-                SearchBar(text: $searchText)
-                    .padding()
+                // Search bar
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                    
+                    TextField("Search icons...", text: $searchText)
+                        .textFieldStyle(PlainTextFieldStyle())
+                    
+                    if !searchText.isEmpty {
+                        Button(action: {
+                            searchText = ""
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(10)
+                .padding()
                 
+                // Icons grid
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 20, pinnedViews: [.sectionHeaders]) {
                         ForEach(filteredCategories, id: \.name) { category in
                             Section {
                                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
                                     ForEach(category.icons, id: \.name) { iconItem in
-                                        IconButton(
-                                            iconItem: iconItem,
-                                            isSelected: selectedIcon == iconItem.name,
-                                            onTap: {
-                                                selectedIcon = iconItem.name
-                                                dismiss()
+                                        Button(action: {
+                                            selectedIcon = iconItem.name
+                                            dismiss()
+                                        }) {
+                                            VStack(spacing: 8) {
+                                                ZStack {
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .fill(selectedIcon == iconItem.name ? Color.blue : Color.clear)
+                                                        .frame(width: 60, height: 60)
+                                                    
+                                                    Image(systemName: iconItem.name)
+                                                        .font(.system(size: 24))
+                                                        .foregroundColor(selectedIcon == iconItem.name ? .white : .primary)
+                                                }
+                                                
+                                                Text(iconItem.displayName)
+                                                    .font(.caption2)
+                                                    .foregroundColor(.secondary)
+                                                    .multilineTextAlignment(.center)
+                                                    .lineLimit(2)
                                             }
-                                        )
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
                                 }
                                 .padding(.horizontal)
@@ -46,18 +88,16 @@ struct IconPickerView: View {
                                         .font(.headline)
                                         .fontWeight(.semibold)
                                         .foregroundColor(.primary)
-                                    
                                     Spacer()
                                 }
                                 .padding(.horizontal)
                                 .padding(.vertical, 8)
+                                .background(Color("Background"))
                             }
-                            .background(Color("Background2"))
                         }
                     }
                 }
             }
-            .background(Color("Background2"))
             .navigationTitle("Choose Icon")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -70,8 +110,6 @@ struct IconPickerView: View {
         }
     }
 }
-
-
 
 #Preview {
     IconPickerView(selectedIcon: .constant("sunrise.fill"))
