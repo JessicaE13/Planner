@@ -453,11 +453,24 @@ struct RoutineView: View {
     }
 }
 
-// Updated Bottom Sheet View for Routine Details with date support - also removed repeat icon
+
+// Updated Bottom Sheet View for Routine Details with Cancel Button
 struct RoutineDetailBottomSheetView: View {
     @Binding var routine: Routine
     let selectedDate: Date
     @Environment(\.dismiss) private var dismiss
+    
+    // Store the original state to revert changes on cancel
+    @State private var originalRoutine: Routine
+    @State private var workingRoutine: Routine
+    
+    init(routine: Binding<Routine>, selectedDate: Date) {
+        self._routine = routine
+        self.selectedDate = selectedDate
+        // Store the original state
+        self._originalRoutine = State(initialValue: routine.wrappedValue)
+        self._workingRoutine = State(initialValue: routine.wrappedValue)
+    }
     
     var body: some View {
         NavigationView {
@@ -468,27 +481,26 @@ struct RoutineDetailBottomSheetView: View {
                 VStack(spacing: 0) {
                     // Header Section
                     VStack(spacing: 16) {
-                        Image(systemName: routine.icon)
+                        Image(systemName: workingRoutine.icon)
                             .font(.system(size: 48))
                             .foregroundColor(.primary)
                         
-                        // Removed repeat icon from here too
-                        Text(routine.name + " Routine")
+                        Text(workingRoutine.name + " Routine")
                             .font(.title2)
                             .fontWeight(.semibold)
                         
                         // Progress view with animation for selected date
-                        ProgressView(value: routine.progress(for: selectedDate), total: 1.0)
+                        ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
                             .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
                             .scaleEffect(y: 1.5) // Makes the progress bar taller
                             .frame(maxWidth: 200)
-                            .animation(.easeInOut(duration: 0.3), value: routine.progress(for: selectedDate))
+                            .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
                     }
                     .padding(.top, 24)
                     .padding(.bottom, 32)
 
                     // Routine Items List
-                    if !routine.items.isEmpty {
+                    if !workingRoutine.items.isEmpty {
                         VStack(spacing: 0) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -496,21 +508,21 @@ struct RoutineDetailBottomSheetView: View {
                                     .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                                 
                                 VStack(spacing: 0) {
-                                    ForEach(routine.items.indices, id: \.self) { index in
+                                    ForEach(workingRoutine.items.indices, id: \.self) { index in
                                         Button(action: {
                                             withAnimation(.easeInOut(duration: 0.3)) {
-                                                routine.toggleItem(routine.items[index], for: selectedDate)
+                                                workingRoutine.toggleItem(workingRoutine.items[index], for: selectedDate)
                                             }
                                         }) {
                                             HStack {
-                                                Image(systemName: routine.isItemCompleted(routine.items[index], for: selectedDate) ? "checkmark.circle.fill" : "circle")
-                                                    .foregroundColor(routine.isItemCompleted(routine.items[index], for: selectedDate) ? .primary : .gray)
-                                                    .animation(.easeInOut(duration: 0.3), value: routine.isItemCompleted(routine.items[index], for: selectedDate))
+                                                Image(systemName: workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate) ? "checkmark.circle.fill" : "circle")
+                                                    .foregroundColor(workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate) ? .primary : .gray)
+                                                    .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate))
                                                 
-                                                Text(routine.items[index])
-                                                    .strikethrough(routine.isItemCompleted(routine.items[index], for: selectedDate))
-                                                    .foregroundColor(routine.isItemCompleted(routine.items[index], for: selectedDate) ? .secondary : .primary)
-                                                    .animation(.easeInOut(duration: 0.3), value: routine.isItemCompleted(routine.items[index], for: selectedDate))
+                                                Text(workingRoutine.items[index])
+                                                    .strikethrough(workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate))
+                                                    .foregroundColor(workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate) ? .secondary : .primary)
+                                                    .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate))
                                                 
                                                 Spacer()
                                             }
@@ -520,7 +532,7 @@ struct RoutineDetailBottomSheetView: View {
                                         }
                                         .buttonStyle(PlainButtonStyle())
                                         
-                                        if index < routine.items.count - 1 {
+                                        if index < workingRoutine.items.count - 1 {
                                             Divider()
                                                 .padding(.leading, 16)
                                         }
@@ -536,6 +548,8 @@ struct RoutineDetailBottomSheetView: View {
                     
                     // Done Button
                     Button("Done") {
+                        // Save changes to the original routine
+                        routine = workingRoutine
                         dismiss()
                     }
                     .font(.headline)
@@ -548,10 +562,19 @@ struct RoutineDetailBottomSheetView: View {
                     .padding(.bottom, 24)
                 }
             }
-            .navigationBarHidden(true)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(.primary)
+                }
+            }
         }
     }
 }
+
 
 // Keep the old RoutineDetailView for reference/backup
 struct RoutineDetailView: View {
