@@ -177,6 +177,9 @@ struct ChecklistItem: Identifiable, Hashable, Codable {
     }
 }
 
+// Updated ScheduleItem struct with custom frequency support
+// Add this to your existing ScheduleModel.swift file
+
 struct ScheduleItem: Identifiable, Codable {
     let id: UUID
     var title: String
@@ -184,6 +187,7 @@ struct ScheduleItem: Identifiable, Codable {
     var icon: String
     var color: String
     var frequency: Frequency = .never
+    var customFrequencyConfig: CustomFrequencyConfig? = nil // New property
     var descriptionText: String = ""
     var location: String = ""
     var allDay: Bool = false
@@ -193,15 +197,9 @@ struct ScheduleItem: Identifiable, Codable {
     var endTime: Date = Date()
     var checklist: [ChecklistItem] = []
     var uniqueKey: String = ""
-    
-    // Updated to use Category instead of string
     var category: Category?
-    
-    // New properties for end repeat functionality
     var endRepeatOption: EndRepeatOption = .never
     var endRepeatDate: Date = Date()
-    
-    // New property to track excluded dates for recurring events
     var excludedDates: Set<Date> = []
     
     // Computed property for AttributedString compatibility
@@ -210,14 +208,15 @@ struct ScheduleItem: Identifiable, Codable {
         set { descriptionText = String(newValue.characters) }
     }
     
-    // Initialize with category and end repeat options
-    init(title: String, time: Date, icon: String, color: String, frequency: Frequency = .never, startTime: Date, endTime: Date, checklist: [ChecklistItem] = [], uniqueKey: String = "", category: Category? = nil, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Date()) {
+    // Initialize with custom frequency config
+    init(title: String, time: Date, icon: String, color: String, frequency: Frequency = .never, customFrequencyConfig: CustomFrequencyConfig? = nil, startTime: Date, endTime: Date, checklist: [ChecklistItem] = [], uniqueKey: String = "", category: Category? = nil, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Date()) {
         self.id = UUID()
         self.title = title
         self.time = time
         self.icon = icon
         self.color = color
         self.frequency = frequency
+        self.customFrequencyConfig = customFrequencyConfig
         self.startTime = startTime
         self.endTime = endTime
         self.checklist = checklist
@@ -227,9 +226,9 @@ struct ScheduleItem: Identifiable, Codable {
         self.endRepeatDate = endRepeatDate
     }
     
-    // Custom Codable implementation
+    // Updated Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, title, time, icon, color, frequency, descriptionText, location, allDay, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates
+        case id, title, time, icon, color, frequency, customFrequencyConfig, descriptionText, location, allDay, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates
     }
     
     init(from decoder: Decoder) throws {
@@ -240,6 +239,7 @@ struct ScheduleItem: Identifiable, Codable {
         icon = try container.decode(String.self, forKey: .icon)
         color = try container.decode(String.self, forKey: .color)
         frequency = try container.decode(Frequency.self, forKey: .frequency)
+        customFrequencyConfig = try container.decodeIfPresent(CustomFrequencyConfig.self, forKey: .customFrequencyConfig)
         descriptionText = try container.decode(String.self, forKey: .descriptionText)
         location = try container.decode(String.self, forKey: .location)
         allDay = try container.decode(Bool.self, forKey: .allDay)
@@ -263,6 +263,7 @@ struct ScheduleItem: Identifiable, Codable {
         try container.encode(icon, forKey: .icon)
         try container.encode(color, forKey: .color)
         try container.encode(frequency, forKey: .frequency)
+        try container.encode(customFrequencyConfig, forKey: .customFrequencyConfig)
         try container.encode(descriptionText, forKey: .descriptionText)
         try container.encode(location, forKey: .location)
         try container.encode(allDay, forKey: .allDay)
@@ -278,7 +279,7 @@ struct ScheduleItem: Identifiable, Codable {
         try container.encode(excludedDates, forKey: .excludedDates)
     }
     
-    // Helper method to check if this event should appear on a given date
+    // Updated shouldAppear method to use custom frequency config
     func shouldAppear(on date: Date) -> Bool {
         let calendar = Calendar.current
         let dateKey = calendar.startOfDay(for: date)
@@ -293,8 +294,8 @@ struct ScheduleItem: Identifiable, Codable {
             return calendar.isDate(startTime, inSameDayAs: date)
         }
         
-        // Check if the event should trigger based on frequency
-        let shouldTrigger = frequency.shouldTrigger(on: date, from: startTime)
+        // Check if the event should trigger based on frequency (including custom config)
+        let shouldTrigger = frequency.shouldTrigger(on: date, from: startTime, customConfig: customFrequencyConfig)
         
         // If it shouldn't trigger based on frequency, don't show
         if !shouldTrigger {

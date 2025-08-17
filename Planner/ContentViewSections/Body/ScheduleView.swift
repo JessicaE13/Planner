@@ -593,9 +593,6 @@ struct ScheduleDetailView: View {
 
 // MARK: - Schedule Edit View with Delete Functionality
 
-// Updated ScheduleEditView with Category Support
-// This replaces the existing ScheduleEditView in ScheduleView.swift
-
 struct ScheduleEditView: View {
     @State private var item: ScheduleItem
     let selectedDate: Date
@@ -610,6 +607,10 @@ struct ScheduleEditView: View {
     // Delete confirmation states
     @State private var showingDeleteConfirmation = false
     @State private var showingRecurringDeleteOptions = false
+    
+    // Custom frequency states
+    @State private var showingCustomFrequencyPicker = false
+    @State private var customFrequencyConfig: CustomFrequencyConfig
     
     // String representation of the description for editing
     @State private var descriptionText: String = ""
@@ -631,6 +632,13 @@ struct ScheduleEditView: View {
         self._descriptionText = State(initialValue: item.descriptionText)
         self._checklistItems = State(initialValue: item.checklist)
         self._selectedCategory = State(initialValue: item.category)
+        
+        // Initialize custom frequency config
+        if let existingConfig = item.customFrequencyConfig {
+            self._customFrequencyConfig = State(initialValue: existingConfig)
+        } else {
+            self._customFrequencyConfig = State(initialValue: CustomFrequencyConfig())
+        }
     }
     
     private func performLocationSearch() {
@@ -706,7 +714,7 @@ struct ScheduleEditView: View {
                         }
                     }
                     
-                    // Updated Category Section - Minimal like repeat picker
+                    // Category Section
                     Section {
                         HStack {
                             Text("Category")
@@ -766,15 +774,50 @@ struct ScheduleEditView: View {
                             }
                         }
                         
+                        // Updated Repeat Section with Custom Frequency Support
                         HStack {
                             Text("Repeat")
                             Spacer()
-                            Picker("", selection: $item.frequency) {
+                            Menu {
                                 ForEach(Frequency.allCases) { frequency in
-                                    Text(frequency.displayName).tag(frequency)
+                                    Button(frequency.displayName) {
+                                        item.frequency = frequency
+                                        if frequency == .custom {
+                                            showingCustomFrequencyPicker = true
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    if item.frequency == .custom {
+                                        Text(customFrequencyConfig.displayDescription())
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                    } else {
+                                        Text(item.frequency.displayName)
+                                            .foregroundColor(.primary)
+                                    }
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption2)
                                 }
                             }
-                            .pickerStyle(MenuPickerStyle())
+                        }
+                        
+                        // Custom frequency configuration button
+                        if item.frequency == .custom {
+                            Button(action: {
+                                showingCustomFrequencyPicker = true
+                            }) {
+                                HStack {
+                                    Text("Configure Custom Frequency")
+                                        .foregroundColor(.blue)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption)
+                                }
+                            }
                         }
                         
                         // Show end repeat options when frequency is not "Never"
@@ -830,7 +873,6 @@ struct ScheduleEditView: View {
                     }
 
                     Section(header: Text("Checklist")) {
-                       
                         ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
                             HStack {
                                 Button(action: {
@@ -900,6 +942,14 @@ struct ScheduleEditView: View {
                         item.descriptionText = descriptionText
                         item.checklist = checklistItems
                         item.category = selectedCategory
+                        
+                        // Save custom frequency config if custom is selected
+                        if item.frequency == .custom {
+                            item.customFrequencyConfig = customFrequencyConfig
+                        } else {
+                            item.customFrequencyConfig = nil
+                        }
+                        
                         onSave(item)
                         dismiss()
                     }
@@ -916,6 +966,11 @@ struct ScheduleEditView: View {
             descriptionText = item.descriptionText
             checklistItems = item.checklist
             selectedCategory = item.category
+            
+            // Load existing custom frequency config
+            if let existingConfig = item.customFrequencyConfig {
+                customFrequencyConfig = existingConfig
+            }
         }
         .onDisappear {
             locationSearchTask?.cancel()
@@ -925,9 +980,17 @@ struct ScheduleEditView: View {
             if newFrequency == .never {
                 item.endRepeatOption = .never
             }
+            
+            // Show custom frequency picker when custom is selected
+            if newFrequency == .custom {
+                showingCustomFrequencyPicker = true
+            }
         }
         .sheet(isPresented: $showingManageCategories) {
             ManageCategoriesView()
+        }
+        .sheet(isPresented: $showingCustomFrequencyPicker) {
+            CustomFrequencyPickerView(customConfig: $customFrequencyConfig)
         }
         // Simple delete confirmation for single events
         .alert("Delete Event", isPresented: $showingDeleteConfirmation) {
