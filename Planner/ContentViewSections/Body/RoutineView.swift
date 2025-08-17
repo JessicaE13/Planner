@@ -538,91 +538,86 @@ struct RoutineDetailBottomSheetView: View {
     
     var body: some View {
         NavigationView {
-            ZStack {
-                Color("Background").opacity(0.2)
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // Header Section
-                    VStack(spacing: 16) {
-                        Image(systemName: workingRoutine.icon)
-                            .font(.system(size: 48))
-                            .foregroundColor(.primary)
-                        
-                        Text(workingRoutine.name + " Routine")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
-                            .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
-                            .scaleEffect(y: 1.5)
-                            .frame(maxWidth: 200)
-                            .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
-                    }
-                    .padding(.top, 24)
-                    .padding(.bottom, 32)
+            VStack(spacing: 0) {
+                // Header Section
+                VStack(spacing: 16) {
+                    Image(systemName: workingRoutine.icon)
+                        .font(.system(size: 48))
+                        .foregroundColor(.primary)
+                    
+                    Text(workingRoutine.name + " Routine")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
+                        .progressViewStyle(LinearProgressViewStyle(tint: Color("Color1")))
+                        .scaleEffect(y: 1.5)
+                        .frame(maxWidth: 200)
+                        .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
+                }
+                .padding(.top, 24)
+                .padding(.bottom, 32)
 
-                    // Routine Items List
-                    if !workingRoutine.items.isEmpty {
-                        VStack(spacing: 0) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.white)
-                                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                                
-                                VStack(spacing: 0) {
-                                    ForEach(workingRoutine.items.indices, id: \.self) { index in
-                                        Button(action: {
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                workingRoutine.toggleItem(workingRoutine.items[index], for: selectedDate)
-                                            }
-                                        }) {
-                                            HStack {
-                                                Image(systemName: workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate) ? "checkmark.circle.fill" : "circle")
-                                                    .foregroundColor(workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate) ? .primary : .gray)
-                                                    .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate))
-                                                
-                                                Text(workingRoutine.items[index])
-                                                    .strikethrough(workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate))
-                                                    .foregroundColor(workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate) ? .secondary : .primary)
-                                                    .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate))
-                                                
-                                                Spacer()
-                                            }
-                                            .padding(.vertical, 12)
-                                            .padding(.horizontal, 16)
-                                            .contentShape(Rectangle())
+                // Routine Items List
+                if !workingRoutine.items.isEmpty {
+                    VStack(spacing: 0) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                            
+                            VStack(spacing: 0) {
+                                ForEach(workingRoutine.items.indices, id: \.self) { index in
+                                    Button(action: {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            workingRoutine.toggleItem(workingRoutine.items[index], for: selectedDate)
                                         }
-                                        .buttonStyle(PlainButtonStyle())
-                                        
-                                        if index < workingRoutine.items.count - 1 {
-                                            Divider()
-                                                .padding(.leading, 16)
+                                    }) {
+                                        HStack {
+                                            Image(systemName: workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate) ? "checkmark.circle.fill" : "circle")
+                                                .foregroundColor(workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate) ? .primary : .gray)
+                                                .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate))
+                                            
+                                            Text(workingRoutine.items[index])
+                                                .strikethrough(workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate))
+                                                .foregroundColor(workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate) ? .secondary : .primary)
+                                                .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(workingRoutine.items[index], for: selectedDate))
+                                            
+                                            Spacer()
                                         }
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 16)
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    if index < workingRoutine.items.count - 1 {
+                                        Divider()
+                                            .padding(.leading, 16)
                                     }
                                 }
                             }
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 16)
                         }
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 16)
                     }
-                    
-                    Spacer()
-                    
-                    // Done Button
-                    Button("Done") {
-                        routine = workingRoutine
-                        dismiss()
-                    }
-                    .font(.headline)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(Color("Color1").opacity(0.9))
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 24)
                 }
+                
+                Spacer()
+                
+                // Done Button
+                Button("Done") {
+                    routine = workingRoutine
+                    dismiss()
+                }
+                .font(.headline)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .background(Color("Color1").opacity(0.9))
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 24)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
