@@ -22,19 +22,21 @@ struct Routine: Identifiable, Codable {
     // Changed from Set<String> to [String: Set<String>] to track completion per date
     var completedItemsByDate: [String: Set<String>] = [:]
     
-    // Updated frequency properties with proper start date
+    // Updated frequency properties with custom frequency support
     var frequency: Frequency = .everyDay
+    var customFrequencyConfig: CustomFrequencyConfig? = nil
     var endRepeatOption: EndRepeatOption = .never
     var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     var startDate: Date = Date()
     
-    // Custom initializer with updated default start date
-    init(name: String, icon: String, items: [String], color: Color = .blue, frequency: Frequency = .everyDay, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(), startDate: Date = Date()) {
+    // Custom initializer with custom frequency support
+    init(name: String, icon: String, items: [String], color: Color = .blue, frequency: Frequency = .everyDay, customFrequencyConfig: CustomFrequencyConfig? = nil, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(), startDate: Date = Date()) {
         self.name = name
         self.icon = icon
         self.items = items
         self.color = color
         self.frequency = frequency
+        self.customFrequencyConfig = customFrequencyConfig
         self.endRepeatOption = endRepeatOption
         self.endRepeatDate = endRepeatDate
         self.startDate = startDate
@@ -42,7 +44,7 @@ struct Routine: Identifiable, Codable {
     
     // Custom Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, name, icon, items, completedItemsByDate, frequency, endRepeatOption, endRepeatDate, startDate, colorData
+        case id, name, icon, items, completedItemsByDate, frequency, customFrequencyConfig, endRepeatOption, endRepeatDate, startDate, colorData
     }
     
     init(from decoder: Decoder) throws {
@@ -52,6 +54,7 @@ struct Routine: Identifiable, Codable {
         items = try container.decode([String].self, forKey: .items)
         completedItemsByDate = try container.decode([String: Set<String>].self, forKey: .completedItemsByDate)
         frequency = try container.decodeIfPresent(Frequency.self, forKey: .frequency) ?? .everyDay
+        customFrequencyConfig = try container.decodeIfPresent(CustomFrequencyConfig.self, forKey: .customFrequencyConfig)
         endRepeatOption = try container.decodeIfPresent(EndRepeatOption.self, forKey: .endRepeatOption) ?? .never
         endRepeatDate = try container.decodeIfPresent(Date.self, forKey: .endRepeatDate) ?? Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
         startDate = try container.decodeIfPresent(Date.self, forKey: .startDate) ?? Date()
@@ -67,6 +70,7 @@ struct Routine: Identifiable, Codable {
         try container.encode(items, forKey: .items)
         try container.encode(completedItemsByDate, forKey: .completedItemsByDate)
         try container.encode(frequency, forKey: .frequency)
+        try container.encode(customFrequencyConfig, forKey: .customFrequencyConfig)
         try container.encode(endRepeatOption, forKey: .endRepeatOption)
         try container.encode(endRepeatDate, forKey: .endRepeatDate)
         try container.encode(startDate, forKey: .startDate)
@@ -112,10 +116,10 @@ struct Routine: Identifiable, Codable {
         return completed.contains(item)
     }
     
-    // Updated shouldAppear method to use proper frequency checking
+    // Updated shouldAppear method to use custom frequency config
     func shouldAppear(on date: Date) -> Bool {
-        // Check if the routine should trigger based on frequency from start date
-        let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate)
+        // Check if the routine should trigger based on frequency from start date (including custom config)
+        let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate, customConfig: customFrequencyConfig)
         
         // If it shouldn't trigger based on frequency, don't show
         if !shouldTrigger {
@@ -145,6 +149,7 @@ struct RoutineItem: Identifiable, Codable {
 }
 
 // MARK: - Create Routine View (Simplified)
+
 struct CreateRoutineView: View {
     @Binding var routines: [Routine]
     @Environment(\.dismiss) private var dismiss
@@ -158,6 +163,8 @@ struct CreateRoutineView: View {
     @State private var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     @State private var startDate: Date = Date()
     @State private var showingIconPicker = false
+    @State private var showingCustomFrequencyPicker = false
+    @State private var customFrequencyConfig = CustomFrequencyConfig()
     
     private let availableColors: [String] = [
         "Color1", "Color2", "Color3", "Color4", "Color5"
@@ -182,22 +189,24 @@ struct CreateRoutineView: View {
                             TextField("Routine Name", text: $routineName)
                         }
                         
-                        // Color Picker
-                        VStack(alignment: .leading) {
+                        // Color Picker - Updated to HStack
+                        HStack {
                             Text("Choose Color")
                                 .font(.headline)
                             
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
+                            Spacer()
+                            
+                            HStack(spacing: 12) {
                                 ForEach(Array(availableColors.enumerated()), id: \.offset) { index, colorName in
                                     Button(action: {
                                         selectedColor = colorName
                                     }) {
                                         Circle()
                                             .fill(Color(colorName))
-                                            .frame(width: 40, height: 40)
+                                            .frame(width: 30, height: 30)
                                             .overlay(
                                                 Circle()
-                                                    .stroke(selectedColor == colorName ? Color.primary : Color.clear, lineWidth: 3)
+                                                    .stroke(selectedColor == colorName ? Color.primary : Color.clear, lineWidth: 2)
                                             )
                                     }
                                     .buttonStyle(PlainButtonStyle())
@@ -215,15 +224,34 @@ struct CreateRoutineView: View {
                                 .labelsHidden()
                         }
                         
+                        // Updated Repeat Section with Custom Frequency Support
                         HStack {
                             Text("Repeat")
                             Spacer()
-                            Picker("", selection: $frequency) {
+                            Menu {
                                 ForEach(Frequency.allCases) { freq in
-                                    Text(freq.displayName).tag(freq)
+                                    Button(freq.displayName) {
+                                        frequency = freq
+                                        if freq == .custom {
+                                            showingCustomFrequencyPicker = true
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    if frequency == .custom {
+                                        Text(customFrequencyConfig.displayDescription())
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                    } else {
+                                        Text(frequency.displayName)
+                                            .foregroundColor(.primary)
+                                    }
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption2)
                                 }
                             }
-                            .pickerStyle(MenuPickerStyle())
                         }
                         
                         if frequency != .never {
@@ -300,10 +328,22 @@ struct CreateRoutineView: View {
             .sheet(isPresented: $showingIconPicker) {
                 IconPickerView(selectedIcon: $selectedIcon, initialSearchText: routineName)
             }
+            .sheet(isPresented: $showingCustomFrequencyPicker) {
+                CustomFrequencyPickerView(
+                    customConfig: $customFrequencyConfig,
+                    endRepeatOption: $endRepeatOption,
+                    endRepeatDate: $endRepeatDate
+                )
+            }
         }
         .onChange(of: frequency) { _, newFrequency in
             if newFrequency == .never {
                 endRepeatOption = .never
+            }
+            
+            // Show custom frequency picker when custom is selected
+            if newFrequency == .custom {
+                showingCustomFrequencyPicker = true
             }
         }
     }
@@ -327,6 +367,7 @@ struct CreateRoutineView: View {
             items: filteredItems,
             color: Color(selectedColor),
             frequency: frequency,
+            customFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil,
             endRepeatOption: endRepeatOption,
             endRepeatDate: endRepeatDate,
             startDate: startDate
