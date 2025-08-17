@@ -636,6 +636,7 @@ struct ScheduleEditView: View {
     
     // Category management
     @State private var selectedCategory: Category?
+    @State private var showingManageCategories = false
     
     init(item: ScheduleItem, selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void, onDelete: ((DeleteOption) -> Void)?) {
         self._item = State(initialValue: item)
@@ -720,9 +721,33 @@ struct ScheduleEditView: View {
                         }
                     }
                     
-                    // Category Section
-                    Section(header: Text("Category")) {
-                        CategoryPickerView(selectedCategory: $selectedCategory)
+                    // Updated Category Section - Minimal like repeat picker
+                    Section {
+                        HStack {
+                            Text("Category")
+                            Spacer()
+                            Menu {
+                                Button("None") {
+                                    selectedCategory = nil
+                                }
+                                ForEach(CategoryDataManager.shared.categories) { category in
+                                    Button(category.name) {
+                                        selectedCategory = category
+                                    }
+                                }
+                                Button("Manage Categories") {
+                                    showingManageCategories = true
+                                }
+                            } label: {
+                                HStack {
+                                    Text(selectedCategory?.name ?? "None")
+                                        .foregroundColor(.primary)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption2)
+                                }
+                            }
+                        }
                     }
                     
                     Section {
@@ -915,6 +940,9 @@ struct ScheduleEditView: View {
             if newFrequency == .never {
                 item.endRepeatOption = .never
             }
+        }
+        .sheet(isPresented: $showingManageCategories) {
+            ManageCategoriesView()
         }
         // Simple delete confirmation for single events
         .alert("Delete Event", isPresented: $showingDeleteConfirmation) {
