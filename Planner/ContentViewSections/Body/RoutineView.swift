@@ -241,6 +241,7 @@ struct CreateRoutineView: View {
                                 }
                             }
                         }
+                        .onDelete(perform: deleteChecklistItems)
                         
                         Button(action: {
                             routineItems.append("")
@@ -279,6 +280,10 @@ struct CreateRoutineView: View {
                 endRepeatOption = .never
             }
         }
+    }
+    
+    private func deleteChecklistItems(offsets: IndexSet) {
+        routineItems.remove(atOffsets: offsets)
     }
     
     private func saveRoutine() {
@@ -376,19 +381,11 @@ struct RoutineView: View {
                                     HStack(alignment: .bottom) {
                         
                                         VStack(alignment: .leading, spacing: 4) {
-                                            HStack(spacing: 4) {
-                                                Text(routineData.routine.name)
-                                                    .font(.system(size: 16, weight: .medium, design: .default))
-                                                    .kerning(1)
-                                                    .foregroundColor(.primary)
-                                                
-                                                // Add repeat icon if routine has frequency other than never
-                                                if routineData.routine.frequency != .never {
-                                                    Image(systemName: "repeat")
-                                                        .foregroundColor(.gray.opacity(0.6))
-                                                        .font(.caption)
-                                                }
-                                            }
+                                            // Removed the repeat icon from here
+                                            Text(routineData.routine.name)
+                                                .font(.system(size: 16, weight: .medium, design: .default))
+                                                .kerning(1)
+                                                .foregroundColor(.primary)
                                                
                                             Text("Routine")
                                                 .font(.system(size: 10, weight: .regular, design: .default))
@@ -457,7 +454,7 @@ struct RoutineView: View {
     }
 }
 
-// Updated Bottom Sheet View for Routine Details with date support
+// Updated Bottom Sheet View for Routine Details with date support - also removed repeat icon
 struct RoutineDetailBottomSheetView: View {
     @Binding var routine: Routine
     let selectedDate: Date
@@ -476,18 +473,10 @@ struct RoutineDetailBottomSheetView: View {
                             .font(.system(size: 48))
                             .foregroundColor(.primary)
                         
-                        HStack(spacing: 4) {
-                            Text(routine.name + " Routine")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                            
-                            // Add repeat icon if routine has frequency other than never
-                            if routine.frequency != .never {
-                                Image(systemName: "repeat")
-                                    .foregroundColor(.gray.opacity(0.6))
-                                    .font(.title3)
-                            }
-                        }
+                        // Removed repeat icon from here too
+                        Text(routine.name + " Routine")
+                            .font(.title2)
+                            .fontWeight(.semibold)
                         
                         // Progress view with animation for selected date
                         ProgressView(value: routine.progress(for: selectedDate), total: 1.0)
