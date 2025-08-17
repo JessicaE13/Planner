@@ -338,8 +338,6 @@ struct ScheduleRowView: View {
 }
 
 // MARK: - Enhanced Schedule Detail View with Repeat Icon
-// Updated ScheduleDetailView with Category Display
-// This replaces the existing ScheduleDetailView in ScheduleView.swift
 
 struct ScheduleDetailView: View {
     @State private var item: ScheduleItem
@@ -509,33 +507,20 @@ struct ScheduleDetailView: View {
                             .padding(.horizontal)
                         }
                         
-                        Spacer(minLength: 20)
-                        
-                        // Edit Button
-                        Button(action: {
-                            onEdit(item)
-                        }) {
-                            HStack {
-                                Image(systemName: "pencil")
-                                Text("Edit Event")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(12)
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom)
+                        Spacer(minLength: 40)
                     }
                 }
             }
             .navigationTitle("Event Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Edit") {
+                        onEdit(item)
+                    }
                 }
             }
         }
@@ -920,7 +905,7 @@ struct ScheduleEditView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Done") {
                         dismiss()
                     }
                 }
