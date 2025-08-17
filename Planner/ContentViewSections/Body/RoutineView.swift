@@ -255,8 +255,7 @@ struct CreateRoutineView: View {
     
     // Item-level frequency editing
     @State private var editingItemIndex: Int?
-    @State private var showingItemFrequencyPicker = false
-    @State private var itemCustomFrequencyConfig = CustomFrequencyConfig()
+    @State private var showingItemDetailSheet = false
     
     // Track if user has manually selected an icon
     @State private var hasManuallySelectedIcon = false
@@ -425,78 +424,39 @@ struct CreateRoutineView: View {
                                 HStack {
                                     TextField("Item \(index + 1)", text: $routineItems[index].name)
                                     
-                                    if routineItems.count > 1 {
-                                        Button(action: {
-                                            routineItems.remove(at: index)
-                                        }) {
-                                            Image(systemName: "minus.circle.fill")
-                                                .foregroundColor(.red)
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                    }
-                                }
-                                
-                                // Individual Item Frequency Controls (Only show in edit mode)
-                                if isEditing {
-                                    HStack {
-                                        Text("Frequency:")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                        
-                                        Spacer()
-                                        
-                                        Button(action: {
-                                            editingItemIndex = index
-                                            itemCustomFrequencyConfig = routineItems[index].customFrequencyConfig ?? CustomFrequencyConfig()
-                                            showingItemFrequencyPicker = true
-                                        }) {
-                                            HStack(spacing: 4) {
-                                                if routineItems[index].frequency == .custom {
-                                                    Text(routineItems[index].customFrequencyConfig?.displayDescription() ?? "Custom")
-                                                        .font(.caption)
-                                                        .foregroundColor(.blue)
-                                                } else {
-                                                    Text(routineItems[index].frequency.displayName)
-                                                        .font(.caption)
-                                                        .foregroundColor(.blue)
-                                                }
-                                                Image(systemName: "chevron.right")
-                                                    .font(.caption2)
+                                    Spacer()
+                                    
+                                    // Show frequency inline if editing and not "Every Day"
+                                    if isEditing && routineItems[index].frequency != .everyDay {
+                                        HStack(spacing: 4) {
+                                            if routineItems[index].frequency == .custom {
+                                                Text(routineItems[index].customFrequencyConfig?.displayDescription() ?? "Custom")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            } else {
+                                                Text(routineItems[index].frequency.displayName)
+                                                    .font(.caption)
                                                     .foregroundColor(.secondary)
                                             }
                                         }
                                     }
                                     
-                                    if routineItems[index].frequency != .never && routineItems[index].frequency != .everyDay {
-                                        HStack {
-                                            Text("Item ends:")
-                                                .font(.caption2)
+                                    // Replace delete button with ellipsis menu (only show for non-empty items)
+                                    if !routineItems[index].name.isEmpty || routineItems.count > 1 {
+                                        Button(action: {
+                                            editingItemIndex = index
+                                            showingItemDetailSheet = true
+                                        }) {
+                                            Image(systemName: "ellipsis")
                                                 .foregroundColor(.secondary)
-                                            
-                                            Spacer()
-                                            
-                                            Picker("", selection: $routineItems[index].endRepeatOption) {
-                                                ForEach(EndRepeatOption.allCases) { option in
-                                                    Text(option.displayName)
-                                                        .font(.caption)
-                                                        .tag(option)
-                                                }
-                                            }
-                                            .pickerStyle(MenuPickerStyle())
-                                            .scaleEffect(0.8)
-                                            
-                                            if routineItems[index].endRepeatOption == .onDate {
-                                                DatePicker("", selection: $routineItems[index].endRepeatDate, displayedComponents: .date)
-                                                    .labelsHidden()
-                                                    .scaleEffect(0.8)
-                                            }
+                                                .frame(width: 20, height: 20)
                                         }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
                                 }
                             }
                             .padding(.vertical, 4)
                         }
-                        .onDelete(perform: deleteRoutineItems)
                         
                         Button(action: {
                             routineItems.append(RoutineItem(name: "", frequency: .everyDay))
@@ -552,16 +512,13 @@ struct CreateRoutineView: View {
                     endRepeatDate: $endRepeatDate
                 )
             }
-            .sheet(isPresented: $showingItemFrequencyPicker) {
+            .sheet(isPresented: $showingItemDetailSheet) {
                 if let editingIndex = editingItemIndex {
-                    ItemFrequencyPickerView(
-                        itemFrequency: $routineItems[editingIndex].frequency,
-                        customConfig: $itemCustomFrequencyConfig,
-                        endRepeatOption: $routineItems[editingIndex].endRepeatOption,
-                        endRepeatDate: $routineItems[editingIndex].endRepeatDate,
-                        onSave: {
-                            routineItems[editingIndex].customFrequencyConfig = routineItems[editingIndex].frequency == .custom ? itemCustomFrequencyConfig : nil
-                            showingItemFrequencyPicker = false
+                    RoutineItemDetailView(
+                        item: $routineItems[editingIndex],
+                        onDelete: {
+                            routineItems.remove(at: editingIndex)
+                            showingItemDetailSheet = false
                             self.editingItemIndex = nil
                         }
                     )
@@ -609,10 +566,6 @@ struct CreateRoutineView: View {
     }
     
     // MARK: - Helper Methods
-    
-    private func deleteRoutineItems(offsets: IndexSet) {
-        routineItems.remove(atOffsets: offsets)
-    }
     
     private func saveRoutine() {
         let trimmedName = routineName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -673,31 +626,46 @@ struct CreateRoutineView: View {
     }
 }
 
-// MARK: - Item Frequency Picker View
-struct ItemFrequencyPickerView: View {
-    @Binding var itemFrequency: Frequency
-    @Binding var customConfig: CustomFrequencyConfig
-    @Binding var endRepeatOption: EndRepeatOption
-    @Binding var endRepeatDate: Date
-    let onSave: () -> Void
-    
+// MARK: - New Routine Item Detail View
+struct RoutineItemDetailView: View {
+    @Binding var item: RoutineItem
+    let onDelete: () -> Void
     @Environment(\.dismiss) private var dismiss
+    
     @State private var showingCustomFrequencyPicker = false
+    @State private var customFrequencyConfig: CustomFrequencyConfig
+    @State private var showingDeleteConfirmation = false
+    
+    init(item: Binding<RoutineItem>, onDelete: @escaping () -> Void) {
+        self._item = item
+        self.onDelete = onDelete
+        
+        // Initialize custom frequency config
+        if let existingConfig = item.wrappedValue.customFrequencyConfig {
+            self._customFrequencyConfig = State(initialValue: existingConfig)
+        } else {
+            self._customFrequencyConfig = State(initialValue: CustomFrequencyConfig())
+        }
+    }
     
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Item Frequency")) {
+                Section(header: Text("Item Details")) {
+                    TextField("Item Name", text: $item.name)
+                }
+                
+                Section(header: Text("Frequency")) {
                     ForEach(Frequency.allCases) { frequency in
                         Button(action: {
-                            itemFrequency = frequency
+                            item.frequency = frequency
                             if frequency == .custom {
                                 showingCustomFrequencyPicker = true
                             }
                         }) {
                             HStack {
-                                if frequency == .custom && itemFrequency == .custom {
-                                    Text(customConfig.displayDescription())
+                                if frequency == .custom && item.frequency == .custom {
+                                    Text(customFrequencyConfig.displayDescription())
                                         .foregroundColor(.primary)
                                 } else {
                                     Text(frequency.displayName)
@@ -706,7 +674,7 @@ struct ItemFrequencyPickerView: View {
                                 
                                 Spacer()
                                 
-                                if itemFrequency == frequency {
+                                if item.frequency == frequency {
                                     Image(systemName: "checkmark")
                                         .foregroundColor(.blue)
                                 }
@@ -715,18 +683,24 @@ struct ItemFrequencyPickerView: View {
                     }
                 }
                 
-                if itemFrequency != .never {
+                if item.frequency != .never {
                     Section(header: Text("End Repeat")) {
-                        Picker("End Repeat", selection: $endRepeatOption) {
+                        Picker("End Repeat", selection: $item.endRepeatOption) {
                             ForEach(EndRepeatOption.allCases) { option in
                                 Text(option.displayName).tag(option)
                             }
                         }
                         .pickerStyle(SegmentedPickerStyle())
                         
-                        if endRepeatOption == .onDate {
-                            DatePicker("End Date", selection: $endRepeatDate, displayedComponents: .date)
+                        if item.endRepeatOption == .onDate {
+                            DatePicker("End Date", selection: $item.endRepeatDate, displayedComponents: .date)
                         }
+                    }
+                }
+                
+                Section {
+                    Button("Delete Item", role: .destructive) {
+                        showingDeleteConfirmation = true
                     }
                 }
                 
@@ -737,7 +711,7 @@ struct ItemFrequencyPickerView: View {
                 }
                 .listRowBackground(Color.clear)
             }
-            .navigationTitle("Item Frequency")
+            .navigationTitle("Edit Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -746,8 +720,13 @@ struct ItemFrequencyPickerView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        onSave()
+                    Button("Done") {
+                        // Save custom frequency config if custom is selected
+                        if item.frequency == .custom {
+                            item.customFrequencyConfig = customFrequencyConfig
+                        } else {
+                            item.customFrequencyConfig = nil
+                        }
                         dismiss()
                     }
                 }
@@ -755,14 +734,22 @@ struct ItemFrequencyPickerView: View {
         }
         .sheet(isPresented: $showingCustomFrequencyPicker) {
             CustomFrequencyPickerView(
-                customConfig: $customConfig,
-                endRepeatOption: $endRepeatOption,
-                endRepeatDate: $endRepeatDate
+                customConfig: $customFrequencyConfig,
+                endRepeatOption: $item.endRepeatOption,
+                endRepeatDate: $item.endRepeatDate
             )
         }
-        .onChange(of: itemFrequency) { _, newFrequency in
+        .alert("Delete Item", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                onDelete()
+            }
+        } message: {
+            Text("Are you sure you want to delete this item? This action cannot be undone.")
+        }
+        .onChange(of: item.frequency) { _, newFrequency in
             if newFrequency == .never {
-                endRepeatOption = .never
+                item.endRepeatOption = .never
             }
             
             if newFrequency == .custom {
