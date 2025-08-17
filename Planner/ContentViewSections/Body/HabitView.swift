@@ -73,6 +73,11 @@ struct Habit: Identifiable, Codable {
     }
     
     func shouldAppear(on date: Date) -> Bool {
+        // If frequency is never, only show on the exact start date
+        if frequency == .never {
+            return Calendar.current.isDate(startDate, inSameDayAs: date)
+        }
+        
         // Check if the habit should trigger based on frequency from start date
         let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate)
         
@@ -145,9 +150,30 @@ class HabitDataManager: ObservableObject {
         do {
             let decoder = JSONDecoder()
             habits = try decoder.decode([Habit].self, from: data)
+            
+            // Migrate existing habits that might have today's date as start date
+            migrateExistingHabits()
         } catch {
             print("Failed to load habits: \(error)")
             loadDefaultHabits()
+        }
+    }
+    
+    private func migrateExistingHabits() {
+        let today = Date()
+        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: today) ?? today
+        var needsUpdate = false
+        
+        for index in habits.indices {
+            // If the habit's start date is today (indicating it's an old habit), update it
+            if Calendar.current.isDate(habits[index].startDate, inSameDayAs: today) {
+                habits[index].startDate = weekAgo
+                needsUpdate = true
+            }
+        }
+        
+        if needsUpdate {
+            saveHabits()
         }
     }
     
@@ -156,11 +182,11 @@ class HabitDataManager: ObservableObject {
         let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         
         habits = [
-            Habit(name: "Drink Water", startDate: weekAgo),
-            Habit(name: "Exercise", startDate: weekAgo),
-            Habit(name: "Read", startDate: weekAgo),
-            Habit(name: "Meditate", startDate: weekAgo),
-            Habit(name: "Journal", startDate: weekAgo)
+            Habit(name: "Drink Water", frequency: .everyDay, startDate: weekAgo),
+            Habit(name: "Exercise", frequency: .everyDay, startDate: weekAgo),
+            Habit(name: "Read", frequency: .everyDay, startDate: weekAgo),
+            Habit(name: "Meditate", frequency: .everyDay, startDate: weekAgo),
+            Habit(name: "Journal", frequency: .everyDay, startDate: weekAgo)
         ]
         saveHabits()
     }
@@ -170,6 +196,27 @@ struct HabitView: View {
     @StateObject private var habitManager = HabitDataManager.shared
     var selectedDate: Date
     @State private var showManageHabits = false
+    
+    // Debug function to check habit visibility
+    private func debugHabitVisibility() {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        
+        print("=== HABIT DEBUG for \(formatter.string(from: selectedDate)) ===")
+        for (index, habit) in habitManager.habits.enumerated() {
+            let shouldShow = habit.shouldAppear(on: selectedDate)
+            let startDateStr = formatter.string(from: habit.startDate)
+            let frequencyTrigger = habit.frequency.shouldTrigger(on: selectedDate, from: habit.startDate)
+            
+            print("Habit \(index): \(habit.name)")
+            print("  Start Date: \(startDateStr)")
+            print("  Frequency: \(habit.frequency.displayName)")
+            print("  Should Trigger: \(frequencyTrigger)")
+            print("  Should Show: \(shouldShow)")
+            print("  End Option: \(habit.endRepeatOption.displayName)")
+            print("---")
+        }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -222,6 +269,14 @@ struct HabitView: View {
         .padding()
         .sheet(isPresented: $showManageHabits) {
             ManageHabitsView(habitManager: habitManager)
+        }
+        .onAppear {
+            // Uncomment this line to see debug info in console
+            // debugHabitVisibility()
+        }
+        .onChange(of: selectedDate) { _, _ in
+            // Uncomment this line to see debug info when date changes
+            // debugHabitVisibility()
         }
     }
 }
