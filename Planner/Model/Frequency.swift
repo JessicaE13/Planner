@@ -26,8 +26,12 @@ enum Frequency: String, CaseIterable, Identifiable, Codable {
     func shouldTrigger(on date: Date, from startDate: Date) -> Bool {
         let calendar = Calendar.current
         
-        // Don't show events before the start date
-        if date < calendar.startOfDay(for: startDate) {
+        // Remove the restriction that prevented showing events before start date
+        // Now we only check if the date is on or after the start date
+        let startOfDay = calendar.startOfDay(for: date)
+        let startOfStartDate = calendar.startOfDay(for: startDate)
+        
+        if startOfDay < startOfStartDate {
             return false
         }
         

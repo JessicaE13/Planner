@@ -13,17 +13,25 @@ struct Habit: Identifiable, Codable {
     var frequency: Frequency = .everyDay
     var completion: [String: Bool] // date string (yyyy-MM-dd) to completion status
     
+    // Add start and end date properties
+    var startDate: Date = Date()
+    var endRepeatOption: EndRepeatOption = .never
+    var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+    
     // Custom initializer for creating new habits
-    init(name: String, frequency: Frequency = .everyDay, completion: [String: Bool] = [:]) {
+    init(name: String, frequency: Frequency = .everyDay, completion: [String: Bool] = [:], startDate: Date = Date(), endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()) {
         self.id = UUID()
         self.name = name
         self.frequency = frequency
         self.completion = completion
+        self.startDate = startDate
+        self.endRepeatOption = endRepeatOption
+        self.endRepeatDate = endRepeatDate
     }
     
     // Custom Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, name, frequency, completion
+        case id, name, frequency, completion, startDate, endRepeatOption, endRepeatDate
     }
     
     init(from decoder: Decoder) throws {
@@ -32,6 +40,9 @@ struct Habit: Identifiable, Codable {
         name = try container.decode(String.self, forKey: .name)
         frequency = try container.decode(Frequency.self, forKey: .frequency)
         completion = try container.decode([String: Bool].self, forKey: .completion)
+        startDate = try container.decodeIfPresent(Date.self, forKey: .startDate) ?? Date()
+        endRepeatOption = try container.decodeIfPresent(EndRepeatOption.self, forKey: .endRepeatOption) ?? .never
+        endRepeatDate = try container.decodeIfPresent(Date.self, forKey: .endRepeatDate) ?? Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     }
     
     func encode(to encoder: Encoder) throws {
@@ -40,6 +51,9 @@ struct Habit: Identifiable, Codable {
         try container.encode(name, forKey: .name)
         try container.encode(frequency, forKey: .frequency)
         try container.encode(completion, forKey: .completion)
+        try container.encode(startDate, forKey: .startDate)
+        try container.encode(endRepeatOption, forKey: .endRepeatOption)
+        try container.encode(endRepeatDate, forKey: .endRepeatDate)
     }
     
     func isCompleted(for date: Date) -> Bool {
@@ -59,8 +73,21 @@ struct Habit: Identifiable, Codable {
     }
     
     func shouldAppear(on date: Date) -> Bool {
-        let startDate = Date()
-        return frequency.shouldTrigger(on: date, from: startDate)
+        // Check if the habit should trigger based on frequency from start date
+        let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate)
+        
+        // If it shouldn't trigger based on frequency, don't show
+        if !shouldTrigger {
+            return false
+        }
+        
+        // Check end repeat conditions
+        if endRepeatOption == .onDate {
+            return date <= endRepeatDate
+        }
+        
+        // If endRepeatOption is .never, show indefinitely (as long as frequency matches)
+        return true
     }
 }
 
@@ -125,12 +152,15 @@ class HabitDataManager: ObservableObject {
     }
     
     private func loadDefaultHabits() {
+        // Set start date to a week ago so habits show up in past days
+        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        
         habits = [
-            Habit(name: "Drink Water", completion: [:]),
-            Habit(name: "Exercise", completion: [:]),
-            Habit(name: "Read", completion: [:]),
-            Habit(name: "Meditate", completion: [:]),
-            Habit(name: "Journal", completion: [:])
+            Habit(name: "Drink Water", startDate: weekAgo),
+            Habit(name: "Exercise", startDate: weekAgo),
+            Habit(name: "Read", startDate: weekAgo),
+            Habit(name: "Meditate", startDate: weekAgo),
+            Habit(name: "Journal", startDate: weekAgo)
         ]
         saveHabits()
     }
@@ -211,6 +241,17 @@ struct HabitDetailView: View {
                         .onChange(of: habit.name) { _, _ in
                             habitManager.updateHabit(habit)
                         }
+                    
+                    HStack {
+                        Text("Start Date")
+                        Spacer()
+                        DatePicker("", selection: $habit.startDate, displayedComponents: .date)
+                            .labelsHidden()
+                    }
+                    .onChange(of: habit.startDate) { _, _ in
+                        habitManager.updateHabit(habit)
+                    }
+                    
                     Picker("Frequency", selection: $habit.frequency) {
                         ForEach(Frequency.allCases) { frequency in
                             Text(frequency.displayName).tag(frequency)
@@ -218,6 +259,36 @@ struct HabitDetailView: View {
                     }
                     .onChange(of: habit.frequency) { _, _ in
                         habitManager.updateHabit(habit)
+                    }
+                    
+                    // Show end repeat options when frequency is not "Never"
+                    if habit.frequency != .never {
+                        HStack {
+                            Text("End Repeat")
+                            Spacer()
+                            Picker("", selection: $habit.endRepeatOption) {
+                                ForEach(EndRepeatOption.allCases) { option in
+                                    Text(option.displayName).tag(option)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                        }
+                        .onChange(of: habit.endRepeatOption) { _, _ in
+                            habitManager.updateHabit(habit)
+                        }
+                        
+                        // Show date picker when "On Date" is selected
+                        if habit.endRepeatOption == .onDate {
+                            HStack {
+                                Text("End Date")
+                                Spacer()
+                                DatePicker("", selection: $habit.endRepeatDate, displayedComponents: .date)
+                                    .labelsHidden()
+                            }
+                            .onChange(of: habit.endRepeatDate) { _, _ in
+                                habitManager.updateHabit(habit)
+                            }
+                        }
                     }
                 }
                 Section {
@@ -231,6 +302,13 @@ struct HabitDetailView: View {
         }
         .navigationTitle(habit.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: habit.frequency) { _, newFrequency in
+            // Reset end repeat options when frequency changes to "Never"
+            if newFrequency == .never {
+                habit.endRepeatOption = .never
+                habitManager.updateHabit(habit)
+            }
+        }
     }
 }
 
@@ -238,6 +316,10 @@ struct ManageHabitsView: View {
     @ObservedObject var habitManager: HabitDataManager
     @Environment(\.dismiss) var dismiss
     @State private var newHabitName = ""
+    @State private var newHabitStartDate = Date()
+    @State private var newHabitFrequency: Frequency = .everyDay
+    @State private var newHabitEndRepeatOption: EndRepeatOption = .never
+    @State private var newHabitEndRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     
     var body: some View {
         NavigationView {
@@ -286,23 +368,71 @@ struct ManageHabitsView: View {
                 
                 Spacer()
                 
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                        .frame(height: 56)
-                    HStack {
-                        TextField("New Habit", text: $newHabitName)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .onSubmit {
+                // Enhanced Add New Habit Form
+                VStack(spacing: 16) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color.white)
+                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        
+                        VStack(spacing: 12) {
+                            TextField("New Habit", text: $newHabitName)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            
+                            HStack {
+                                Text("Start Date")
+                                Spacer()
+                                DatePicker("", selection: $newHabitStartDate, displayedComponents: .date)
+                                    .labelsHidden()
+                            }
+                            
+                            HStack {
+                                Text("Frequency")
+                                Spacer()
+                                Picker("", selection: $newHabitFrequency) {
+                                    ForEach(Frequency.allCases) { frequency in
+                                        Text(frequency.displayName).tag(frequency)
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                            }
+                            
+                            // Show end repeat options when frequency is not "Never"
+                            if newHabitFrequency != .never {
+                                HStack {
+                                    Text("End Repeat")
+                                    Spacer()
+                                    Picker("", selection: $newHabitEndRepeatOption) {
+                                        ForEach(EndRepeatOption.allCases) { option in
+                                            Text(option.displayName).tag(option)
+                                        }
+                                    }
+                                    .pickerStyle(MenuPickerStyle())
+                                }
+                                
+                                // Show date picker when "On Date" is selected
+                                if newHabitEndRepeatOption == .onDate {
+                                    HStack {
+                                        Text("End Date")
+                                        Spacer()
+                                        DatePicker("", selection: $newHabitEndRepeatDate, displayedComponents: .date)
+                                            .labelsHidden()
+                                    }
+                                }
+                            }
+                            
+                            Button("Add Habit") {
                                 addNewHabit()
                             }
-                        Button("Add") {
-                            addNewHabit()
+                            .disabled(newHabitName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(newHabitName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray.opacity(0.3) : Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
                         }
-                        .disabled(newHabitName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .padding()
                     }
-                    .padding(.horizontal)
                 }
                 .padding(.all, 16)
             }
@@ -316,14 +446,33 @@ struct ManageHabitsView: View {
             }
         }
         .background(Color("Background"))
+        .onChange(of: newHabitFrequency) { _, newFrequency in
+            // Reset end repeat options when frequency changes to "Never"
+            if newFrequency == .never {
+                newHabitEndRepeatOption = .never
+            }
+        }
     }
     
     private func addNewHabit() {
         let trimmedName = newHabitName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedName.isEmpty {
-            let newHabit = Habit(name: trimmedName, completion: [:])
+            let newHabit = Habit(
+                name: trimmedName,
+                frequency: newHabitFrequency,
+                completion: [:],
+                startDate: newHabitStartDate,
+                endRepeatOption: newHabitEndRepeatOption,
+                endRepeatDate: newHabitEndRepeatDate
+            )
             habitManager.addHabit(newHabit)
+            
+            // Reset form
             newHabitName = ""
+            newHabitStartDate = Date()
+            newHabitFrequency = .everyDay
+            newHabitEndRepeatOption = .never
+            newHabitEndRepeatDate = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
         }
     }
 }

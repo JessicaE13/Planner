@@ -12,8 +12,19 @@ struct ContentView: View {
     @State private var showRoutineDetail = false
     @State private var selectedRoutineIndex: Int? = nil
     @State private var routines = [
-        Routine(name: "Morning", icon: "sunrise", items: ["Brush teeth", "Shower", "Make bed", "Breakfast"]),
-        Routine(name: "Evening", icon: "moon", items: ["Dinner", "Read book", "Skincare", "Set alarm"])
+        // Initialize with start dates from a week ago so they show in past days
+        Routine(
+            name: "Morning",
+            icon: "sunrise",
+            items: ["Brush teeth", "Shower", "Make bed", "Breakfast"],
+            startDate: Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        ),
+        Routine(
+            name: "Evening",
+            icon: "moon",
+            items: ["Dinner", "Read book", "Skincare", "Set alarm"],
+            startDate: Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        )
     ]
     
     var body: some View {

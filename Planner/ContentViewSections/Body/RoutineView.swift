@@ -15,14 +15,14 @@ struct Routine: Identifiable, Codable {
     // Changed from Set<String> to [String: Set<String>] to track completion per date
     var completedItemsByDate: [String: Set<String>] = [:]
     
-    // New frequency properties
+    // Updated frequency properties with proper start date
     var frequency: Frequency = .everyDay
     var endRepeatOption: EndRepeatOption = .never
-    var endRepeatDate: Date = Date()
+    var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     var startDate: Date = Date()
     
-    // Custom initializer
-    init(name: String, icon: String, items: [String], frequency: Frequency = .everyDay, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Date(), startDate: Date = Date()) {
+    // Custom initializer with updated default start date
+    init(name: String, icon: String, items: [String], frequency: Frequency = .everyDay, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(), startDate: Date = Date()) {
         self.name = name
         self.icon = icon
         self.items = items
@@ -45,7 +45,7 @@ struct Routine: Identifiable, Codable {
         completedItemsByDate = try container.decode([String: Set<String>].self, forKey: .completedItemsByDate)
         frequency = try container.decodeIfPresent(Frequency.self, forKey: .frequency) ?? .everyDay
         endRepeatOption = try container.decodeIfPresent(EndRepeatOption.self, forKey: .endRepeatOption) ?? .never
-        endRepeatDate = try container.decodeIfPresent(Date.self, forKey: .endRepeatDate) ?? Date()
+        endRepeatDate = try container.decodeIfPresent(Date.self, forKey: .endRepeatDate) ?? Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
         startDate = try container.decodeIfPresent(Date.self, forKey: .startDate) ?? Date()
     }
     
@@ -101,14 +101,9 @@ struct Routine: Identifiable, Codable {
         return completed.contains(item)
     }
     
-    // Check if routine should appear on a given date based on frequency
+    // Updated shouldAppear method to use proper frequency checking
     func shouldAppear(on date: Date) -> Bool {
-        // If frequency is never, only show on the exact date
-        if frequency == .never {
-            return Calendar.current.isDate(startDate, inSameDayAs: date)
-        }
-        
-        // Check if the routine should trigger based on frequency
+        // Check if the routine should trigger based on frequency from start date
         let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate)
         
         // If it shouldn't trigger based on frequency, don't show
@@ -121,12 +116,12 @@ struct Routine: Identifiable, Codable {
             return date <= endRepeatDate
         }
         
-        // If endRepeatOption is .never, show indefinitely
+        // If endRepeatOption is .never, show indefinitely (as long as frequency matches)
         return true
     }
 }
 
-// MARK: - Create Routine View with Frequency Support
+// MARK: - Create Routine View with Enhanced Frequency Support
 struct CreateRoutineView: View {
     @Binding var routines: [Routine]
     @Environment(\.dismiss) private var dismiss
@@ -388,11 +383,11 @@ struct RoutineView: View {
                                                     .foregroundColor(.primary)
                                                 
                                                 // Add repeat icon if routine has frequency other than never
-//                                                if routineData.routine.frequency != .never {
-//                                                    Image(systemName: "repeat")
-//                                                        .foregroundColor(.gray.opacity(0.6))
-//                                                        .font(.caption)
-//                                                }
+                                                if routineData.routine.frequency != .never {
+                                                    Image(systemName: "repeat")
+                                                        .foregroundColor(.gray.opacity(0.6))
+                                                        .font(.caption)
+                                                }
                                             }
                                                
                                             Text("Routine")
@@ -443,6 +438,21 @@ struct RoutineView: View {
         }
         .sheet(isPresented: $showCreateRoutine) {
             CreateRoutineView(routines: $routines)
+        }
+        .onAppear {
+            // Update default routines to start from a week ago for backwards compatibility
+            updateDefaultRoutinesStartDate()
+        }
+    }
+    
+    private func updateDefaultRoutinesStartDate() {
+        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        
+        for index in routines.indices {
+            // Only update if the start date is today (meaning it's a default routine)
+            if Calendar.current.isDate(routines[index].startDate, inSameDayAs: Date()) {
+                routines[index].startDate = weekAgo
+            }
         }
     }
 }
