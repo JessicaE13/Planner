@@ -134,24 +134,13 @@ struct Routine: Identifiable, Codable {
 
 // MARK: - Supporting structs for compatibility
 struct RoutineItem: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     var name: String
     var isCompleted: Bool = false
     
     init(name: String, isCompleted: Bool = false) {
         self.name = name
         self.isCompleted = isCompleted
-    }
-}
-
-// MARK: - Extension for Color compatibility
-extension Color {
-    static let routineColors: [Color] = [
-        .blue, .green, .orange, .red, .purple, .pink, .yellow, .cyan
-    ]
-    
-    func isApproximatelyEqual(to other: Color) -> Bool {
-        return self == other
     }
 }
 
@@ -162,7 +151,7 @@ struct CreateRoutineView: View {
     
     @State private var routineName = ""
     @State private var selectedIcon = "sunrise"
-    @State private var selectedColor = Color.blue
+    @State private var selectedColor = "Color1"
     @State private var routineItems: [String] = [""]
     @State private var frequency: Frequency = .everyDay
     @State private var endRepeatOption: EndRepeatOption = .never
@@ -170,16 +159,8 @@ struct CreateRoutineView: View {
     @State private var startDate: Date = Date()
     @State private var showingIconPicker = false
     
-    // Available icons for routines
-    private let availableIcons = [
-        "sunrise", "moon", "figure.walk", "figure.run", "figure.yoga",
-        "heart.fill", "book.fill", "music.note", "gamecontroller.fill",
-        "cup.and.saucer.fill", "fork.knife", "car.fill", "house.fill",
-        "laptopcomputer", "phone.fill", "camera.fill", "paintbrush.fill"
-    ]
-    
-    private let availableColors: [Color] = [
-        .blue, .green, .orange, .red, .purple, .pink, .yellow, .cyan
+    private let availableColors: [String] = [
+        "Color1", "Color2", "Color3", "Color4", "Color5"
     ]
     
     var body: some View {
@@ -195,7 +176,7 @@ struct CreateRoutineView: View {
                                 showingIconPicker = true
                             }) {
                                 Image(systemName: selectedIcon)
-                                    .foregroundColor(selectedColor)
+                                    .foregroundColor(Color(selectedColor))
                                     .frame(width: 30)
                             }
                             TextField("Routine Name", text: $routineName)
@@ -206,41 +187,18 @@ struct CreateRoutineView: View {
                             Text("Choose Color")
                                 .font(.headline)
                             
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 10) {
-                                ForEach(Array(availableColors.enumerated()), id: \.offset) { index, color in
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 12) {
+                                ForEach(Array(availableColors.enumerated()), id: \.offset) { index, colorName in
                                     Button(action: {
-                                        selectedColor = color
+                                        selectedColor = colorName
                                     }) {
                                         Circle()
-                                            .fill(color)
-                                            .frame(width: 30, height: 30)
+                                            .fill(Color(colorName))
+                                            .frame(width: 40, height: 40)
                                             .overlay(
                                                 Circle()
-                                                    .stroke(selectedColor == color ? Color.primary : Color.clear, lineWidth: 2)
+                                                    .stroke(selectedColor == colorName ? Color.primary : Color.clear, lineWidth: 3)
                                             )
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                            }
-                        }
-                        .padding(.vertical, 8)
-                        
-                        // Icon Picker
-                        VStack(alignment: .leading) {
-                            Text("Choose Icon")
-                                .font(.headline)
-                            
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 10) {
-                                ForEach(availableIcons, id: \.self) { icon in
-                                    Button(action: {
-                                        selectedIcon = icon
-                                    }) {
-                                        Image(systemName: icon)
-                                            .font(.title2)
-                                            .foregroundColor(selectedIcon == icon ? .white : selectedColor)
-                                            .frame(width: 40, height: 40)
-                                            .background(selectedIcon == icon ? selectedColor : Color.gray.opacity(0.2))
-                                            .cornerRadius(8)
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 }
@@ -367,7 +325,7 @@ struct CreateRoutineView: View {
             name: trimmedName,
             icon: selectedIcon,
             items: filteredItems,
-            color: selectedColor,
+            color: Color(selectedColor),
             frequency: frequency,
             endRepeatOption: endRepeatOption,
             endRepeatDate: endRepeatDate,
