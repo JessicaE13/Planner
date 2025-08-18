@@ -2,69 +2,14 @@
 //  ToDoView.swift
 //  Planner
 //
-//  Created by Assistant on 8/15/25.
+//  Updated to use ScheduleItem model instead of ToDoItem
 //
 
 import SwiftUI
 
-struct ToDoItem: Identifiable, Codable {
-    let id: UUID
-    var text: String
-    var isCompleted: Bool
-    var dateCreated: Date
-    var category: Category?
-    var dueDate: Date?
-    var hasDueDate: Bool
-    var notes: String
-    var checklist: [ChecklistItem]
-    
-    init(text: String, isCompleted: Bool = false, category: Category? = nil, dueDate: Date? = nil, hasDueDate: Bool = false, notes: String = "", checklist: [ChecklistItem] = []) {
-        self.id = UUID()
-        self.text = text
-        self.isCompleted = isCompleted
-        self.dateCreated = Date()
-        self.category = category
-        self.dueDate = dueDate
-        self.hasDueDate = hasDueDate
-        self.notes = notes
-        self.checklist = checklist
-    }
-    
-    // Custom Codable implementation
-    enum CodingKeys: String, CodingKey {
-        case id, text, isCompleted, dateCreated, category, dueDate, hasDueDate, notes, checklist
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        text = try container.decode(String.self, forKey: .text)
-        isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
-        dateCreated = try container.decode(Date.self, forKey: .dateCreated)
-        category = try container.decodeIfPresent(Category.self, forKey: .category)
-        dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
-        hasDueDate = try container.decodeIfPresent(Bool.self, forKey: .hasDueDate) ?? false
-        notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
-        checklist = try container.decodeIfPresent([ChecklistItem].self, forKey: .checklist) ?? []
-    }
-    
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(text, forKey: .text)
-        try container.encode(isCompleted, forKey: .isCompleted)
-        try container.encode(dateCreated, forKey: .dateCreated)
-        try container.encode(category, forKey: .category)
-        try container.encode(dueDate, forKey: .dueDate)
-        try container.encode(hasDueDate, forKey: .hasDueDate)
-        try container.encode(notes, forKey: .notes)
-        try container.encode(checklist, forKey: .checklist)
-    }
-}
-
-// MARK: - To Do Data Manager
+// MARK: - To Do Data Manager using ScheduleItem
 class ToDoDataManager: ObservableObject {
-    @Published var items: [ToDoItem] = []
+    @Published var items: [ScheduleItem] = []
     
     static let shared = ToDoDataManager()
     
@@ -72,12 +17,12 @@ class ToDoDataManager: ObservableObject {
         loadItems()
     }
     
-    func addItem(_ item: ToDoItem) {
+    func addItem(_ item: ScheduleItem) {
         items.append(item)
         saveItems()
     }
     
-    func updateItem(_ item: ToDoItem) {
+    func updateItem(_ item: ScheduleItem) {
         if let index = items.firstIndex(where: { $0.id == item.id }) {
             items[index] = item
             saveItems()
@@ -110,20 +55,20 @@ class ToDoDataManager: ObservableObject {
         do {
             let encoder = JSONEncoder()
             let data = try encoder.encode(items)
-            UserDefaults.standard.set(data, forKey: "ToDoItems")
+            UserDefaults.standard.set(data, forKey: "ToDoScheduleItems")
         } catch {
             print("Failed to save to-do items: \(error)")
         }
     }
     
     private func loadItems() {
-        guard let data = UserDefaults.standard.data(forKey: "ToDoItems") else {
+        guard let data = UserDefaults.standard.data(forKey: "ToDoScheduleItems") else {
             return
         }
         
         do {
             let decoder = JSONDecoder()
-            items = try decoder.decode([ToDoItem].self, from: data)
+            items = try decoder.decode([ScheduleItem].self, from: data)
         } catch {
             print("Failed to load to-do items: \(error)")
             items = []
@@ -144,12 +89,19 @@ struct ToDoView: View {
         return formatter
     }()
     
-    // Filter items based on selected category
-    private var filteredItems: [ToDoItem] {
-        if let filterCategory = filterCategory {
-            return dataManager.items.filter { $0.category?.id == filterCategory.id }
+    // Filter items based on selected category - only show items with no date/time (to-dos)
+    private var filteredItems: [ScheduleItem] {
+        let todoItems = dataManager.items.filter { item in
+            // Only show items that don't have specific dates/times set (null/blank)
+            // You can customize this logic based on how you want to identify "to-do" vs "scheduled" items
+            return item.frequency == .never &&
+                   Calendar.current.isDate(item.startTime, inSameDayAs: item.time) // Basic to-do check
         }
-        return dataManager.items
+        
+        if let filterCategory = filterCategory {
+            return todoItems.filter { $0.category?.id == filterCategory.id }
+        }
+        return todoItems
     }
     
     var body: some View {
@@ -255,9 +207,10 @@ struct ToDoView: View {
                                                 dataManager.deleteItem(at: actualIndex)
                                             }
                                         },
-                                        onMoveToSchedule: { toDoItem in
-                                            // The item will be deleted from ToDo after successful move
-                                            dataManager.deleteItem(withId: toDoItem.id)
+                                        onMoveToSchedule: { scheduleItem in
+                                            // Remove from ToDo and add to Schedule with date/time
+                                            dataManager.deleteItem(withId: scheduleItem.id)
+                                            ScheduleDataManager.shared.addOrUpdateItem(scheduleItem)
                                         }
                                     )
                                 }
@@ -308,16 +261,14 @@ struct ToDoView: View {
     }
 }
 
-// MARK: - Add To Do View
+// MARK: - Add To Do View using ScheduleItem
 struct AddToDoView: View {
-    let onSave: (ToDoItem) -> Void
+    let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
     
     @State private var title = ""
     @State private var notes = ""
     @State private var selectedCategory: Category?
-    @State private var hasDueDate = false
-    @State private var dueDate = Date()
     @State private var checklistItems: [ChecklistItem] = []
     @State private var newChecklistItem = ""
     @State private var showingManageCategories = false
@@ -368,23 +319,6 @@ struct AddToDoView: View {
                                         .foregroundColor(.secondary)
                                         .font(.caption2)
                                 }
-                            }
-                        }
-                    }
-                    
-                    Section(header: Text("Due Date")) {
-                        HStack {
-                            Text("Has due date")
-                            Spacer()
-                            Toggle("", isOn: $hasDueDate)
-                        }
-                        
-                        if hasDueDate {
-                            HStack {
-                                Text("Due date")
-                                Spacer()
-                                DatePicker("", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
-                                    .labelsHidden()
                             }
                         }
                     }
@@ -497,26 +431,41 @@ struct AddToDoView: View {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
         
-        let newItem = ToDoItem(
-            text: trimmedTitle,
-            isCompleted: false,
+        // Create a ScheduleItem with null/default date/time values for to-do
+        let currentDate = Date()
+        let newItem = ScheduleItem(
+            title: trimmedTitle,
+            time: currentDate, // Default to current time, but frequency will be .never
+            icon: "checklist",
+            color: selectedCategory?.color ?? "Color1",
+            frequency: .never, // This marks it as a to-do (not recurring)
+            customFrequencyConfig: nil,
+            startTime: currentDate, // Default start time
+            endTime: currentDate, // Default end time (same as start for to-dos)
+            checklist: checklistItems,
+            uniqueKey: "todo-\(UUID().uuidString)",
             category: selectedCategory,
-            dueDate: hasDueDate ? dueDate : nil,
-            hasDueDate: hasDueDate,
-            notes: notes,
-            checklist: checklistItems
+            endRepeatOption: .never,
+            endRepeatDate: currentDate
         )
         
-        onSave(newItem)
+        // Set the description (notes) and mark as incomplete
+        var finalItem = newItem
+        finalItem.descriptionText = notes
+        finalItem.isCompleted = false
+        finalItem.allDay = false // To-dos don't need all-day flag
+        finalItem.location = "" // To-dos typically don't have locations
+        
+        onSave(finalItem)
     }
 }
 
 struct ToDoItemRow: View {
-    let item: ToDoItem
+    let item: ScheduleItem // Now using ScheduleItem instead of ToDoItem
     let onToggle: () -> Void
-    let onEdit: (ToDoItem) -> Void
+    let onEdit: (ScheduleItem) -> Void
     let onDelete: () -> Void
-    let onMoveToSchedule: (ToDoItem) -> Void
+    let onMoveToSchedule: (ScheduleItem) -> Void
     
     @State private var showingEditSheet = false
     @State private var showingMoveToSchedule = false
@@ -541,22 +490,10 @@ struct ToDoItemRow: View {
             // Content
             VStack(alignment: .leading, spacing: 6) {
                 // Title
-                Text(item.text)
+                Text(item.title)
                     .font(.body)
                     .strikethrough(item.isCompleted)
                     .foregroundColor(item.isCompleted ? .secondary : .primary)
-                
-                // Due date (if present)
-                if item.hasDueDate, let dueDate = item.dueDate {
-                    HStack(spacing: 4) {
-                        Image(systemName: "calendar")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text(dateFormatter.string(from: dueDate))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
                 
                 // Category indicator (if present)
                 if let category = item.category {
@@ -575,8 +512,8 @@ struct ToDoItemRow: View {
                 }
                 
                 // Notes preview (if present)
-                if !item.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(item.notes)
+                if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(item.descriptionText)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -633,12 +570,9 @@ struct ToDoItemRow: View {
         }
         .sheet(isPresented: $showingMoveToSchedule) {
             MoveToScheduleView(
-                todoItem: item,
-                onSave: { scheduleItem in
-                    // Add to schedule
-                    ScheduleDataManager.shared.addOrUpdateItem(scheduleItem)
-                    // Remove from todo
-                    onMoveToSchedule(item)
+                scheduleItem: item,
+                onSave: { updatedScheduleItem in
+                    onMoveToSchedule(updatedScheduleItem)
                     showingMoveToSchedule = false
                 }
             )
@@ -646,10 +580,10 @@ struct ToDoItemRow: View {
     }
 }
 
-// MARK: - Edit To Do View
+// MARK: - Edit To Do View using ScheduleItem
 struct EditToDoView: View {
-    @State private var item: ToDoItem
-    let onSave: (ToDoItem) -> Void
+    @State private var item: ScheduleItem
+    let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
     
     @State private var showingManageCategories = false
@@ -658,7 +592,7 @@ struct EditToDoView: View {
     @FocusState private var notesIsFocused: Bool
     @FocusState private var checklistInputFocused: Bool
     
-    init(item: ToDoItem, onSave: @escaping (ToDoItem) -> Void) {
+    init(item: ScheduleItem, onSave: @escaping (ScheduleItem) -> Void) {
         self._item = State(initialValue: item)
         self.onSave = onSave
     }
@@ -671,7 +605,7 @@ struct EditToDoView: View {
                 
                 Form {
                     Section(header: Text("Task Details")) {
-                        TextField("Task title", text: $item.text)
+                        TextField("Task title", text: $item.title)
                             .font(.body)
                         
                         // Category Selection
@@ -710,29 +644,9 @@ struct EditToDoView: View {
                         }
                     }
                     
-                    Section(header: Text("Due Date")) {
-                        HStack {
-                            Text("Has due date")
-                            Spacer()
-                            Toggle("", isOn: $item.hasDueDate)
-                        }
-                        
-                        if item.hasDueDate {
-                            HStack {
-                                Text("Due date")
-                                Spacer()
-                                DatePicker("", selection: Binding(
-                                    get: { item.dueDate ?? Date() },
-                                    set: { item.dueDate = $0 }
-                                ), displayedComponents: [.date, .hourAndMinute])
-                                    .labelsHidden()
-                            }
-                        }
-                    }
-                    
                     Section(header: Text("Notes")) {
                         ZStack(alignment: .topLeading) {
-                            TextEditor(text: $item.notes)
+                            TextEditor(text: $item.descriptionText)
                                 .frame(minHeight: 100)
                                 .focused($notesIsFocused)
                                 .onTapGesture {
@@ -741,14 +655,14 @@ struct EditToDoView: View {
                                 .scrollContentBackground(.hidden)
                                 .background(Color.clear)
 
-                            if item.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            if item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 Text("Add notes...")
                                     .foregroundColor(.secondary.opacity(0.5))
                                     .padding(.top, 8)
                                     .padding(.leading, 6)
                                     .allowsHitTesting(false)
                                     .transition(.opacity)
-                                    .animation(.easeInOut(duration: 0.2), value: item.notes)
+                                    .animation(.easeInOut(duration: 0.2), value: item.descriptionText)
                             }
                         }
                         .padding(.vertical, 4)
@@ -812,19 +726,12 @@ struct EditToDoView: View {
                     Button("Save") {
                         onSave(item)
                     }
-                    .disabled(item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
         .sheet(isPresented: $showingManageCategories) {
             ManageCategoriesView()
-        }
-        .onChange(of: item.hasDueDate) { _, newValue in
-            if !newValue {
-                item.dueDate = nil
-            } else if item.dueDate == nil {
-                item.dueDate = Date()
-            }
         }
     }
     
@@ -842,15 +749,13 @@ struct EditToDoView: View {
     }
 }
 
-// MARK: - Move to Schedule View (keeping the existing implementation)
+// MARK: - Updated Move to Schedule View
 struct MoveToScheduleView: View {
-    let todoItem: ToDoItem
+    @State private var scheduleItem: ScheduleItem
     let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
     
     @State private var selectedDate = Date()
-    @State private var startTime = Date()
-    @State private var endTime: Date
     @State private var allDay = false
     @State private var location = ""
     @State private var frequency: Frequency = .never
@@ -859,16 +764,11 @@ struct MoveToScheduleView: View {
     @State private var customFrequencyConfig = CustomFrequencyConfig()
     @State private var showingCustomFrequencyPicker = false
     
-    init(todoItem: ToDoItem, onSave: @escaping (ScheduleItem) -> Void) {
-        self.todoItem = todoItem
+    init(scheduleItem: ScheduleItem, onSave: @escaping (ScheduleItem) -> Void) {
+        self._scheduleItem = State(initialValue: scheduleItem)
         self.onSave = onSave
         
-        let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
-        let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
         let defaultEndRepeat = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
-        
-        self._startTime = State(initialValue: defaultStart)
-        self._endTime = State(initialValue: defaultEnd)
         self._endRepeatDate = State(initialValue: defaultEndRepeat)
     }
     
@@ -893,14 +793,14 @@ struct MoveToScheduleView: View {
                         HStack {
                             Text("Start Time")
                             Spacer()
-                            DatePicker("", selection: $startTime, displayedComponents: .hourAndMinute)
+                            DatePicker("", selection: $scheduleItem.startTime, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                         }
                         
                         HStack {
                             Text("End Time")
                             Spacer()
-                            DatePicker("", selection: $endTime, displayedComponents: .hourAndMinute)
+                            DatePicker("", selection: $scheduleItem.endTime, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                         }
                     }
@@ -965,11 +865,11 @@ struct MoveToScheduleView: View {
                     HStack {
                         Text("Title")
                         Spacer()
-                        Text(todoItem.text)
+                        Text(scheduleItem.title)
                             .foregroundColor(.secondary)
                     }
                     
-                    if let category = todoItem.category {
+                    if let category = scheduleItem.category {
                         HStack {
                             Text("Category")
                             Spacer()
@@ -1018,13 +918,13 @@ struct MoveToScheduleView: View {
         .onChange(of: selectedDate) { _, newDate in
             // Update start and end times to use the selected date
             let calendar = Calendar.current
-            let timeComponents = calendar.dateComponents([.hour, .minute], from: startTime)
+            let timeComponents = calendar.dateComponents([.hour, .minute], from: scheduleItem.startTime)
             if let newStartTime = calendar.date(bySettingHour: timeComponents.hour ?? 9,
                                                minute: timeComponents.minute ?? 0,
                                                second: 0,
                                                of: newDate) {
-                startTime = newStartTime
-                endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
+                scheduleItem.startTime = newStartTime
+                scheduleItem.endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
             }
         }
     }
@@ -1040,8 +940,8 @@ struct MoveToScheduleView: View {
             finalStartTime = calendar.startOfDay(for: selectedDate)
             finalEndTime = calendar.date(byAdding: .day, value: 1, to: finalStartTime) ?? finalStartTime
         } else {
-            let startTimeComponents = calendar.dateComponents([.hour, .minute], from: startTime)
-            let endTimeComponents = calendar.dateComponents([.hour, .minute], from: endTime)
+            let startTimeComponents = calendar.dateComponents([.hour, .minute], from: scheduleItem.startTime)
+            let endTimeComponents = calendar.dateComponents([.hour, .minute], from: scheduleItem.endTime)
             
             finalStartTime = calendar.date(bySettingHour: startTimeComponents.hour ?? 9,
                                          minute: startTimeComponents.minute ?? 0,
@@ -1054,29 +954,20 @@ struct MoveToScheduleView: View {
                                        of: selectedDate) ?? finalStartTime
         }
         
-        let scheduleItem = ScheduleItem(
-            title: todoItem.text,
-            time: finalStartTime,
-            icon: "checkmark.circle.fill",
-            color: todoItem.category?.color ?? "Color1",
-            frequency: frequency,
-            customFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil,
-            startTime: finalStartTime,
-            endTime: finalEndTime,
-            checklist: todoItem.checklist,
-            uniqueKey: "todo-\(todoItem.id.uuidString)",
-            category: todoItem.category,
-            endRepeatOption: endRepeatOption,
-            endRepeatDate: endRepeatDate
-        )
+        // Update the schedule item with new values
+        var updatedItem = scheduleItem
+        updatedItem.time = finalStartTime
+        updatedItem.startTime = finalStartTime
+        updatedItem.endTime = finalEndTime
+        updatedItem.location = location
+        updatedItem.allDay = allDay
+        updatedItem.frequency = frequency
+        updatedItem.customFrequencyConfig = frequency == .custom ? customFrequencyConfig : nil
+        updatedItem.endRepeatOption = endRepeatOption
+        updatedItem.endRepeatDate = endRepeatDate
+        updatedItem.uniqueKey = "scheduled-\(updatedItem.id.uuidString)"
         
-        // Update additional properties
-        var finalItem = scheduleItem
-        finalItem.location = location
-        finalItem.allDay = allDay
-        finalItem.descriptionText = todoItem.notes
-        
-        onSave(finalItem)
+        onSave(updatedItem)
     }
 }
 
