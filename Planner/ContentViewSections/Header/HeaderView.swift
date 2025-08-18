@@ -4,6 +4,7 @@ struct HeaderView: View {
     @Binding var selectedDate: Date
     @State private var showingDatePicker = false
     @State private var currentWeekOffset: Int = 0
+    @Environment(\.colorScheme) private var colorScheme
     
     private let calendar = Calendar.current
     private let dateFormatter: DateFormatter = {
@@ -87,7 +88,7 @@ struct HeaderView: View {
                         Text(dayFormatter.string(from: date))
                             .font(.title2)
                             .fontWeight(.medium)
-                            .foregroundColor(isSelected(date) ? Color.white : .primary)
+                            .foregroundColor(isSelected(date) ? (colorScheme == .dark ? .black : .white) : .primary)
                             .frame(width: 40, height: 40)
                             .background(isSelected(date) ? Color("AccentColor") : Color.clear)
                             .clipShape(Circle())
