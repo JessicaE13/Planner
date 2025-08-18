@@ -936,6 +936,7 @@ struct RoutineDetailBottomSheetView: View {
     }
 }
 
+
 // MARK: - Updated Main Routine View to Handle New Model
 struct RoutineView: View {
     var selectedDate: Date
@@ -951,32 +952,6 @@ struct RoutineView: View {
         formatter.dateFormat = "EEEE, MMM d"
         return formatter
     }()
-    
-    // Computed binding for detail sheet presentation
-    private var showDetailSheet: Binding<Bool> {
-        Binding(
-            get: { selectedRoutineIndex != nil && editingRoutine == nil },
-            set: { isPresented in
-                if !isPresented {
-                    selectedRoutineIndex = nil
-                    showRoutineDetail = false
-                }
-            }
-        )
-    }
-    
-    // Computed binding for edit sheet presentation
-    private var showEditSheet: Binding<Bool> {
-        Binding(
-            get: { editingRoutine != nil },
-            set: { isPresented in
-                if !isPresented {
-                    editingRoutine = nil
-                    editingRoutineIndex = nil
-                }
-            }
-        )
-    }
     
     // Filter routines that should appear on the selected date
     private var visibleRoutines: [(routine: Routine, index: Int)] {
@@ -1012,8 +987,15 @@ struct RoutineView: View {
                 HStack (spacing: 16) {
                     ForEach(visibleRoutines, id: \.routine.id) { routineData in
                         Button(action: {
-                            selectedRoutineIndex = routineData.index
-                            showRoutineDetail = true
+                            // Clear any existing selection first
+                            selectedRoutineIndex = nil
+                            showRoutineDetail = false
+                            
+                            // Set new selection after a brief delay to ensure clean state
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                selectedRoutineIndex = routineData.index
+                                showRoutineDetail = true
+                            }
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10)
@@ -1061,8 +1043,16 @@ struct RoutineView: View {
             }
         }
         .padding()
-        .sheet(isPresented: showDetailSheet) {
-            if let index = selectedRoutineIndex {
+        .sheet(isPresented: Binding(
+            get: { selectedRoutineIndex != nil && editingRoutine == nil },
+            set: { isPresented in
+                if !isPresented {
+                    selectedRoutineIndex = nil
+                    showRoutineDetail = false
+                }
+            }
+        )) {
+            if let index = selectedRoutineIndex, index < routines.count {
                 RoutineDetailBottomSheetView(
                     routine: $routines[index],
                     selectedDate: selectedDate,
@@ -1084,7 +1074,15 @@ struct RoutineView: View {
         .sheet(isPresented: $showCreateRoutine) {
             CreateRoutineView(routines: $routines)
         }
-        .sheet(isPresented: showEditSheet) {
+        .sheet(isPresented: Binding(
+            get: { editingRoutine != nil },
+            set: { isPresented in
+                if !isPresented {
+                    editingRoutine = nil
+                    editingRoutineIndex = nil
+                }
+            }
+        )) {
             if let routine = editingRoutine, let editIndex = editingRoutineIndex {
                 CreateRoutineView(
                     routines: $routines,
