@@ -13,19 +13,17 @@ struct ToDoItem: Identifiable, Codable {
     var isCompleted: Bool
     var dateCreated: Date
     var category: Category?
-    var priority: Priority
     var dueDate: Date?
     var hasDueDate: Bool
     var notes: String
     var checklist: [ChecklistItem]
     
-    init(text: String, isCompleted: Bool = false, category: Category? = nil, priority: Priority = .medium, dueDate: Date? = nil, hasDueDate: Bool = false, notes: String = "", checklist: [ChecklistItem] = []) {
+    init(text: String, isCompleted: Bool = false, category: Category? = nil, dueDate: Date? = nil, hasDueDate: Bool = false, notes: String = "", checklist: [ChecklistItem] = []) {
         self.id = UUID()
         self.text = text
         self.isCompleted = isCompleted
         self.dateCreated = Date()
         self.category = category
-        self.priority = priority
         self.dueDate = dueDate
         self.hasDueDate = hasDueDate
         self.notes = notes
@@ -34,7 +32,7 @@ struct ToDoItem: Identifiable, Codable {
     
     // Custom Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, text, isCompleted, dateCreated, category, priority, dueDate, hasDueDate, notes, checklist
+        case id, text, isCompleted, dateCreated, category, dueDate, hasDueDate, notes, checklist
     }
     
     init(from decoder: Decoder) throws {
@@ -44,7 +42,6 @@ struct ToDoItem: Identifiable, Codable {
         isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
         dateCreated = try container.decode(Date.self, forKey: .dateCreated)
         category = try container.decodeIfPresent(Category.self, forKey: .category)
-        priority = try container.decodeIfPresent(Priority.self, forKey: .priority) ?? .medium
         dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
         hasDueDate = try container.decodeIfPresent(Bool.self, forKey: .hasDueDate) ?? false
         notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
@@ -58,46 +55,10 @@ struct ToDoItem: Identifiable, Codable {
         try container.encode(isCompleted, forKey: .isCompleted)
         try container.encode(dateCreated, forKey: .dateCreated)
         try container.encode(category, forKey: .category)
-        try container.encode(priority, forKey: .priority)
         try container.encode(dueDate, forKey: .dueDate)
         try container.encode(hasDueDate, forKey: .hasDueDate)
         try container.encode(notes, forKey: .notes)
         try container.encode(checklist, forKey: .checklist)
-    }
-}
-
-// MARK: - Priority Enum
-enum Priority: String, CaseIterable, Identifiable, Codable {
-    case low = "Low"
-    case medium = "Medium"
-    case high = "High"
-    
-    var id: String { self.rawValue }
-    
-    var displayName: String {
-        return self.rawValue
-    }
-    
-    var color: Color {
-        switch self {
-        case .low:
-            return .green
-        case .medium:
-            return .orange
-        case .high:
-            return .red
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .low:
-            return "arrow.down.circle.fill"
-        case .medium:
-            return "minus.circle.fill"
-        case .high:
-            return "arrow.up.circle.fill"
-        }
     }
 }
 
@@ -355,7 +316,6 @@ struct AddToDoView: View {
     @State private var title = ""
     @State private var notes = ""
     @State private var selectedCategory: Category?
-    @State private var priority: Priority = .medium
     @State private var hasDueDate = false
     @State private var dueDate = Date()
     @State private var checklistItems: [ChecklistItem] = []
@@ -375,35 +335,6 @@ struct AddToDoView: View {
                     Section(header: Text("Task Details")) {
                         TextField("Task title", text: $title)
                             .font(.body)
-                        
-                        // Priority Picker
-                        HStack {
-                            Text("Priority")
-                            Spacer()
-                            Menu {
-                                ForEach(Priority.allCases) { priorityOption in
-                                    Button(action: {
-                                        priority = priorityOption
-                                    }) {
-                                        HStack {
-                                            Image(systemName: priorityOption.icon)
-                                                .foregroundColor(priorityOption.color)
-                                            Text(priorityOption.displayName)
-                                        }
-                                    }
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: priority.icon)
-                                        .foregroundColor(priority.color)
-                                    Text(priority.displayName)
-                                        .foregroundColor(.primary)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.secondary)
-                                        .font(.caption2)
-                                }
-                            }
-                        }
                         
                         // Category Selection
                         HStack {
@@ -570,7 +501,6 @@ struct AddToDoView: View {
             text: trimmedTitle,
             isCompleted: false,
             category: selectedCategory,
-            priority: priority,
             dueDate: hasDueDate ? dueDate : nil,
             hasDueDate: hasDueDate,
             notes: notes,
@@ -610,20 +540,11 @@ struct ToDoItemRow: View {
             
             // Content
             VStack(alignment: .leading, spacing: 6) {
-                // Title and priority
-                HStack {
-                    Text(item.text)
-                        .font(.body)
-                        .strikethrough(item.isCompleted)
-                        .foregroundColor(item.isCompleted ? .secondary : .primary)
-                    
-                    Spacer()
-                    
-                    // Priority indicator
-                    Image(systemName: item.priority.icon)
-                        .foregroundColor(item.priority.color)
-                        .font(.caption)
-                }
+                // Title
+                Text(item.text)
+                    .font(.body)
+                    .strikethrough(item.isCompleted)
+                    .foregroundColor(item.isCompleted ? .secondary : .primary)
                 
                 // Due date (if present)
                 if item.hasDueDate, let dueDate = item.dueDate {
@@ -752,35 +673,6 @@ struct EditToDoView: View {
                     Section(header: Text("Task Details")) {
                         TextField("Task title", text: $item.text)
                             .font(.body)
-                        
-                        // Priority Picker
-                        HStack {
-                            Text("Priority")
-                            Spacer()
-                            Menu {
-                                ForEach(Priority.allCases) { priorityOption in
-                                    Button(action: {
-                                        item.priority = priorityOption
-                                    }) {
-                                        HStack {
-                                            Image(systemName: priorityOption.icon)
-                                                .foregroundColor(priorityOption.color)
-                                            Text(priorityOption.displayName)
-                                        }
-                                    }
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: item.priority.icon)
-                                        .foregroundColor(item.priority.color)
-                                    Text(item.priority.displayName)
-                                        .foregroundColor(.primary)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.secondary)
-                                        .font(.caption2)
-                                }
-                            }
-                        }
                         
                         // Category Selection
                         HStack {
