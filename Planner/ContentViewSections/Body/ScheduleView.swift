@@ -37,7 +37,6 @@ struct ScheduleView: View {
     var selectedDate: Date
     @StateObject private var dataManager = UnifiedDataManager.shared
     @State private var sheetContent: SheetContent? = nil
-    @State private var defaultItems: [ScheduleItem] = []
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -66,8 +65,8 @@ struct ScheduleView: View {
             .padding(.bottom, 16)
             
             VStack(spacing: 12) {
-                // Get all items for the selected date - this now includes moved to-do items and default items
-                let allScheduleItems = getAllItemsForDate(selectedDate).sorted { $0.startTime < $1.startTime }
+                // Get only actual scheduled items for the selected date (no defaults)
+                let allScheduleItems = getActualScheduleItems(selectedDate).sorted { $0.startTime < $1.startTime }
                 
                 if allScheduleItems.isEmpty {
                     // Show empty state
@@ -76,7 +75,7 @@ struct ScheduleView: View {
                             .font(.system(size: 40))
                             .foregroundColor(.gray.opacity(0.5))
                         
-                        Text("No events scheduled")
+                        Text("Your schedule is clear")
                             .font(.headline)
                             .foregroundColor(.secondary)
                         
@@ -97,12 +96,6 @@ struct ScheduleView: View {
             .padding(.horizontal, 16)
         }
         .padding()
-        .onAppear {
-            initializeDefaultItems()
-        }
-        .onChange(of: selectedDate) { _, _ in
-            initializeDefaultItems()
-        }
         .sheet(item: $sheetContent) { content in
             switch content {
             case .detail(let item):
@@ -172,68 +165,14 @@ struct ScheduleView: View {
         }
     }
     
-    // MARK: - Updated method to get ALL items for a date (including defaults when appropriate)
-    private func getAllItemsForDate(_ date: Date) -> [ScheduleItem] {
-        var allItems: [ScheduleItem] = []
-        
-        // Get all actual scheduled items from the unified data manager that should appear on this date
-        let actualScheduledItems = dataManager.items.filter { item in
+    // MARK: - Updated method to get ONLY actual scheduled items (no defaults)
+    private func getActualScheduleItems(_ date: Date) -> [ScheduleItem] {
+        // Get only actual scheduled items from the unified data manager that should appear on this date
+        return dataManager.items.filter { item in
             // Only show scheduled items (not to-do items) that should appear on this date
             guard item.itemType == .scheduled else { return false }
             return item.shouldAppear(on: date)
         }
-        
-        // Add the actual scheduled items
-        allItems.append(contentsOf: actualScheduledItems)
-        
-        // Add default items only if there are NO actual scheduled items for this specific date
-        // This means defaults will show until you start adding real events
-        if actualScheduledItems.isEmpty {
-            allItems.append(contentsOf: defaultItems)
-        }
-        
-        return allItems
-    }
-    
-    private func initializeDefaultItems() {
-        // Create default items for demonstration purposes
-        // These will only show when there are no actual scheduled items for the date
-        let calendar = Calendar.current
-        
-        let dailyRoutineItem = ScheduleItem(
-            title: getScheduleTitle(for: selectedDate),
-            time: getScheduleTimeAsDate(for: selectedDate),
-            icon: getScheduleIcon(for: selectedDate),
-            color: "Color1",
-            frequency: .everyDay,
-            startTime: getScheduleStartTime(for: selectedDate),
-            endTime: calendar.date(byAdding: .hour, value: 1, to: getScheduleStartTime(for: selectedDate)) ?? getScheduleStartTime(for: selectedDate),
-            uniqueKey: "daily-routine-\(dateFormatter.string(from: selectedDate))"
-        )
-        
-        let morningWalkItem = ScheduleItem(
-            title: "Morning Walk",
-            time: getFixedTime(hour: 12, minute: 0),
-            icon: "figure.walk",
-            color: "Color2",
-            frequency: .never,
-            startTime: getFixedTime(hour: 12, minute: 0),
-            endTime: calendar.date(byAdding: .hour, value: 1, to: getFixedTime(hour: 12, minute: 0)) ?? getFixedTime(hour: 12, minute: 0),
-            uniqueKey: "morning-walk-\(dateFormatter.string(from: selectedDate))"
-        )
-        
-        let teamMeetingItem = ScheduleItem(
-            title: "Team Meeting",
-            time: getFixedTime(hour: 12, minute: 0),
-            icon: "person.3.fill",
-            color: "Color3",
-            frequency: .everyWeek,
-            startTime: getFixedTime(hour: 12, minute: 0),
-            endTime: calendar.date(byAdding: .hour, value: 1, to: getFixedTime(hour: 12, minute: 0)) ?? getFixedTime(hour: 12, minute: 0),
-            uniqueKey: "team-meeting-\(dateFormatter.string(from: selectedDate))"
-        )
-        
-        defaultItems = [dailyRoutineItem, morningWalkItem, teamMeetingItem]
     }
     
     private func createNewScheduleItem() -> ScheduleItem {
@@ -257,69 +196,6 @@ struct ScheduleView: View {
             endRepeatOption: .never,
             endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStartTime) ?? defaultStartTime
         )
-    }
-    
-    private func getScheduleIcon(for date: Date) -> String {
-        let calendar = Calendar.current
-        let dayOfWeek = calendar.component(.weekday, from: date)
-        
-        switch dayOfWeek {
-        case 1, 7: return "figure.yoga"
-        case 2, 4, 6: return "figure.run"
-        default: return "figure.walk"
-        }
-    }
-    
-    private func getScheduleTime(for date: Date) -> String {
-        let calendar = Calendar.current
-        let dayOfWeek = calendar.component(.weekday, from: date)
-        
-        switch dayOfWeek {
-        case 1, 7: return "10:00 AM"
-        case 2, 4, 6: return "6:00 AM"
-        default: return "12:00 PM"
-        }
-    }
-    
-    private func getScheduleTitle(for date: Date) -> String {
-        let calendar = Calendar.current
-        let dayOfWeek = calendar.component(.weekday, from: date)
-        
-        switch dayOfWeek {
-        case 1, 7: return "Yoga Class"
-        case 2, 4, 6: return "Morning Run"
-        default: return "Lunch Walk"
-        }
-    }
-    
-    private func getScheduleTimeAsDate(for date: Date) -> Date {
-        let calendar = Calendar.current
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        let timeString = getScheduleTime(for: date)
-        let components = timeString.split(separator: ":")
-        let hourMinute = components[0].trimmingCharacters(in: .whitespaces)
-        let ampm = timeString.suffix(2)
-        var hour = Int(hourMinute) ?? 12
-        let minute = Int(components[1].prefix(2))
-        if ampm == "PM" && hour != 12 { hour += 12 }
-        if ampm == "AM" && hour == 12 { hour = 0 }
-        return calendar.date(bySettingHour: hour, minute: minute ?? 0, second: 0, of: date) ?? date
-    }
-    
-    private func getFixedTime(hour: Int, minute: Int) -> Date {
-        let calendar = Calendar.current
-        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: selectedDate) ?? selectedDate
-    }
-    
-    private func getScheduleStartTime(for date: Date) -> Date {
-        let calendar = Calendar.current
-        let dayOfWeek = calendar.component(.weekday, from: date)
-        switch dayOfWeek {
-        case 1, 7: return calendar.date(bySettingHour: 10, minute: 0, second: 0, of: date) ?? date
-        case 2, 4, 6: return calendar.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? date
-        default: return calendar.date(bySettingHour: 12, minute: 0, second: 0, of: date) ?? date
-        }
     }
     
     private func formatTime(_ date: Date) -> String {
