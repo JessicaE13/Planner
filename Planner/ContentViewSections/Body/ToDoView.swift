@@ -759,7 +759,7 @@ struct EditToDoView: View {
     }
 }
 
-// MARK: - Updated Move to Schedule View
+// MARK: - Updated Move to Schedule View with Icon Selection
 struct MoveToScheduleView: View {
     @State private var scheduleItem: ScheduleItem
     let onSave: (ScheduleItem) -> Void
@@ -774,17 +774,61 @@ struct MoveToScheduleView: View {
     @State private var customFrequencyConfig = CustomFrequencyConfig()
     @State private var showingCustomFrequencyPicker = false
     
+    // Icon selection states
+    @State private var selectedIcon: String
+    @State private var showingIconPicker = false
+    
     init(scheduleItem: ScheduleItem, onSave: @escaping (ScheduleItem) -> Void) {
         self._scheduleItem = State(initialValue: scheduleItem)
         self.onSave = onSave
         
         let defaultEndRepeat = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
         self._endRepeatDate = State(initialValue: defaultEndRepeat)
+        
+        // Initialize icon state
+        self._selectedIcon = State(initialValue: scheduleItem.icon)
     }
     
     var body: some View {
         NavigationView {
             Form {
+                Section {
+                    HStack {
+                        Button(action: {
+                            showingIconPicker = true
+                        }) {
+                            Image(systemName: selectedIcon)
+                                .foregroundColor(.blue)
+                                .padding(.trailing, 8)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(scheduleItem.title)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                                .multilineTextAlignment(.leading)
+                            
+                            if let category = scheduleItem.category {
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(Color(category.color))
+                                        .frame(width: 8, height: 8)
+                                    Text(category.name)
+                                        .font(.caption2)
+                                        .foregroundColor(Color(category.color))
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color(category.color).opacity(0.1))
+                                .cornerRadius(8)
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                }
+                
                 Section(header: Text("Schedule Details")) {
                     HStack {
                         Text("Date")
@@ -870,30 +914,6 @@ struct MoveToScheduleView: View {
                         }
                     }
                 }
-                
-                Section(header: Text("Task")) {
-                    HStack {
-                        Text("Title")
-                        Spacer()
-                        Text(scheduleItem.title)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    if let category = scheduleItem.category {
-                        HStack {
-                            Text("Category")
-                            Spacer()
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(Color(category.color))
-                                    .frame(width: 12, height: 12)
-                                Text(category.name)
-                                    .font(.caption)
-                                    .foregroundColor(Color(category.color))
-                            }
-                        }
-                    }
-                }
             }
             .navigationTitle("Schedule Task")
             .navigationBarTitleDisplayMode(.inline)
@@ -909,6 +929,9 @@ struct MoveToScheduleView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showingIconPicker) {
+            IconPickerView(selectedIcon: $selectedIcon, initialSearchText: scheduleItem.title)
         }
         .sheet(isPresented: $showingCustomFrequencyPicker) {
             CustomFrequencyPickerView(
@@ -964,7 +987,7 @@ struct MoveToScheduleView: View {
                                        of: selectedDate) ?? finalStartTime
         }
         
-        // Update the schedule item with new values
+        // Update the schedule item with new values, including the selected icon
         var updatedItem = scheduleItem
         updatedItem.time = finalStartTime
         updatedItem.startTime = finalStartTime
@@ -976,6 +999,7 @@ struct MoveToScheduleView: View {
         updatedItem.endRepeatOption = endRepeatOption
         updatedItem.endRepeatDate = endRepeatDate
         updatedItem.uniqueKey = "scheduled-\(updatedItem.id.uuidString)"
+        updatedItem.icon = selectedIcon  // Apply the selected icon
         
         onSave(updatedItem)
     }
