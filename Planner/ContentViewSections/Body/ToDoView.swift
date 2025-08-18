@@ -13,18 +13,28 @@ struct ToDoItem: Identifiable, Codable {
     var isCompleted: Bool
     var dateCreated: Date
     var category: Category?
+    var priority: Priority
+    var dueDate: Date?
+    var hasDueDate: Bool
+    var notes: String
+    var checklist: [ChecklistItem]
     
-    init(text: String, isCompleted: Bool = false, category: Category? = nil) {
+    init(text: String, isCompleted: Bool = false, category: Category? = nil, priority: Priority = .medium, dueDate: Date? = nil, hasDueDate: Bool = false, notes: String = "", checklist: [ChecklistItem] = []) {
         self.id = UUID()
         self.text = text
         self.isCompleted = isCompleted
         self.dateCreated = Date()
         self.category = category
+        self.priority = priority
+        self.dueDate = dueDate
+        self.hasDueDate = hasDueDate
+        self.notes = notes
+        self.checklist = checklist
     }
     
     // Custom Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, text, isCompleted, dateCreated, category
+        case id, text, isCompleted, dateCreated, category, priority, dueDate, hasDueDate, notes, checklist
     }
     
     init(from decoder: Decoder) throws {
@@ -34,6 +44,11 @@ struct ToDoItem: Identifiable, Codable {
         isCompleted = try container.decode(Bool.self, forKey: .isCompleted)
         dateCreated = try container.decode(Date.self, forKey: .dateCreated)
         category = try container.decodeIfPresent(Category.self, forKey: .category)
+        priority = try container.decodeIfPresent(Priority.self, forKey: .priority) ?? .medium
+        dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
+        hasDueDate = try container.decodeIfPresent(Bool.self, forKey: .hasDueDate) ?? false
+        notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        checklist = try container.decodeIfPresent([ChecklistItem].self, forKey: .checklist) ?? []
     }
     
     func encode(to encoder: Encoder) throws {
@@ -43,6 +58,46 @@ struct ToDoItem: Identifiable, Codable {
         try container.encode(isCompleted, forKey: .isCompleted)
         try container.encode(dateCreated, forKey: .dateCreated)
         try container.encode(category, forKey: .category)
+        try container.encode(priority, forKey: .priority)
+        try container.encode(dueDate, forKey: .dueDate)
+        try container.encode(hasDueDate, forKey: .hasDueDate)
+        try container.encode(notes, forKey: .notes)
+        try container.encode(checklist, forKey: .checklist)
+    }
+}
+
+// MARK: - Priority Enum
+enum Priority: String, CaseIterable, Identifiable, Codable {
+    case low = "Low"
+    case medium = "Medium"
+    case high = "High"
+    
+    var id: String { self.rawValue }
+    
+    var displayName: String {
+        return self.rawValue
+    }
+    
+    var color: Color {
+        switch self {
+        case .low:
+            return .green
+        case .medium:
+            return .orange
+        case .high:
+            return .red
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .low:
+            return "arrow.down.circle.fill"
+        case .medium:
+            return "minus.circle.fill"
+        case .high:
+            return "arrow.up.circle.fill"
+        }
     }
 }
 
@@ -117,11 +172,9 @@ class ToDoDataManager: ObservableObject {
 
 struct ToDoView: View {
     @StateObject private var dataManager = ToDoDataManager.shared
-    @State private var newItemText = ""
-    @State private var selectedCategory: Category?
     @State private var filterCategory: Category?
     @State private var showingFilterOptions = false
-    @FocusState private var isTextFieldFocused: Bool
+    @State private var showingAddToDo = false
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -149,7 +202,7 @@ struct ToDoView: View {
                         Text("To Do")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                        Text("Move your items to the todo list")
+                        Text("Organize your tasks and ideas")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -170,6 +223,17 @@ struct ToDoView: View {
                         }
                         .foregroundColor(.blue)
                     }
+                    
+                    // Add button
+                    Button(action: {
+                        showingAddToDo = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .foregroundColor(.primary)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
                     
                     // Clear completed button
                     if filteredItems.contains(where: { $0.isCompleted }) {
@@ -197,11 +261,11 @@ struct ToDoView: View {
                             .font(.system(size: 60))
                             .foregroundColor(.gray.opacity(0.5))
                         
-                        Text(filterCategory == nil ? "No thoughts captured yet" : "No items in \(filterCategory?.name ?? "this category")")
+                        Text(filterCategory == nil ? "No tasks yet" : "No items in \(filterCategory?.name ?? "this category")")
                             .font(.headline)
                             .foregroundColor(.secondary)
                         
-                        Text("Start by adding anything that comes to mind - ideas, tasks, reminders, or random thoughts!")
+                        Text("Start by adding tasks, ideas, or reminders using the + button above!")
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -222,13 +286,8 @@ struct ToDoView: View {
                                                 dataManager.toggleItem(at: actualIndex)
                                             }
                                         },
-                                        onUpdate: { updatedText in
-                                            dataManager.items[actualIndex].text = updatedText
-                                            dataManager.updateItem(dataManager.items[actualIndex])
-                                        },
-                                        onCategoryUpdate: { newCategory in
-                                            dataManager.items[actualIndex].category = newCategory
-                                            dataManager.updateItem(dataManager.items[actualIndex])
+                                        onEdit: { updatedItem in
+                                            dataManager.updateItem(updatedItem)
                                         },
                                         onDelete: {
                                             withAnimation(.easeInOut(duration: 0.3)) {
@@ -244,116 +303,26 @@ struct ToDoView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 200) // Extra padding for floating input
+                        .padding(.bottom, 100) // Extra padding for bottom
                     }
                 }
                 
                 Spacer()
             }
-            
-            // Floating input section at bottom
-            VStack {
-                Spacer()
-                
-                // Horizontal scrolling category pills
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        // None/Clear category pill
-                        Button(action: {
-                            selectedCategory = nil
-                        }) {
-                            Text("None")
-                                .font(.caption)
-                                .foregroundColor(selectedCategory == nil ? .white : .primary)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(selectedCategory == nil ? Color.gray : Color.gray.opacity(0.2))
-                                .cornerRadius(16)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        // Category pills
-                        ForEach(CategoryDataManager.shared.categories) { category in
-                            Button(action: {
-                                selectedCategory = category
-                            }) {
-                                HStack(spacing: 4) {
-                                    Circle()
-                                        .fill(Color(category.color))
-                                        .frame(width: 8, height: 8)
-                                    Text(category.name)
-                                        .font(.caption)
-                                        .lineLimit(1)
-                                }
-                                .foregroundColor(selectedCategory?.id == category.id ? .white : .primary)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(selectedCategory?.id == category.id ? Color(category.color) : Color.gray.opacity(0.2))
-                                .cornerRadius(16)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                }
-                .padding(.bottom, 8)
-                
-                // Input field
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        // Selected category indicator (small)
-                        if let selectedCategory = selectedCategory {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(Color(selectedCategory.color))
-                                    .frame(width: 8, height: 8)
-                                Text(selectedCategory.name)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                
-                                Button(action: {
-                                    self.selectedCategory = nil
-                                }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.caption2)
-                                        .foregroundColor(.gray)
-                                }
-                            }
-                            .padding(.horizontal, 8)
-                        }
-                        
-                        TextField("What's on your mind?", text: $newItemText, axis: .vertical)
-                            .focused($isTextFieldFocused)
-                            .lineLimit(1...5)
-                            .onSubmit {
-                                addNewItem()
-                            }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-                    
-                    Button(action: addNewItem) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : .blue)
-                    }
-                    .disabled(newItemText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-                .padding(.horizontal)
-                .padding(.bottom)
-            }
-        }
-        .onTapGesture {
-            isTextFieldFocused = false
         }
         .actionSheet(isPresented: $showingFilterOptions) {
             ActionSheet(
                 title: Text("Filter by Category"),
                 buttons: createFilterButtons()
             )
+        }
+        .sheet(isPresented: $showingAddToDo) {
+            AddToDoView { newItem in
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    dataManager.addItem(newItem)
+                }
+                showingAddToDo = false
+            }
         }
     }
     
@@ -376,35 +345,258 @@ struct ToDoView: View {
         buttons.append(.cancel())
         return buttons
     }
+}
+
+// MARK: - Add To Do View
+struct AddToDoView: View {
+    let onSave: (ToDoItem) -> Void
+    @Environment(\.dismiss) private var dismiss
     
-    private func addNewItem() {
-        let trimmedText = newItemText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty else { return }
-        
-        let newItem = ToDoItem(text: trimmedText, category: selectedCategory)
-        withAnimation(.easeInOut(duration: 0.3)) {
-            dataManager.addItem(newItem)
+    @State private var title = ""
+    @State private var notes = ""
+    @State private var selectedCategory: Category?
+    @State private var priority: Priority = .medium
+    @State private var hasDueDate = false
+    @State private var dueDate = Date()
+    @State private var checklistItems: [ChecklistItem] = []
+    @State private var newChecklistItem = ""
+    @State private var showingManageCategories = false
+    
+    @FocusState private var notesIsFocused: Bool
+    @FocusState private var checklistInputFocused: Bool
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color("Background").opacity(0.2)
+                    .ignoresSafeArea()
+                
+                Form {
+                    Section(header: Text("Task Details")) {
+                        TextField("Task title", text: $title)
+                            .font(.body)
+                        
+                        // Priority Picker
+                        HStack {
+                            Text("Priority")
+                            Spacer()
+                            Menu {
+                                ForEach(Priority.allCases) { priorityOption in
+                                    Button(action: {
+                                        priority = priorityOption
+                                    }) {
+                                        HStack {
+                                            Image(systemName: priorityOption.icon)
+                                                .foregroundColor(priorityOption.color)
+                                            Text(priorityOption.displayName)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: priority.icon)
+                                        .foregroundColor(priority.color)
+                                    Text(priority.displayName)
+                                        .foregroundColor(.primary)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption2)
+                                }
+                            }
+                        }
+                        
+                        // Category Selection
+                        HStack {
+                            Text("Category")
+                            Spacer()
+                            Menu {
+                                Button("None") {
+                                    selectedCategory = nil
+                                }
+                                ForEach(CategoryDataManager.shared.categories) { category in
+                                    Button(category.name) {
+                                        selectedCategory = category
+                                    }
+                                }
+                                Button("Manage Categories") {
+                                    showingManageCategories = true
+                                }
+                            } label: {
+                                HStack {
+                                    if let category = selectedCategory {
+                                        Circle()
+                                            .fill(Color(category.color))
+                                            .frame(width: 12, height: 12)
+                                        Text(category.name)
+                                            .foregroundColor(.primary)
+                                    } else {
+                                        Text("None")
+                                            .foregroundColor(.primary)
+                                    }
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption2)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Section(header: Text("Due Date")) {
+                        HStack {
+                            Text("Has due date")
+                            Spacer()
+                            Toggle("", isOn: $hasDueDate)
+                        }
+                        
+                        if hasDueDate {
+                            HStack {
+                                Text("Due date")
+                                Spacer()
+                                DatePicker("", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
+                                    .labelsHidden()
+                            }
+                        }
+                    }
+                    
+                    Section(header: Text("Notes")) {
+                        ZStack(alignment: .topLeading) {
+                            TextEditor(text: $notes)
+                                .frame(minHeight: 100)
+                                .focused($notesIsFocused)
+                                .onTapGesture {
+                                    notesIsFocused = true
+                                }
+                                .scrollContentBackground(.hidden)
+                                .background(Color.clear)
+
+                            if notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text("Add notes...")
+                                    .foregroundColor(.secondary.opacity(0.5))
+                                    .padding(.top, 8)
+                                    .padding(.leading, 6)
+                                    .allowsHitTesting(false)
+                                    .transition(.opacity)
+                                    .animation(.easeInOut(duration: 0.2), value: notes)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    
+                    Section(header: Text("Subtasks")) {
+                        ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
+                            HStack {
+                                Button(action: {
+                                    checklistItems[index].isCompleted.toggle()
+                                }) {
+                                    Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(checklistItem.isCompleted ? .green : .gray)
+                                        .font(.title2)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                TextField("Subtask", text: Binding(
+                                    get: { checklistItems[index].text },
+                                    set: { checklistItems[index].text = $0 }
+                                ))
+                                .strikethrough(checklistItem.isCompleted)
+                                .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        .onDelete(perform: deleteChecklistItems)
+                        
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.title2)
+                            
+                            TextField("Add subtask", text: $newChecklistItem)
+                                .focused($checklistInputFocused)
+                                .onSubmit {
+                                    addChecklistItem()
+                                }
+                            
+                            if !newChecklistItem.isEmpty {
+                                Button("Add") {
+                                    addChecklistItem()
+                                }
+                                .foregroundColor(.blue)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("New Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveTask()
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
         }
-        newItemText = ""
-        selectedCategory = nil
-        isTextFieldFocused = false
+        .sheet(isPresented: $showingManageCategories) {
+            ManageCategoriesView()
+        }
+    }
+    
+    private func addChecklistItem() {
+        guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        let newItem = ChecklistItem(text: newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines))
+        checklistItems.append(newItem)
+        newChecklistItem = ""
+        checklistInputFocused = false
+    }
+    
+    private func deleteChecklistItems(offsets: IndexSet) {
+        checklistItems.remove(atOffsets: offsets)
+    }
+    
+    private func saveTask() {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+        
+        let newItem = ToDoItem(
+            text: trimmedTitle,
+            isCompleted: false,
+            category: selectedCategory,
+            priority: priority,
+            dueDate: hasDueDate ? dueDate : nil,
+            hasDueDate: hasDueDate,
+            notes: notes,
+            checklist: checklistItems
+        )
+        
+        onSave(newItem)
     }
 }
 
 struct ToDoItemRow: View {
     let item: ToDoItem
     let onToggle: () -> Void
-    let onUpdate: (String) -> Void
-    let onCategoryUpdate: (Category?) -> Void
+    let onEdit: (ToDoItem) -> Void
     let onDelete: () -> Void
     let onMoveToSchedule: (ToDoItem) -> Void
     
-    @State private var isEditing = false
-    @State private var editText = ""
-    @State private var showingCategoryEdit = false
-    @State private var editingCategory: Category?
+    @State private var showingEditSheet = false
     @State private var showingMoveToSchedule = false
-    @FocusState private var isTextFieldFocused: Bool
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }()
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -417,26 +609,32 @@ struct ToDoItemRow: View {
             .buttonStyle(PlainButtonStyle())
             
             // Content
-            VStack(alignment: .leading, spacing: 4) {
-                if isEditing {
-                    TextField("Edit item", text: $editText, axis: .vertical)
-                        .focused($isTextFieldFocused)
-                        .lineLimit(1...10)
-                        .onSubmit {
-                            saveEdit()
-                        }
-                        .onAppear {
-                            editText = item.text
-                            isTextFieldFocused = true
-                        }
-                } else {
+            VStack(alignment: .leading, spacing: 6) {
+                // Title and priority
+                HStack {
                     Text(item.text)
                         .font(.body)
                         .strikethrough(item.isCompleted)
                         .foregroundColor(item.isCompleted ? .secondary : .primary)
-                        .onTapGesture {
-                            startEditing()
-                        }
+                    
+                    Spacer()
+                    
+                    // Priority indicator
+                    Image(systemName: item.priority.icon)
+                        .foregroundColor(item.priority.color)
+                        .font(.caption)
+                }
+                
+                // Due date (if present)
+                if item.hasDueDate, let dueDate = item.dueDate {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Text(dateFormatter.string(from: dueDate))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 // Category indicator (if present)
@@ -454,35 +652,43 @@ struct ToDoItemRow: View {
                     .background(Color(category.color).opacity(0.1))
                     .cornerRadius(8)
                 }
+                
+                // Notes preview (if present)
+                if !item.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(item.notes)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                
+                // Checklist progress (if present)
+                if !item.checklist.isEmpty {
+                    let completedCount = item.checklist.filter { $0.isCompleted }.count
+                    let totalCount = item.checklist.count
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "checklist")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Text("\(completedCount)/\(totalCount) subtasks")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             
             Spacer()
             
             // Actions menu
             Menu {
-                if isEditing {
-                    Button("Save") {
-                        saveEdit()
-                    }
-                    Button("Cancel") {
-                        cancelEdit()
-                    }
-                } else {
-                    Button("Edit") {
-                        startEditing()
-                    }
-                    
-                    Button("Change Category") {
-                        editingCategory = item.category
-                        showingCategoryEdit = true
-                    }
-                    
-                    // New: Move to Schedule option
-                    Button(action: {
-                        showingMoveToSchedule = true
-                    }) {
-                        Label("Move to Schedule", systemImage: "calendar.badge.plus")
-                    }
+                Button("Edit") {
+                    showingEditSheet = true
+                }
+                
+                Button(action: {
+                    showingMoveToSchedule = true
+                }) {
+                    Label("Move to Schedule", systemImage: "calendar.badge.plus")
                 }
                 
                 Button("Delete", role: .destructive) {
@@ -498,31 +704,11 @@ struct ToDoItemRow: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-        .sheet(isPresented: $showingCategoryEdit) {
-            NavigationView {
-                VStack {
-                    CategoryPickerView(selectedCategory: $editingCategory)
-                        .padding()
-                    
-                    Spacer()
-                }
-                .navigationTitle("Select Category")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            onCategoryUpdate(editingCategory)
-                            showingCategoryEdit = false
-                        }
-                    }
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Cancel") {
-                            showingCategoryEdit = false
-                        }
-                    }
-                }
+        .sheet(isPresented: $showingEditSheet) {
+            EditToDoView(item: item) { updatedItem in
+                onEdit(updatedItem)
+                showingEditSheet = false
             }
-            .presentationDetents([.medium])
         }
         .sheet(isPresented: $showingMoveToSchedule) {
             MoveToScheduleView(
@@ -537,29 +723,234 @@ struct ToDoItemRow: View {
             )
         }
     }
+}
+
+// MARK: - Edit To Do View
+struct EditToDoView: View {
+    @State private var item: ToDoItem
+    let onSave: (ToDoItem) -> Void
+    @Environment(\.dismiss) private var dismiss
     
-    private func startEditing() {
-        editText = item.text
-        isEditing = true
+    @State private var showingManageCategories = false
+    @State private var newChecklistItem = ""
+    
+    @FocusState private var notesIsFocused: Bool
+    @FocusState private var checklistInputFocused: Bool
+    
+    init(item: ToDoItem, onSave: @escaping (ToDoItem) -> Void) {
+        self._item = State(initialValue: item)
+        self.onSave = onSave
     }
     
-    private func saveEdit() {
-        let trimmedText = editText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedText.isEmpty && trimmedText != item.text {
-            onUpdate(trimmedText)
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color("Background").opacity(0.2)
+                    .ignoresSafeArea()
+                
+                Form {
+                    Section(header: Text("Task Details")) {
+                        TextField("Task title", text: $item.text)
+                            .font(.body)
+                        
+                        // Priority Picker
+                        HStack {
+                            Text("Priority")
+                            Spacer()
+                            Menu {
+                                ForEach(Priority.allCases) { priorityOption in
+                                    Button(action: {
+                                        item.priority = priorityOption
+                                    }) {
+                                        HStack {
+                                            Image(systemName: priorityOption.icon)
+                                                .foregroundColor(priorityOption.color)
+                                            Text(priorityOption.displayName)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: item.priority.icon)
+                                        .foregroundColor(item.priority.color)
+                                    Text(item.priority.displayName)
+                                        .foregroundColor(.primary)
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption2)
+                                }
+                            }
+                        }
+                        
+                        // Category Selection
+                        HStack {
+                            Text("Category")
+                            Spacer()
+                            Menu {
+                                Button("None") {
+                                    item.category = nil
+                                }
+                                ForEach(CategoryDataManager.shared.categories) { category in
+                                    Button(category.name) {
+                                        item.category = category
+                                    }
+                                }
+                                Button("Manage Categories") {
+                                    showingManageCategories = true
+                                }
+                            } label: {
+                                HStack {
+                                    if let category = item.category {
+                                        Circle()
+                                            .fill(Color(category.color))
+                                            .frame(width: 12, height: 12)
+                                        Text(category.name)
+                                            .foregroundColor(.primary)
+                                    } else {
+                                        Text("None")
+                                            .foregroundColor(.primary)
+                                    }
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption2)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Section(header: Text("Due Date")) {
+                        HStack {
+                            Text("Has due date")
+                            Spacer()
+                            Toggle("", isOn: $item.hasDueDate)
+                        }
+                        
+                        if item.hasDueDate {
+                            HStack {
+                                Text("Due date")
+                                Spacer()
+                                DatePicker("", selection: Binding(
+                                    get: { item.dueDate ?? Date() },
+                                    set: { item.dueDate = $0 }
+                                ), displayedComponents: [.date, .hourAndMinute])
+                                    .labelsHidden()
+                            }
+                        }
+                    }
+                    
+                    Section(header: Text("Notes")) {
+                        ZStack(alignment: .topLeading) {
+                            TextEditor(text: $item.notes)
+                                .frame(minHeight: 100)
+                                .focused($notesIsFocused)
+                                .onTapGesture {
+                                    notesIsFocused = true
+                                }
+                                .scrollContentBackground(.hidden)
+                                .background(Color.clear)
+
+                            if item.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text("Add notes...")
+                                    .foregroundColor(.secondary.opacity(0.5))
+                                    .padding(.top, 8)
+                                    .padding(.leading, 6)
+                                    .allowsHitTesting(false)
+                                    .transition(.opacity)
+                                    .animation(.easeInOut(duration: 0.2), value: item.notes)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    
+                    Section(header: Text("Subtasks")) {
+                        ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
+                            HStack {
+                                Button(action: {
+                                    item.checklist[index].isCompleted.toggle()
+                                }) {
+                                    Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(checklistItem.isCompleted ? .green : .gray)
+                                        .font(.title2)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                TextField("Subtask", text: Binding(
+                                    get: { item.checklist[index].text },
+                                    set: { item.checklist[index].text = $0 }
+                                ))
+                                .strikethrough(checklistItem.isCompleted)
+                                .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        .onDelete(perform: deleteChecklistItems)
+                        
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.title2)
+                            
+                            TextField("Add subtask", text: $newChecklistItem)
+                                .focused($checklistInputFocused)
+                                .onSubmit {
+                                    addChecklistItem()
+                                }
+                            
+                            if !newChecklistItem.isEmpty {
+                                Button("Add") {
+                                    addChecklistItem()
+                                }
+                                .foregroundColor(.blue)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Edit Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        onSave(item)
+                    }
+                    .disabled(item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
         }
-        isEditing = false
-        isTextFieldFocused = false
+        .sheet(isPresented: $showingManageCategories) {
+            ManageCategoriesView()
+        }
+        .onChange(of: item.hasDueDate) { _, newValue in
+            if !newValue {
+                item.dueDate = nil
+            } else if item.dueDate == nil {
+                item.dueDate = Date()
+            }
+        }
     }
     
-    private func cancelEdit() {
-        editText = item.text
-        isEditing = false
-        isTextFieldFocused = false
+    private func addChecklistItem() {
+        guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        let newItem = ChecklistItem(text: newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines))
+        item.checklist.append(newItem)
+        newChecklistItem = ""
+        checklistInputFocused = false
+    }
+    
+    private func deleteChecklistItems(offsets: IndexSet) {
+        item.checklist.remove(atOffsets: offsets)
     }
 }
 
-// MARK: - Move to Schedule View
+// MARK: - Move to Schedule View (keeping the existing implementation)
 struct MoveToScheduleView: View {
     let todoItem: ToDoItem
     let onSave: (ScheduleItem) -> Void
@@ -780,7 +1171,7 @@ struct MoveToScheduleView: View {
             customFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil,
             startTime: finalStartTime,
             endTime: finalEndTime,
-            checklist: [],
+            checklist: todoItem.checklist,
             uniqueKey: "todo-\(todoItem.id.uuidString)",
             category: todoItem.category,
             endRepeatOption: endRepeatOption,
@@ -791,6 +1182,7 @@ struct MoveToScheduleView: View {
         var finalItem = scheduleItem
         finalItem.location = location
         finalItem.allDay = allDay
+        finalItem.descriptionText = todoItem.notes
         
         onSave(finalItem)
     }
