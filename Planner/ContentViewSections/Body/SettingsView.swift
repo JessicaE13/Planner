@@ -86,7 +86,7 @@ struct SettingsView: View {
                                         .padding(.leading, 16)
                                     
                                     SettingsRow(
-                                        icon: "hand.raised.fill",
+                                        icon: "lock.fill",
                                         title: "Privacy Policy",
                                         action: {
                                             openURL("https://github.com")
