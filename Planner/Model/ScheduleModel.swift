@@ -83,6 +83,7 @@ struct ScheduleItem: Identifiable, Codable {
     var endRepeatOption: EndRepeatOption = .never
     var endRepeatDate: Date = Date()
     var excludedDates: Set<Date> = []
+    var hasDate: Bool = false // New property to track if todo has a date assigned
     
     // Legacy properties for compatibility
     var type: String {
@@ -104,6 +105,11 @@ struct ScheduleItem: Identifiable, Codable {
         return itemType == .scheduled && frequency != .never
     }
     
+    // New computed property to check if todo item should appear on schedule
+    var isDatedToDo: Bool {
+        return itemType == .todo && hasDate
+    }
+    
     // Computed property for AttributedString compatibility
     var description: AttributedString {
         get { AttributedString(descriptionText) }
@@ -115,27 +121,31 @@ struct ScheduleItem: Identifiable, Codable {
         title: String,
         descriptionText: String = "",
         category: Category? = nil,
-        checklist: [ChecklistItem] = []
+        checklist: [ChecklistItem] = [],
+        hasDate: Bool = false,
+        dueDate: Date? = nil
     ) -> ScheduleItem {
+        let finalDate = dueDate ?? Date()
         return ScheduleItem(
             title: title,
-            time: Date(), // Default to current time, but won't be used for display
+            time: finalDate,
             icon: "checklist",
             color: category?.color ?? "Color1",
             frequency: .never,
             customFrequencyConfig: nil,
             descriptionText: descriptionText,
             location: "",
-            allDay: false,
+            allDay: true, // Todo items with dates are typically all-day
             itemType: .todo,
             isCompleted: false,
-            startTime: Date(),
-            endTime: Date(),
+            startTime: finalDate,
+            endTime: finalDate,
             checklist: checklist,
             uniqueKey: "todo-\(UUID().uuidString)",
             category: category,
             endRepeatOption: .never,
-            endRepeatDate: Date()
+            endRepeatDate: finalDate,
+            hasDate: hasDate
         )
     }
     
@@ -206,6 +216,7 @@ struct ScheduleItem: Identifiable, Codable {
         self.endRepeatOption = endRepeatOption
         self.endRepeatDate = finalEndRepeatDate
         self.uniqueKey = "scheduled-\(self.id.uuidString)"
+        self.hasDate = true // Scheduled items always have dates
         
         // Update icon to something more schedule-appropriate if it's still the default to-do icon
         if self.icon == "checklist" {
@@ -219,17 +230,32 @@ struct ScheduleItem: Identifiable, Codable {
         self.frequency = .never
         self.customFrequencyConfig = nil
         self.location = ""
-        self.allDay = false
+        self.allDay = true // Todo items are typically all-day
         self.endRepeatOption = .never
         self.uniqueKey = "todo-\(self.id.uuidString)"
         self.icon = "checklist"
+        // Keep hasDate as true if it was scheduled, false if it was never dated
         
-        // Reset times to current time (though they won't be used for display)
-        let now = Date()
-        self.time = now
-        self.startTime = now
-        self.endTime = now
-        self.endRepeatDate = now
+        // Keep the date information for todos - they might want to keep the date
+        // self.hasDate remains as is
+    }
+    
+    // Method to add/remove date from todo item
+    mutating func setDate(_ date: Date?, allDay: Bool = true) {
+        if let date = date {
+            self.hasDate = true
+            self.time = date
+            self.startTime = date
+            self.endTime = date
+            self.allDay = allDay
+        } else {
+            self.hasDate = false
+            // Reset to current time but mark as not having a date
+            let now = Date()
+            self.time = now
+            self.startTime = now
+            self.endTime = now
+        }
     }
     
     // Initialize with all parameters (for Codable and internal use)
@@ -251,7 +277,8 @@ struct ScheduleItem: Identifiable, Codable {
         uniqueKey: String = "",
         category: Category? = nil,
         endRepeatOption: EndRepeatOption = .never,
-        endRepeatDate: Date = Date()
+        endRepeatDate: Date = Date(),
+        hasDate: Bool = false
     ) {
         self.id = UUID()
         self.title = title
@@ -272,11 +299,12 @@ struct ScheduleItem: Identifiable, Codable {
         self.category = category
         self.endRepeatOption = endRepeatOption
         self.endRepeatDate = endRepeatDate
+        self.hasDate = hasDate
     }
     
     // Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, title, time, icon, color, frequency, customFrequencyConfig, descriptionText, location, allDay, itemType, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates
+        case id, title, time, icon, color, frequency, customFrequencyConfig, descriptionText, location, allDay, itemType, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates, hasDate
     }
     
     init(from decoder: Decoder) throws {
@@ -310,6 +338,7 @@ struct ScheduleItem: Identifiable, Codable {
         endRepeatOption = try container.decode(EndRepeatOption.self, forKey: .endRepeatOption)
         endRepeatDate = try container.decode(Date.self, forKey: .endRepeatDate)
         excludedDates = try container.decodeIfPresent(Set<Date>.self, forKey: .excludedDates) ?? []
+        hasDate = try container.decodeIfPresent(Bool.self, forKey: .hasDate) ?? (itemType == .scheduled) // Default based on type
     }
     
     func encode(to encoder: Encoder) throws {
@@ -335,13 +364,11 @@ struct ScheduleItem: Identifiable, Codable {
         try container.encode(endRepeatOption, forKey: .endRepeatOption)
         try container.encode(endRepeatDate, forKey: .endRepeatDate)
         try container.encode(excludedDates, forKey: .excludedDates)
+        try container.encode(hasDate, forKey: .hasDate)
     }
     
-    // Updated shouldAppear method - only applies to scheduled items
+    // Updated shouldAppear method - now includes dated todo items
     func shouldAppear(on date: Date) -> Bool {
-        // To-do items don't appear on specific dates
-        guard itemType == .scheduled else { return false }
-        
         let calendar = Calendar.current
         let dateKey = calendar.startOfDay(for: date)
         
@@ -350,26 +377,36 @@ struct ScheduleItem: Identifiable, Codable {
             return false
         }
         
-        // If frequency is never, only show on the exact date
-        if frequency == .never {
+        // For scheduled items, use the existing logic
+        if itemType == .scheduled {
+            // If frequency is never, only show on the exact date
+            if frequency == .never {
+                return calendar.isDate(startTime, inSameDayAs: date)
+            }
+            
+            // Check if the event should trigger based on frequency (including custom config)
+            let shouldTrigger = frequency.shouldTrigger(on: date, from: startTime, customConfig: customFrequencyConfig)
+            
+            // If it shouldn't trigger based on frequency, don't show
+            if !shouldTrigger {
+                return false
+            }
+            
+            // Check end repeat conditions
+            if endRepeatOption == .onDate {
+                return date <= endRepeatDate
+            }
+            
+            // If endRepeatOption is .never, show indefinitely
+            return true
+        }
+        
+        // For todo items, only show if they have a date and it matches
+        if itemType == .todo && hasDate {
             return calendar.isDate(startTime, inSameDayAs: date)
         }
         
-        // Check if the event should trigger based on frequency (including custom config)
-        let shouldTrigger = frequency.shouldTrigger(on: date, from: startTime, customConfig: customFrequencyConfig)
-        
-        // If it shouldn't trigger based on frequency, don't show
-        if !shouldTrigger {
-            return false
-        }
-        
-        // Check end repeat conditions
-        if endRepeatOption == .onDate {
-            return date <= endRepeatDate
-        }
-        
-        // If endRepeatOption is .never, show indefinitely
-        return true
+        return false
     }
 }
 
