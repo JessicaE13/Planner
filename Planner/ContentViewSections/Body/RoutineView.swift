@@ -760,6 +760,7 @@ struct RoutineItemDetailView: View {
 }
 
 // MARK: - Updated Bottom Sheet View for Routine Details
+// Updated RoutineDetailBottomSheetView with clear background for routine items
 struct RoutineDetailBottomSheetView: View {
     @Binding var routine: Routine
     let selectedDate: Date
@@ -812,69 +813,62 @@ struct RoutineDetailBottomSheetView: View {
                 .padding(.top, 24)
                 .padding(.bottom, 32)
 
-                // Routine Items List - Only show visible items
+                // Routine Items List - Only show visible items with clear background
                 if !visibleItems.isEmpty {
                     VStack(spacing: 0) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                            
-                            VStack(spacing: 0) {
-                                ForEach(visibleItems.indices, id: \.self) { index in
-                                    let item = visibleItems[index]
-                                    
-                                    Button(action: {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            workingRoutine.toggleItem(item.name, for: selectedDate)
-                                            // Auto-save changes immediately
-                                            routine = workingRoutine
-                                        }
-                                    }) {
-                                        HStack {
-                                            Image(systemName: workingRoutine.isItemCompleted(item.name, for: selectedDate) ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .primary : .gray)
+                        VStack(spacing: 0) {
+                            ForEach(visibleItems.indices, id: \.self) { index in
+                                let item = visibleItems[index]
+                                
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        workingRoutine.toggleItem(item.name, for: selectedDate)
+                                        // Auto-save changes immediately
+                                        routine = workingRoutine
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: workingRoutine.isItemCompleted(item.name, for: selectedDate) ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .primary : .gray)
+                                            .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(item.name, for: selectedDate))
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.name)
+                                                .strikethrough(workingRoutine.isItemCompleted(item.name, for: selectedDate))
+                                                .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .secondary : .primary)
                                                 .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(item.name, for: selectedDate))
                                             
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(item.name)
-                                                    .strikethrough(workingRoutine.isItemCompleted(item.name, for: selectedDate))
-                                                    .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .secondary : .primary)
-                                                    .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(item.name, for: selectedDate))
-                                                
-                                                // Show item frequency if different from routine frequency
-                                                if item.frequency != workingRoutine.frequency {
-                                                    HStack(spacing: 4) {
-                                                        Image(systemName: "repeat")
+                                            // Show item frequency if different from routine frequency
+                                            if item.frequency != workingRoutine.frequency {
+                                                HStack(spacing: 4) {
+                                                    Image(systemName: "repeat")
+                                                        .font(.caption2)
+                                                    if item.frequency == .custom {
+                                                        Text(item.customFrequencyConfig?.displayDescription() ?? "Custom")
                                                             .font(.caption2)
-                                                        if item.frequency == .custom {
-                                                            Text(item.customFrequencyConfig?.displayDescription() ?? "Custom")
-                                                                .font(.caption2)
-                                                        } else {
-                                                            Text(item.frequency.displayName)
-                                                                .font(.caption2)
-                                                        }
+                                                    } else {
+                                                        Text(item.frequency.displayName)
+                                                            .font(.caption2)
                                                     }
-                                                    .foregroundColor(.secondary)
                                                 }
+                                                .foregroundColor(.secondary)
                                             }
-                                            
-                                            Spacer()
                                         }
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal, 16)
-                                        .contentShape(Rectangle())
+                                        
+                                        Spacer()
                                     }
-                                    .buttonStyle(PlainButtonStyle())
-                                    
-                                    if index < visibleItems.count - 1 {
-                                        Divider()
-                                            .padding(.leading, 16)
-                                    }
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 16)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                if index < visibleItems.count - 1 {
+                                    Divider()
+                                        .padding(.leading, 16)
                                 }
                             }
                         }
-                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 16)
                     }
                 } else {
