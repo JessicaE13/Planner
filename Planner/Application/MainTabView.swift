@@ -16,7 +16,7 @@ struct MainTabView: View {
             ContentView()
                 .tabItem {
                     Image(systemName: "text.rectangle.page")
-                    Text("Agenda")
+                    Text("Planner")
                 }
                 .tag(0)
             
