@@ -34,6 +34,55 @@ struct SettingsView: View {
                 
                 // Settings List
                 ScrollView {
+                    
+                    //
+                    //  Add this to your SettingsView.swift temporarily for testing
+                    //
+
+                    // Add this section to your SettingsView body, in the settings list:
+
+                    // Debug Section (Remove in production)
+                    VStack(spacing: 0) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color(.secondarySystemBackground))
+                                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                            
+                            VStack(spacing: 0) {
+                                SettingsRow(
+                                    icon: "star.fill",
+                                    title: "Test Review Prompt",
+                                    action: {
+                                        AppReviewManager.shared.shouldShowReviewPrompt = true
+                                    }
+                                )
+                                
+                                Divider()
+                                    .padding(.leading, 16)
+                                
+                                SettingsRow(
+                                    icon: "arrow.counterclockwise",
+                                    title: "Reset Review Counter",
+                                    action: {
+                                        AppReviewManager.shared.resetReviewPrompt()
+                                    }
+                                )
+                                
+                                Divider()
+                                    .padding(.leading, 16)
+                                
+                                SettingsRow(
+                                    icon: "number",
+                                    title: "Launch Count: \(AppReviewManager.shared.getCurrentLaunchCount())",
+                                    showChevron: false,
+                                    action: nil
+                                )
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    
+                    // end test
                     VStack(spacing: 16) {
                         // Account Section
                         VStack(spacing: 0) {
