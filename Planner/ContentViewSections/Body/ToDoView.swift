@@ -74,6 +74,11 @@ class ToDoDataManager: ObservableObject {
         saveItems()
     }
     
+    func deleteItem(withId id: UUID) {
+        items.removeAll { $0.id == id }
+        saveItems()
+    }
+    
     func toggleItem(at index: Int) {
         guard index < items.count else { return }
         items[index].isCompleted.toggle()
@@ -229,6 +234,10 @@ struct ToDoView: View {
                                             withAnimation(.easeInOut(duration: 0.3)) {
                                                 dataManager.deleteItem(at: actualIndex)
                                             }
+                                        },
+                                        onMoveToSchedule: { toDoItem in
+                                            // The item will be deleted from ToDo after successful move
+                                            dataManager.deleteItem(withId: toDoItem.id)
                                         }
                                     )
                                 }
@@ -388,11 +397,13 @@ struct ToDoItemRow: View {
     let onUpdate: (String) -> Void
     let onCategoryUpdate: (Category?) -> Void
     let onDelete: () -> Void
+    let onMoveToSchedule: (ToDoItem) -> Void
     
     @State private var isEditing = false
     @State private var editText = ""
     @State private var showingCategoryEdit = false
     @State private var editingCategory: Category?
+    @State private var showingMoveToSchedule = false
     @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
@@ -465,6 +476,13 @@ struct ToDoItemRow: View {
                         editingCategory = item.category
                         showingCategoryEdit = true
                     }
+                    
+                    // New: Move to Schedule option
+                    Button(action: {
+                        showingMoveToSchedule = true
+                    }) {
+                        Label("Move to Schedule", systemImage: "calendar.badge.plus")
+                    }
                 }
                 
                 Button("Delete", role: .destructive) {
@@ -506,6 +524,18 @@ struct ToDoItemRow: View {
             }
             .presentationDetents([.medium])
         }
+        .sheet(isPresented: $showingMoveToSchedule) {
+            MoveToScheduleView(
+                todoItem: item,
+                onSave: { scheduleItem in
+                    // Add to schedule
+                    ScheduleDataManager.shared.addOrUpdateItem(scheduleItem)
+                    // Remove from todo
+                    onMoveToSchedule(item)
+                    showingMoveToSchedule = false
+                }
+            )
+        }
     }
     
     private func startEditing() {
@@ -526,6 +556,243 @@ struct ToDoItemRow: View {
         editText = item.text
         isEditing = false
         isTextFieldFocused = false
+    }
+}
+
+// MARK: - Move to Schedule View
+struct MoveToScheduleView: View {
+    let todoItem: ToDoItem
+    let onSave: (ScheduleItem) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var selectedDate = Date()
+    @State private var startTime = Date()
+    @State private var endTime: Date
+    @State private var allDay = false
+    @State private var location = ""
+    @State private var frequency: Frequency = .never
+    @State private var endRepeatOption: EndRepeatOption = .never
+    @State private var endRepeatDate: Date
+    @State private var customFrequencyConfig = CustomFrequencyConfig()
+    @State private var showingCustomFrequencyPicker = false
+    
+    init(todoItem: ToDoItem, onSave: @escaping (ScheduleItem) -> Void) {
+        self.todoItem = todoItem
+        self.onSave = onSave
+        
+        let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
+        let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
+        let defaultEndRepeat = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+        
+        self._startTime = State(initialValue: defaultStart)
+        self._endTime = State(initialValue: defaultEnd)
+        self._endRepeatDate = State(initialValue: defaultEndRepeat)
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Schedule Details")) {
+                    HStack {
+                        Text("Date")
+                        Spacer()
+                        DatePicker("", selection: $selectedDate, displayedComponents: .date)
+                            .labelsHidden()
+                    }
+                    
+                    HStack {
+                        Text("All-day")
+                        Spacer()
+                        Toggle("", isOn: $allDay)
+                    }
+                    
+                    if !allDay {
+                        HStack {
+                            Text("Start Time")
+                            Spacer()
+                            DatePicker("", selection: $startTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                        
+                        HStack {
+                            Text("End Time")
+                            Spacer()
+                            DatePicker("", selection: $endTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                    }
+                    
+                    TextField("Location (optional)", text: $location)
+                }
+                
+                Section(header: Text("Repeat")) {
+                    HStack {
+                        Text("Frequency")
+                        Spacer()
+                        Menu {
+                            ForEach(Frequency.allCases) { freq in
+                                Button(freq.displayName) {
+                                    frequency = freq
+                                    if freq == .custom {
+                                        showingCustomFrequencyPicker = true
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                if frequency == .custom {
+                                    Text(customFrequencyConfig.displayDescription())
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
+                                } else {
+                                    Text(frequency.displayName)
+                                        .foregroundColor(.primary)
+                                }
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption2)
+                            }
+                        }
+                    }
+                    
+                    if frequency != .never {
+                        HStack {
+                            Text("End Repeat")
+                            Spacer()
+                            Picker("", selection: $endRepeatOption) {
+                                ForEach(EndRepeatOption.allCases) { option in
+                                    Text(option.displayName).tag(option)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                        }
+                        
+                        if endRepeatOption == .onDate {
+                            HStack {
+                                Text("End Date")
+                                Spacer()
+                                DatePicker("", selection: $endRepeatDate, displayedComponents: .date)
+                                    .labelsHidden()
+                            }
+                        }
+                    }
+                }
+                
+                Section(header: Text("Task")) {
+                    HStack {
+                        Text("Title")
+                        Spacer()
+                        Text(todoItem.text)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    if let category = todoItem.category {
+                        HStack {
+                            Text("Category")
+                            Spacer()
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color(category.color))
+                                    .frame(width: 12, height: 12)
+                                Text(category.name)
+                                    .font(.caption)
+                                    .foregroundColor(Color(category.color))
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Schedule Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveToSchedule()
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingCustomFrequencyPicker) {
+            CustomFrequencyPickerView(
+                customConfig: $customFrequencyConfig,
+                endRepeatOption: $endRepeatOption,
+                endRepeatDate: $endRepeatDate
+            )
+        }
+        .onChange(of: frequency) { _, newFrequency in
+            if newFrequency == .never {
+                endRepeatOption = .never
+            }
+            if newFrequency == .custom {
+                showingCustomFrequencyPicker = true
+            }
+        }
+        .onChange(of: selectedDate) { _, newDate in
+            // Update start and end times to use the selected date
+            let calendar = Calendar.current
+            let timeComponents = calendar.dateComponents([.hour, .minute], from: startTime)
+            if let newStartTime = calendar.date(bySettingHour: timeComponents.hour ?? 9,
+                                               minute: timeComponents.minute ?? 0,
+                                               second: 0,
+                                               of: newDate) {
+                startTime = newStartTime
+                endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
+            }
+        }
+    }
+    
+    private func saveToSchedule() {
+        let calendar = Calendar.current
+        
+        // Create final start and end times using selected date
+        let finalStartTime: Date
+        let finalEndTime: Date
+        
+        if allDay {
+            finalStartTime = calendar.startOfDay(for: selectedDate)
+            finalEndTime = calendar.date(byAdding: .day, value: 1, to: finalStartTime) ?? finalStartTime
+        } else {
+            let startTimeComponents = calendar.dateComponents([.hour, .minute], from: startTime)
+            let endTimeComponents = calendar.dateComponents([.hour, .minute], from: endTime)
+            
+            finalStartTime = calendar.date(bySettingHour: startTimeComponents.hour ?? 9,
+                                         minute: startTimeComponents.minute ?? 0,
+                                         second: 0,
+                                         of: selectedDate) ?? selectedDate
+            
+            finalEndTime = calendar.date(bySettingHour: endTimeComponents.hour ?? 10,
+                                       minute: endTimeComponents.minute ?? 0,
+                                       second: 0,
+                                       of: selectedDate) ?? finalStartTime
+        }
+        
+        let scheduleItem = ScheduleItem(
+            title: todoItem.text,
+            time: finalStartTime,
+            icon: "checkmark.circle.fill",
+            color: todoItem.category?.color ?? "Color1",
+            frequency: frequency,
+            customFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil,
+            startTime: finalStartTime,
+            endTime: finalEndTime,
+            checklist: [],
+            uniqueKey: "todo-\(todoItem.id.uuidString)",
+            category: todoItem.category,
+            endRepeatOption: endRepeatOption,
+            endRepeatDate: endRepeatDate
+        )
+        
+        // Update additional properties
+        var finalItem = scheduleItem
+        finalItem.location = location
+        finalItem.allDay = allDay
+        
+        onSave(finalItem)
     }
 }
 
