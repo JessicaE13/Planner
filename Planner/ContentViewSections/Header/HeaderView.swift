@@ -81,8 +81,9 @@ struct HeaderView: View {
                     VStack(spacing: 4) {
                         // Weekday name - always in primary color (never highlighted)
                         Text(dateFormatter.string(from: date))
-                            .font(.body)
-                            .foregroundColor(.primary)
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .textCase(.uppercase)
                         
                         // Date number - highlighted when selected
                         Text(dayFormatter.string(from: date))

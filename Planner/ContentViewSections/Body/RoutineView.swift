@@ -1001,10 +1001,12 @@ struct RoutineView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(routineData.routine.name)
                                                 .font(.system(size: 18, weight: .medium, design: .default))
+                                                .kerning(0.5)
                                                 .foregroundColor(.primary)
                                                
                                             Text("Routine")
                                                 .font(.system(size: 10, weight: .regular, design: .default))
+                                                .kerning(0.5)
                                                 .textCase(.uppercase)
                                                 .foregroundColor(.primary.opacity(0.75))
                                              
@@ -1026,7 +1028,7 @@ struct RoutineView: View {
                                         .padding(.top, 8)
                                         .animation(.easeInOut(duration: 0.3), value: routineData.routine.progress(for: selectedDate))
                                 }
-                                .frame(width: 136)
+                                .frame(width: 144)
                             }
                             
                         }
