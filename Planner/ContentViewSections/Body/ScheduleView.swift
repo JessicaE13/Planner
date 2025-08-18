@@ -829,7 +829,7 @@ struct ScheduleEditView: View {
                         }
                     }
                     
-                    Section(header: Text("Description")) {
+                    Section() {
                         ZStack(alignment: .topLeading) {
                             TextEditor(text: $descriptionText)
                                 .frame(minHeight: 100)
@@ -856,7 +856,7 @@ struct ScheduleEditView: View {
                         .padding(.vertical, 4)
                     }
 
-                    Section(header: Text("Checklist")) {
+                    Section {
                         ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
                             HStack {
                                 Button(action: {
