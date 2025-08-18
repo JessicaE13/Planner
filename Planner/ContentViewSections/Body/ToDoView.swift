@@ -2,7 +2,7 @@
 //  ToDoView.swift
 //  Planner
 //
-//  Updated to use ScheduleItem model instead of ToDoItem
+//  Updated to use ScheduleItem model instead of ToDoItem with floating action button
 //
 
 import SwiftUI
@@ -137,17 +137,6 @@ struct ToDoView: View {
                         .foregroundColor(.blue)
                     }
                     
-                    // Add button
-                    Button(action: {
-                        showingAddToDo = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title2)
-                            .foregroundColor(.primary)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    
                     // Clear completed button
                     if filteredItems.contains(where: { $0.isCompleted }) {
                         Button("Clear Done") {
@@ -178,7 +167,7 @@ struct ToDoView: View {
                             .font(.headline)
                             .foregroundColor(.secondary)
                         
-                        Text("Start by adding tasks, ideas, or reminders using the + button above!")
+                        Text("Start by adding tasks, ideas, or reminders using the + button below!")
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -217,11 +206,32 @@ struct ToDoView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 100) // Extra padding for bottom
+                        .padding(.bottom, 100) // Extra padding for floating action button
                     }
                 }
                 
                 Spacer()
+            }
+            
+            // Floating Action Button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        showingAddToDo = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.blue)
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 34) // Account for tab bar
+                }
             }
         }
         .actionSheet(isPresented: $showingFilterOptions) {
