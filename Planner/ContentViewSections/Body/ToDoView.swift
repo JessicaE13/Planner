@@ -2,82 +2,13 @@
 //  ToDoView.swift
 //  Planner
 //
-//  Updated to use ScheduleItem model instead of ToDoItem with floating action button
+//  Updated to use UnifiedDataManager for consistency
 //
 
 import SwiftUI
 
-// MARK: - To Do Data Manager using ScheduleItem
-class ToDoDataManager: ObservableObject {
-    @Published var items: [ScheduleItem] = []
-    
-    static let shared = ToDoDataManager()
-    
-    private init() {
-        loadItems()
-    }
-    
-    func addItem(_ item: ScheduleItem) {
-        items.append(item)
-        saveItems()
-    }
-    
-    func updateItem(_ item: ScheduleItem) {
-        if let index = items.firstIndex(where: { $0.id == item.id }) {
-            items[index] = item
-            saveItems()
-        }
-    }
-    
-    func deleteItem(at index: Int) {
-        guard index < items.count else { return }
-        items.remove(at: index)
-        saveItems()
-    }
-    
-    func deleteItem(withId id: UUID) {
-        items.removeAll { $0.id == id }
-        saveItems()
-    }
-    
-    func toggleItem(at index: Int) {
-        guard index < items.count else { return }
-        items[index].isCompleted.toggle()
-        saveItems()
-    }
-    
-    func clearCompleted() {
-        items.removeAll { $0.isCompleted }
-        saveItems()
-    }
-    
-    private func saveItems() {
-        do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(items)
-            UserDefaults.standard.set(data, forKey: "ToDoScheduleItems")
-        } catch {
-            print("Failed to save to-do items: \(error)")
-        }
-    }
-    
-    private func loadItems() {
-        guard let data = UserDefaults.standard.data(forKey: "ToDoScheduleItems") else {
-            return
-        }
-        
-        do {
-            let decoder = JSONDecoder()
-            items = try decoder.decode([ScheduleItem].self, from: data)
-        } catch {
-            print("Failed to load to-do items: \(error)")
-            items = []
-        }
-    }
-}
-
 struct ToDoView: View {
-    @StateObject private var dataManager = ToDoDataManager.shared
+    @StateObject private var dataManager = UnifiedDataManager.shared
     @State private var filterCategory: Category?
     @State private var showingFilterOptions = false
     @State private var showingAddToDo = false
@@ -89,14 +20,9 @@ struct ToDoView: View {
         return formatter
     }()
     
-    // Filter items based on selected category - only show items with no date/time (to-dos)
+    // Filter items based on selected category - only show to-do items
     private var filteredItems: [ScheduleItem] {
-        let todoItems = dataManager.items.filter { item in
-            // Only show items that don't have specific dates/times set (null/blank)
-            // You can customize this logic based on how you want to identify "to-do" vs "scheduled" items
-            return item.frequency == .never &&
-                   Calendar.current.isDate(item.startTime, inSameDayAs: item.time) // Basic to-do check
-        }
+        let todoItems = dataManager.toDoItems
         
         if let filterCategory = filterCategory {
             return todoItems.filter { $0.category?.id == filterCategory.id }
@@ -141,7 +67,7 @@ struct ToDoView: View {
                     if filteredItems.contains(where: { $0.isCompleted }) {
                         Button("Clear Done") {
                             withAnimation(.easeInOut(duration: 0.3)) {
-                                dataManager.clearCompleted()
+                                dataManager.clearCompletedToDoItems()
                             }
                         }
                         .font(.caption)
@@ -185,7 +111,8 @@ struct ToDoView: View {
                                         item: dataManager.items[actualIndex],
                                         onToggle: {
                                             withAnimation(.easeInOut(duration: 0.2)) {
-                                                dataManager.toggleItem(at: actualIndex)
+                                                dataManager.items[actualIndex].isCompleted.toggle()
+                                                dataManager.updateItem(dataManager.items[actualIndex])
                                             }
                                         },
                                         onEdit: { updatedItem in
@@ -196,10 +123,10 @@ struct ToDoView: View {
                                                 dataManager.deleteItem(at: actualIndex)
                                             }
                                         },
-                                        onMoveToSchedule: { scheduleItem in
-                                            // Remove from ToDo and add to Schedule with date/time
-                                            dataManager.deleteItem(withId: scheduleItem.id)
-                                            ScheduleDataManager.shared.addOrUpdateItem(scheduleItem)
+                                        onMoveToSchedule: { scheduledInfo in
+                                            // Move the item to schedule using the unified data manager
+                                            let toDoItem = dataManager.items[actualIndex]
+                                            dataManager.moveToDoToSchedule(toDoItem, scheduledInfo: scheduledInfo)
                                         }
                                     )
                                 }
@@ -441,41 +368,24 @@ struct AddToDoView: View {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
         
-        // Create a ScheduleItem with null/default date/time values for to-do
-        let currentDate = Date()
-        let newItem = ScheduleItem(
+        // Create a to-do item using the convenience method
+        let newItem = ScheduleItem.createToDo(
             title: trimmedTitle,
-            time: currentDate, // Default to current time, but frequency will be .never
-            icon: "checklist",
-            color: selectedCategory?.color ?? "Color1",
-            frequency: .never, // This marks it as a to-do (not recurring)
-            customFrequencyConfig: nil,
-            startTime: currentDate, // Default start time
-            endTime: currentDate, // Default end time (same as start for to-dos)
-            checklist: checklistItems,
-            uniqueKey: "todo-\(UUID().uuidString)",
+            descriptionText: notes,
             category: selectedCategory,
-            endRepeatOption: .never,
-            endRepeatDate: currentDate
+            checklist: checklistItems
         )
         
-        // Set the description (notes) and mark as incomplete
-        var finalItem = newItem
-        finalItem.descriptionText = notes
-        finalItem.isCompleted = false
-        finalItem.allDay = false // To-dos don't need all-day flag
-        finalItem.location = "" // To-dos typically don't have locations
-        
-        onSave(finalItem)
+        onSave(newItem)
     }
 }
 
 struct ToDoItemRow: View {
-    let item: ScheduleItem // Now using ScheduleItem instead of ToDoItem
+    let item: ScheduleItem
     let onToggle: () -> Void
     let onEdit: (ScheduleItem) -> Void
     let onDelete: () -> Void
-    let onMoveToSchedule: (ScheduleItem) -> Void
+    let onMoveToSchedule: (ScheduledInfo) -> Void
     
     @State private var showingEditSheet = false
     @State private var showingMoveToSchedule = false
@@ -581,8 +491,8 @@ struct ToDoItemRow: View {
         .sheet(isPresented: $showingMoveToSchedule) {
             MoveToScheduleView(
                 scheduleItem: item,
-                onSave: { updatedScheduleItem in
-                    onMoveToSchedule(updatedScheduleItem)
+                onSave: { scheduledInfo in
+                    onMoveToSchedule(scheduledInfo)
                     showingMoveToSchedule = false
                 }
             )
@@ -759,13 +669,15 @@ struct EditToDoView: View {
     }
 }
 
-// MARK: - Updated Move to Schedule View with Icon Selection
+// MARK: - Updated Move to Schedule View
 struct MoveToScheduleView: View {
-    @State private var scheduleItem: ScheduleItem
-    let onSave: (ScheduleItem) -> Void
+    let scheduleItem: ScheduleItem
+    let onSave: (ScheduledInfo) -> Void
     @Environment(\.dismiss) private var dismiss
     
     @State private var selectedDate = Date()
+    @State private var startTime = Date()
+    @State private var endTime = Date()
     @State private var allDay = false
     @State private var location = ""
     @State private var frequency: Frequency = .never
@@ -778,8 +690,8 @@ struct MoveToScheduleView: View {
     @State private var selectedIcon: String
     @State private var showingIconPicker = false
     
-    init(scheduleItem: ScheduleItem, onSave: @escaping (ScheduleItem) -> Void) {
-        self._scheduleItem = State(initialValue: scheduleItem)
+    init(scheduleItem: ScheduleItem, onSave: @escaping (ScheduledInfo) -> Void) {
+        self.scheduleItem = scheduleItem
         self.onSave = onSave
         
         let defaultEndRepeat = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
@@ -787,6 +699,14 @@ struct MoveToScheduleView: View {
         
         // Initialize icon state
         self._selectedIcon = State(initialValue: scheduleItem.icon)
+        
+        // Initialize start and end times
+        let calendar = Calendar.current
+        let defaultStart = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
+        let defaultEnd = calendar.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
+        
+        self._startTime = State(initialValue: defaultStart)
+        self._endTime = State(initialValue: defaultEnd)
     }
     
     var body: some View {
@@ -847,14 +767,14 @@ struct MoveToScheduleView: View {
                         HStack {
                             Text("Start Time")
                             Spacer()
-                            DatePicker("", selection: $scheduleItem.startTime, displayedComponents: .hourAndMinute)
+                            DatePicker("", selection: $startTime, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                         }
                         
                         HStack {
                             Text("End Time")
                             Spacer()
-                            DatePicker("", selection: $scheduleItem.endTime, displayedComponents: .hourAndMinute)
+                            DatePicker("", selection: $endTime, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                         }
                     }
@@ -951,13 +871,13 @@ struct MoveToScheduleView: View {
         .onChange(of: selectedDate) { _, newDate in
             // Update start and end times to use the selected date
             let calendar = Calendar.current
-            let timeComponents = calendar.dateComponents([.hour, .minute], from: scheduleItem.startTime)
+            let timeComponents = calendar.dateComponents([.hour, .minute], from: startTime)
             if let newStartTime = calendar.date(bySettingHour: timeComponents.hour ?? 9,
                                                minute: timeComponents.minute ?? 0,
                                                second: 0,
                                                of: newDate) {
-                scheduleItem.startTime = newStartTime
-                scheduleItem.endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
+                startTime = newStartTime
+                endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
             }
         }
     }
@@ -973,8 +893,8 @@ struct MoveToScheduleView: View {
             finalStartTime = calendar.startOfDay(for: selectedDate)
             finalEndTime = calendar.date(byAdding: .day, value: 1, to: finalStartTime) ?? finalStartTime
         } else {
-            let startTimeComponents = calendar.dateComponents([.hour, .minute], from: scheduleItem.startTime)
-            let endTimeComponents = calendar.dateComponents([.hour, .minute], from: scheduleItem.endTime)
+            let startTimeComponents = calendar.dateComponents([.hour, .minute], from: startTime)
+            let endTimeComponents = calendar.dateComponents([.hour, .minute], from: endTime)
             
             finalStartTime = calendar.date(bySettingHour: startTimeComponents.hour ?? 9,
                                          minute: startTimeComponents.minute ?? 0,
@@ -987,21 +907,20 @@ struct MoveToScheduleView: View {
                                        of: selectedDate) ?? finalStartTime
         }
         
-        // Update the schedule item with new values, including the selected icon
-        var updatedItem = scheduleItem
-        updatedItem.time = finalStartTime
-        updatedItem.startTime = finalStartTime
-        updatedItem.endTime = finalEndTime
-        updatedItem.location = location
-        updatedItem.allDay = allDay
-        updatedItem.frequency = frequency
-        updatedItem.customFrequencyConfig = frequency == .custom ? customFrequencyConfig : nil
-        updatedItem.endRepeatOption = endRepeatOption
-        updatedItem.endRepeatDate = endRepeatDate
-        updatedItem.uniqueKey = "scheduled-\(updatedItem.id.uuidString)"
-        updatedItem.icon = selectedIcon  // Apply the selected icon
+        // Create the ScheduledInfo struct
+        let scheduledInfo = ScheduledInfo(
+            startTime: finalStartTime,
+            endTime: finalEndTime,
+            location: location,
+            allDay: allDay,
+            frequency: frequency,
+            customFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil,
+            endRepeatOption: endRepeatOption,
+            endRepeatDate: endRepeatDate,
+            icon: selectedIcon
+        )
         
-        onSave(updatedItem)
+        onSave(scheduledInfo)
     }
 }
 

@@ -35,7 +35,7 @@ enum DeleteOption: String, CaseIterable {
 
 struct ScheduleView: View {
     var selectedDate: Date
-    @StateObject private var dataManager = ScheduleDataManager.shared
+    @StateObject private var dataManager = UnifiedDataManager.shared
     @State private var sheetContent: SheetContent? = nil
     @State private var defaultItems: [ScheduleItem] = []
     
@@ -66,17 +66,17 @@ struct ScheduleView: View {
             .padding(.bottom, 16)
             
             VStack(spacing: 12) {
-                // Display all schedule items for the selected date, sorted by start time
-                let scheduleItems = getScheduleItemsForDate(selectedDate).sorted { $0.startTime < $1.startTime }
+                // Get all scheduled items for the selected date, including items moved from to-do
+                let allScheduleItems = getAllScheduleItemsForDate(selectedDate).sorted { $0.startTime < $1.startTime }
                 
-                ForEach(scheduleItems, id: \.id) { item in
+                ForEach(allScheduleItems, id: \.id) { item in
                     ScheduleRowView(item: item) {
                         sheetContent = .detail(item)
                     }
                 }
                 
-                // Show default items if no custom items exist
-                if scheduleItems.isEmpty {
+                // Show default items only if no custom items exist at all
+                if allScheduleItems.isEmpty {
                     ForEach(defaultItems, id: \.id) { item in
                         ScheduleRowView(item: item) {
                             sheetContent = .detail(item)
@@ -105,7 +105,7 @@ struct ScheduleView: View {
                     onSave: { updatedItem in
                         Task {
                             await MainActor.run {
-                                dataManager.addOrUpdateItem(updatedItem)
+                                dataManager.updateItem(updatedItem)
                             }
                         }
                     }
@@ -117,7 +117,7 @@ struct ScheduleView: View {
                     onSave: { updatedItem in
                         Task {
                             await MainActor.run {
-                                dataManager.addOrUpdateItem(updatedItem)
+                                dataManager.updateItem(updatedItem)
                                 sheetContent = nil
                             }
                         }
@@ -138,7 +138,7 @@ struct ScheduleView: View {
                     onSave: { newItem in
                         Task {
                             await MainActor.run {
-                                dataManager.addOrUpdateItem(newItem)
+                                dataManager.addItem(newItem)
                                 sheetContent = nil
                             }
                         }
@@ -162,50 +162,63 @@ struct ScheduleView: View {
         }
     }
     
-    private func getScheduleItemsForDate(_ date: Date) -> [ScheduleItem] {
-        return dataManager.scheduleItems.filter { item in
-            item.shouldAppear(on: date)
+    // Updated method to get ALL scheduled items for a date
+    private func getAllScheduleItemsForDate(_ date: Date) -> [ScheduleItem] {
+        // Get all items from the unified data manager that should appear on this date
+        return dataManager.items.filter { item in
+            // Only show scheduled items (not to-do items)
+            guard item.itemType == .scheduled else { return false }
+            
+            // Check if the item should appear on this date
+            return item.shouldAppear(on: date)
         }
     }
     
     private func initializeDefaultItems() {
-        // Create default items without immediately saving them to the data manager
-        let calendar = Calendar.current
+        // Only show default items if there are no actual scheduled items
+        let actualScheduledItems = getAllScheduleItemsForDate(selectedDate)
         
-        let dailyRoutineItem = ScheduleItem(
-            title: getScheduleTitle(for: selectedDate),
-            time: getScheduleTimeAsDate(for: selectedDate),
-            icon: getScheduleIcon(for: selectedDate),
-            color: "Color1",
-            frequency: .everyDay,
-            startTime: getScheduleStartTime(for: selectedDate),
-            endTime: calendar.date(byAdding: .hour, value: 1, to: getScheduleStartTime(for: selectedDate)) ?? getScheduleStartTime(for: selectedDate),
-            uniqueKey: "daily-routine"
-        )
-        
-        let morningWalkItem = ScheduleItem(
-            title: "Morning Walk",
-            time: getFixedTime(hour: 12, minute: 0),
-            icon: "figure.walk",
-            color: "Color2",
-            frequency: .never,
-            startTime: getFixedTime(hour: 12, minute: 0),
-            endTime: calendar.date(byAdding: .hour, value: 1, to: getFixedTime(hour: 12, minute: 0)) ?? getFixedTime(hour: 12, minute: 0),
-            uniqueKey: "morning-walk"
-        )
-        
-        let teamMeetingItem = ScheduleItem(
-            title: "Team Meeting",
-            time: getFixedTime(hour: 12, minute: 0),
-            icon: "person.3.fill",
-            color: "Color3",
-            frequency: .everyWeek,
-            startTime: getFixedTime(hour: 12, minute: 0),
-            endTime: calendar.date(byAdding: .hour, value: 1, to: getFixedTime(hour: 12, minute: 0)) ?? getFixedTime(hour: 12, minute: 0),
-            uniqueKey: "team-meeting"
-        )
-        
-        defaultItems = [dailyRoutineItem, morningWalkItem, teamMeetingItem]
+        if actualScheduledItems.isEmpty {
+            // Create default items without immediately saving them to the data manager
+            let calendar = Calendar.current
+            
+            let dailyRoutineItem = ScheduleItem(
+                title: getScheduleTitle(for: selectedDate),
+                time: getScheduleTimeAsDate(for: selectedDate),
+                icon: getScheduleIcon(for: selectedDate),
+                color: "Color1",
+                frequency: .everyDay,
+                startTime: getScheduleStartTime(for: selectedDate),
+                endTime: calendar.date(byAdding: .hour, value: 1, to: getScheduleStartTime(for: selectedDate)) ?? getScheduleStartTime(for: selectedDate),
+                uniqueKey: "daily-routine"
+            )
+            
+            let morningWalkItem = ScheduleItem(
+                title: "Morning Walk",
+                time: getFixedTime(hour: 12, minute: 0),
+                icon: "figure.walk",
+                color: "Color2",
+                frequency: .never,
+                startTime: getFixedTime(hour: 12, minute: 0),
+                endTime: calendar.date(byAdding: .hour, value: 1, to: getFixedTime(hour: 12, minute: 0)) ?? getFixedTime(hour: 12, minute: 0),
+                uniqueKey: "morning-walk"
+            )
+            
+            let teamMeetingItem = ScheduleItem(
+                title: "Team Meeting",
+                time: getFixedTime(hour: 12, minute: 0),
+                icon: "person.3.fill",
+                color: "Color3",
+                frequency: .everyWeek,
+                startTime: getFixedTime(hour: 12, minute: 0),
+                endTime: calendar.date(byAdding: .hour, value: 1, to: getFixedTime(hour: 12, minute: 0)) ?? getFixedTime(hour: 12, minute: 0),
+                uniqueKey: "team-meeting"
+            )
+            
+            defaultItems = [dailyRoutineItem, morningWalkItem, teamMeetingItem]
+        } else {
+            defaultItems = []
+        }
     }
     
     private func createNewScheduleItem() -> ScheduleItem {
@@ -213,16 +226,19 @@ struct ScheduleView: View {
         let defaultStartTime = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
         let defaultEndTime = calendar.date(byAdding: .hour, value: 1, to: defaultStartTime) ?? defaultStartTime
         
-        return ScheduleItem(
+        // Create a properly structured scheduled item
+        return ScheduleItem.createScheduled(
             title: "",
-            time: defaultStartTime,
+            startTime: defaultStartTime,
+            endTime: defaultEndTime,
             icon: "calendar",
             color: "Color1",
             frequency: .never,
-            startTime: defaultStartTime,
-            endTime: defaultEndTime,
+            descriptionText: "",
+            location: "",
+            allDay: false,
             checklist: [],
-            uniqueKey: UUID().uuidString,
+            category: nil,
             endRepeatOption: .never,
             endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStartTime) ?? defaultStartTime
         )
@@ -322,6 +338,14 @@ struct ScheduleRowView: View {
                 Image(systemName: "repeat")
                     .foregroundColor(Color.gray.opacity(0.6))
             }
+            
+            // Add indicator for items moved from to-do
+            if item.uniqueKey.hasPrefix("todo-") && item.itemType == .scheduled {
+                Image(systemName: "arrow.right.circle.fill")
+                    .foregroundColor(.blue.opacity(0.6))
+                    .font(.caption)
+            }
+            
             Spacer()
         }
         .contentShape(Rectangle())
@@ -926,6 +950,9 @@ struct ScheduleEditView: View {
                         item.descriptionText = descriptionText
                         item.checklist = checklistItems
                         item.category = selectedCategory
+                        
+                        // Ensure this is marked as a scheduled item
+                        item.itemType = .scheduled
                         
                         // Save custom frequency config if custom is selected
                         if item.frequency == .custom {
