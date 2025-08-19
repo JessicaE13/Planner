@@ -302,8 +302,8 @@ struct CreateRoutineView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color("Background").opacity(0.2)
-                    .ignoresSafeArea()
+                Color("Background")
+                    .edgesIgnoringSafeArea(.all)
                 
                 Form {
                     Section(header: Text("Routine Details")) {
@@ -422,6 +422,11 @@ struct CreateRoutineView: View {
                         ForEach(routineItems.indices, id: \.self) { index in
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
+                                    // Add drag handle for reordering
+                                    Image(systemName: "line.3.horizontal")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption)
+                                    
                                     TextField("Item \(index + 1)", text: $routineItems[index].name)
                                     
                                     Spacer()
@@ -457,6 +462,7 @@ struct CreateRoutineView: View {
                             }
                             .padding(.vertical, 4)
                         }
+                        .onMove(perform: moveItems)
                         
                         Button(action: {
                             routineItems.append(RoutineItem(name: "", frequency: .everyDay))
@@ -567,6 +573,10 @@ struct CreateRoutineView: View {
     
     // MARK: - Helper Methods
     
+    private func moveItems(from source: IndexSet, to destination: Int) {
+        routineItems.move(fromOffsets: source, toOffset: destination)
+    }
+    
     private func saveRoutine() {
         let trimmedName = routineName.trimmingCharacters(in: .whitespacesAndNewlines)
         let filteredItems = routineItems.compactMap { item in
@@ -650,110 +660,115 @@ struct RoutineItemDetailView: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Item Details")) {
-                    TextField("Item Name", text: $item.name)
-                }
+            ZStack {
+                Color("Background")
+                    .edgesIgnoringSafeArea(.all)
                 
-                Section(header: Text("Frequency")) {
-                    ForEach(Frequency.allCases) { frequency in
-                        Button(action: {
-                            item.frequency = frequency
-                            if frequency == .custom {
-                                showingCustomFrequencyPicker = true
-                            }
-                        }) {
-                            HStack {
-                                if frequency == .custom && item.frequency == .custom {
-                                    Text(customFrequencyConfig.displayDescription())
-                                        .foregroundColor(.primary)
-                                } else {
-                                    Text(frequency.displayName)
-                                        .foregroundColor(.primary)
+                Form {
+                    Section(header: Text("Item Details")) {
+                        TextField("Item Name", text: $item.name)
+                    }
+                    
+                    Section(header: Text("Frequency")) {
+                        ForEach(Frequency.allCases) { frequency in
+                            Button(action: {
+                                item.frequency = frequency
+                                if frequency == .custom {
+                                    showingCustomFrequencyPicker = true
                                 }
-                                
-                                Spacer()
-                                
-                                if item.frequency == frequency {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
+                            }) {
+                                HStack {
+                                    if frequency == .custom && item.frequency == .custom {
+                                        Text(customFrequencyConfig.displayDescription())
+                                            .foregroundColor(.primary)
+                                    } else {
+                                        Text(frequency.displayName)
+                                            .foregroundColor(.primary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    if item.frequency == frequency {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(.blue)
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                
-                if item.frequency != .never {
-                    Section(header: Text("End Repeat")) {
-                        Picker("End Repeat", selection: $item.endRepeatOption) {
-                            ForEach(EndRepeatOption.allCases) { option in
-                                Text(option.displayName).tag(option)
+                    
+                    if item.frequency != .never {
+                        Section(header: Text("End Repeat")) {
+                            Picker("End Repeat", selection: $item.endRepeatOption) {
+                                ForEach(EndRepeatOption.allCases) { option in
+                                    Text(option.displayName).tag(option)
+                                }
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            
+                            if item.endRepeatOption == .onDate {
+                                DatePicker("End Date", selection: $item.endRepeatDate, displayedComponents: .date)
                             }
                         }
-                        .pickerStyle(SegmentedPickerStyle())
-                        
-                        if item.endRepeatOption == .onDate {
-                            DatePicker("End Date", selection: $item.endRepeatDate, displayedComponents: .date)
+                    }
+                    
+                    Section {
+                        Button("Delete Item", role: .destructive) {
+                            showingDeleteConfirmation = true
+                        }
+                    }
+                    
+                    Section {
+                        Text("This frequency will override the routine's overall frequency for this specific item.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .listRowBackground(Color.clear)
+                }
+                .navigationTitle("Edit Item")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancel") {
+                            dismiss()
+                        }
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            // Save custom frequency config if custom is selected
+                            if item.frequency == .custom {
+                                item.customFrequencyConfig = customFrequencyConfig
+                            } else {
+                                item.customFrequencyConfig = nil
+                            }
+                            dismiss()
                         }
                     }
                 }
-                
-                Section {
-                    Button("Delete Item", role: .destructive) {
-                        showingDeleteConfirmation = true
-                    }
+            }
+            .sheet(isPresented: $showingCustomFrequencyPicker) {
+                CustomFrequencyPickerView(
+                    customConfig: $customFrequencyConfig,
+                    endRepeatOption: $item.endRepeatOption,
+                    endRepeatDate: $item.endRepeatDate
+                )
+            }
+            .alert("Delete Item", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    onDelete()
+                }
+            } message: {
+                Text("Are you sure you want to delete this item? This action cannot be undone.")
+            }
+            .onChange(of: item.frequency) { _, newFrequency in
+                if newFrequency == .never {
+                    item.endRepeatOption = .never
                 }
                 
-                Section {
-                    Text("This frequency will override the routine's overall frequency for this specific item.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                if newFrequency == .custom {
+                    showingCustomFrequencyPicker = true
                 }
-                .listRowBackground(Color.clear)
-            }
-            .navigationTitle("Edit Item")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        // Save custom frequency config if custom is selected
-                        if item.frequency == .custom {
-                            item.customFrequencyConfig = customFrequencyConfig
-                        } else {
-                            item.customFrequencyConfig = nil
-                        }
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .sheet(isPresented: $showingCustomFrequencyPicker) {
-            CustomFrequencyPickerView(
-                customConfig: $customFrequencyConfig,
-                endRepeatOption: $item.endRepeatOption,
-                endRepeatDate: $item.endRepeatDate
-            )
-        }
-        .alert("Delete Item", isPresented: $showingDeleteConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                onDelete()
-            }
-        } message: {
-            Text("Are you sure you want to delete this item? This action cannot be undone.")
-        }
-        .onChange(of: item.frequency) { _, newFrequency in
-            if newFrequency == .never {
-                item.endRepeatOption = .never
-            }
-            
-            if newFrequency == .custom {
-                showingCustomFrequencyPicker = true
             }
         }
     }
