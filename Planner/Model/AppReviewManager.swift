@@ -43,6 +43,7 @@ class AppReviewManager: ObservableObject {
         }
     }
     
+    @MainActor
     func handleLoveResponse() {
         // User loves the app - request App Store review
         markReviewPromptAsShown()
@@ -65,10 +66,15 @@ class AppReviewManager: ObservableObject {
         shouldShowReviewPrompt = false
     }
     
+    @MainActor
     private func requestAppStoreReview() {
         if let scene = UIApplication.shared.connectedScenes
             .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-            SKStoreReviewController.requestReview(in: scene)
+            if #available(iOS 18.0, *) {
+                AppStore.requestReview(in: scene)
+            } else {
+                SKStoreReviewController.requestReview(in: scene)
+            }
         }
     }
     

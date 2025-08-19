@@ -577,6 +577,20 @@ struct ScheduleDetailView: View {
 
 // MARK: - Schedule Edit View with Delete Functionality
 
+// Custom shape for rounding specific corners
+struct RoundedCorner: Shape {
+    var radius: CGFloat = 24.0
+    var corners: UIRectCorner = [.topLeft, .topRight]
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
+
 struct ScheduleEditView: View {
     @State private var item: ScheduleItem
     let selectedDate: Date
@@ -652,354 +666,360 @@ struct ScheduleEditView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color("Background").opacity(0.2)
+                // Increased opacity for less transparency
+                Color("Background").opacity(0.6)
                     .ignoresSafeArea()
                 
-                Form {
-                    Section {
-                        HStack {
-                            Image(systemName: item.icon)
-                                .foregroundColor(.blue)
-                                .padding(.trailing, 8)
-                            TextField("Title", text: $item.title)
-                                .multilineTextAlignment(.leading)
-                        }
-                        
-                        TextField("Location", text: $item.location, onEditingChanged: { editing in
-                            isSearchingLocation = editing
-                            if editing { performLocationSearch() }
-                        })
-                        .multilineTextAlignment(.leading)
-                        .onChange(of: item.location) { _, _ in
-                            performLocationSearch()
-                        }
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        
-                        if isSearchingLocation && !locationSearchResults.isEmpty {
-                            ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
-                                Button(action: {
-                                    let name = itemResult.mapItem.name ?? "Selected Location"
-                                    let address = itemResult.mapItem.placemark.title ?? ""
-                                    item.location = name + (address.isEmpty ? "" : "\n" + address)
-                                    isSearchingLocation = false
-                                    locationSearchResults = []
-                                }) {
-                                    VStack(alignment: .leading) {
-                                        Text(itemResult.mapItem.name ?? "Unknown")
-                                            .foregroundColor(.primary)
-                                        Text(itemResult.mapItem.placemark.title ?? "")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    }
-                                    .padding(.vertical, 4)
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Category Section
-                    Section {
-                        HStack {
-                            Text("Category")
-                            Spacer()
-                            Menu {
-                                Button("None") {
-                                    selectedCategory = nil
-                                }
-                                ForEach(CategoryDataManager.shared.categories) { category in
-                                    Button(category.name) {
-                                        selectedCategory = category
-                                    }
-                                }
-                                Button("Manage Categories") {
-                                    showingManageCategories = true
-                                }
-                            } label: {
-                                HStack {
-                                    Text(selectedCategory?.name ?? "None")
-                                        .foregroundColor(.primary)
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.secondary)
-                                        .font(.caption2)
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Item Type Section
-                    Section {
-                        HStack {
-                            Text("To Do Item")
-                                .font(.body)
-                            Spacer()
-                            Toggle("", isOn: Binding(
-                                get: { item.itemType == .todo },
-                                set: { newValue in
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        if newValue {
-                                            item.convertToToDo()
-                                        } else {
-                                            // Convert back to scheduled with default values
-                                            let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
-                                            let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
-                                            
-                                            item.convertToScheduled(
-                                                startTime: defaultStart,
-                                                endTime: defaultEnd,
-                                                location: item.location,
-                                                allDay: item.allDay,
-                                                frequency: .never,
-                                                endRepeatOption: .never,
-                                                endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
-                                            )
-                                        }
-                                    }
-                                }
-                            ))
-                        }
-                        
-                        // Todo-specific options
-                        if item.itemType == .todo {
-                            // Date assignment toggle
-                            HStack {
-                                Text("Assign Date")
-                                    .font(.body)
-                                Spacer()
-                                Toggle("", isOn: Binding(
-                                    get: { item.hasDate },
-                                    set: { newValue in
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            if newValue {
-                                                // Assign current selected date
-                                                item.setDate(selectedDate, allDay: true)
-                                            } else {
-                                                // Remove date assignment
-                                                item.setDate(nil)
-                                            }
-                                        }
-                                    }
-                                ))
-                            }
-                            
-                            // Date picker (only show if date is assigned)
-                            if item.hasDate {
-                                HStack {
-                                    Text("Due Date")
-                                    Spacer()
-                                    DatePicker("", selection: Binding(
-                                        get: { item.startTime },
-                                        set: { newDate in
-                                            item.setDate(newDate, allDay: true)
-                                        }
-                                    ), displayedComponents: .date)
-                                    .labelsHidden()
-                                }
-                            }
-                            
-                            // Completion toggle
-                            HStack {
-                                Button(action: {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        item.isCompleted.toggle()
-                                    }
-                                }) {
-                                    HStack {
-                                        Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(item.isCompleted ? .green : .gray)
-                                            .font(.title2)
-                                        
-                                        Text("Mark as Completed")
-                                            .font(.body)
-                                            .strikethrough(item.isCompleted)
-                                            .foregroundColor(item.isCompleted ? .secondary : .primary)
-                                        
-                                        Spacer()
-                                    }
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
-                    }
-                    
-                    // Scheduling Section (only show for scheduled items)
-                    if item.itemType == .scheduled {
+                VStack(spacing: 0) {
+                    Form {
                         Section {
                             HStack {
-                                Text("All-day")
-                                Spacer()
-                                Toggle("", isOn: $item.allDay)
+                                Image(systemName: item.icon)
+                                    .foregroundColor(.blue)
+                                    .padding(.trailing, 8)
+                                TextField("Title", text: $item.title)
+                                    .multilineTextAlignment(.leading)
                             }
                             
-                            HStack {
-                                Text("Start")
-                                Spacer()
-                                DatePicker("", selection: $item.startTime, displayedComponents: .date)
-                                    .labelsHidden()
-                                
-                                if !item.allDay {
-                                    DatePicker("", selection: $item.startTime, displayedComponents: .hourAndMinute)
-                                        .labelsHidden()
+                            TextField("Location", text: $item.location, onEditingChanged: { editing in
+                                isSearchingLocation = editing
+                                if editing { performLocationSearch() }
+                            })
+                            .multilineTextAlignment(.leading)
+                            .onChange(of: item.location) { _, _ in
+                                performLocationSearch()
+                            }
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            
+                            if isSearchingLocation && !locationSearchResults.isEmpty {
+                                ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
+                                    Button(action: {
+                                        let name = itemResult.mapItem.name ?? "Selected Location"
+                                        let address = itemResult.mapItem.placemark.title ?? ""
+                                        item.location = name + (address.isEmpty ? "" : "\n" + address)
+                                        isSearchingLocation = false
+                                        locationSearchResults = []
+                                    }) {
+                                        VStack(alignment: .leading) {
+                                            Text(itemResult.mapItem.name ?? "Unknown")
+                                                .foregroundColor(.primary)
+                                            Text(itemResult.mapItem.placemark.title ?? "")
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                        }
+                                        .padding(.vertical, 4)
+                                    }
                                 }
                             }
-                            
+                        }
+                        
+                        // Category Section
+                        Section {
                             HStack {
-                                Text("End")
-                                Spacer()
-                                DatePicker("", selection: $item.endTime, displayedComponents: .date)
-                                    .labelsHidden()
-                                
-                                if !item.allDay {
-                                    DatePicker("", selection: $item.endTime, displayedComponents: .hourAndMinute)
-                                        .labelsHidden()
-                                }
-                            }
-                            
-                            // Updated Repeat Section with Custom Frequency Support
-                            HStack {
-                                Text("Repeat")
+                                Text("Category")
                                 Spacer()
                                 Menu {
-                                    ForEach(Frequency.allCases) { frequency in
-                                        Button(frequency.displayName) {
-                                            item.frequency = frequency
-                                            if frequency == .custom {
-                                                showingCustomFrequencyPicker = true
-                                            }
+                                    Button("None") {
+                                        selectedCategory = nil
+                                    }
+                                    ForEach(CategoryDataManager.shared.categories) { category in
+                                        Button(category.name) {
+                                            selectedCategory = category
                                         }
+                                    }
+                                    Button("Manage Categories") {
+                                        showingManageCategories = true
                                     }
                                 } label: {
                                     HStack {
-                                        if item.frequency == .custom {
-                                            Text(customFrequencyConfig.displayDescription())
-                                                .foregroundColor(.primary)
-                                                .lineLimit(1)
-                                        } else {
-                                            Text(item.frequency.displayName)
-                                                .foregroundColor(.primary)
-                                        }
+                                        Text(selectedCategory?.name ?? "None")
+                                            .foregroundColor(.primary)
                                         Image(systemName: "chevron.up.chevron.down")
                                             .foregroundColor(.secondary)
                                             .font(.caption2)
                                     }
                                 }
                             }
-                            
-                            // Show end repeat options when frequency is not "Never"
-                            if item.frequency != .never {
-                                HStack {
-                                    Text("End Repeat")
-                                    Spacer()
-                                    Picker("", selection: $item.endRepeatOption) {
-                                        ForEach(EndRepeatOption.allCases) { option in
-                                            Text(option.displayName).tag(option)
+                        }
+                        
+                        // Item Type Section
+                        Section {
+                            HStack {
+                                Text("To Do Item")
+                                    .font(.body)
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { item.itemType == .todo },
+                                    set: { newValue in
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            if newValue {
+                                                item.convertToToDo()
+                                            } else {
+                                                // Convert back to scheduled with default values
+                                                let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+                                                let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
+                                                
+                                                item.convertToScheduled(
+                                                    startTime: defaultStart,
+                                                    endTime: defaultEnd,
+                                                    location: item.location,
+                                                    allDay: item.allDay,
+                                                    frequency: .never,
+                                                    endRepeatOption: .never,
+                                                    endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
+                                                )
+                                            }
                                         }
                                     }
-                                    .pickerStyle(MenuPickerStyle())
+                                ))
+                            }
+                            
+                            // Todo-specific options
+                            if item.itemType == .todo {
+                                // Date assignment toggle
+                                HStack {
+                                    Text("Assign Date")
+                                        .font(.body)
+                                    Spacer()
+                                    Toggle("", isOn: Binding(
+                                        get: { item.hasDate },
+                                        set: { newValue in
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                if newValue {
+                                                    // Assign current selected date
+                                                    item.setDate(selectedDate, allDay: true)
+                                                } else {
+                                                    // Remove date assignment
+                                                    item.setDate(nil)
+                                                }
+                                            }
+                                        }
+                                    ))
                                 }
                                 
-                                // Show date picker when "On Date" is selected
-                                if item.endRepeatOption == .onDate {
+                                // Date picker (only show if date is assigned)
+                                if item.hasDate {
                                     HStack {
-                                        Text("End Date")
+                                        Text("Due Date")
                                         Spacer()
-                                        DatePicker("", selection: $item.endRepeatDate, displayedComponents: .date)
+                                        DatePicker("", selection: Binding(
+                                            get: { item.startTime },
+                                            set: { newDate in
+                                                item.setDate(newDate, allDay: true)
+                                            }
+                                        ), displayedComponents: .date)
+                                        .labelsHidden()
+                                    }
+                                }
+                                
+                                // Completion toggle
+                                HStack {
+                                    Button(action: {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            item.isCompleted.toggle()
+                                        }
+                                    }) {
+                                        HStack {
+                                            Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                                .foregroundColor(item.isCompleted ? .green : .gray)
+                                                .font(.title2)
+                                            
+                                            Text("Mark as Completed")
+                                                .font(.body)
+                                                .strikethrough(item.isCompleted)
+                                                .foregroundColor(item.isCompleted ? .secondary : .primary)
+                                            
+                                            Spacer()
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                        }
+                        
+                        // Scheduling Section (only show for scheduled items)
+                        if item.itemType == .scheduled {
+                            Section {
+                                HStack {
+                                    Text("All-day")
+                                    Spacer()
+                                    Toggle("", isOn: $item.allDay)
+                                }
+                                
+                                HStack {
+                                    Text("Start")
+                                    Spacer()
+                                    DatePicker("", selection: $item.startTime, displayedComponents: .date)
+                                        .labelsHidden()
+                                    
+                                    if !item.allDay {
+                                        DatePicker("", selection: $item.startTime, displayedComponents: .hourAndMinute)
                                             .labelsHidden()
                                     }
                                 }
-                            }
-                        }
-                    }
-                    
-                    Section() {
-                        ZStack(alignment: .topLeading) {
-                            TextEditor(text: $descriptionText)
-                                .frame(minHeight: 100)
-                                .focused($descriptionIsFocused)
-                                .onTapGesture {
-                                    descriptionIsFocused = true
-                                }
-                                .onChange(of: descriptionText) { _, newValue in
-                                    item.descriptionText = newValue
-                                }
-                                .scrollContentBackground(.hidden)
-                                .background(Color.clear)
-
-                            if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                Text("Add description...")
-                                    .foregroundColor(.secondary.opacity(0.5))
-                                    .padding(.top, 8)
-                                    .padding(.leading, 6)
-                                    .allowsHitTesting(false)
-                                    .transition(.opacity)
-                                    .animation(.easeInOut(duration: 0.2), value: descriptionText)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-
-                    Section {
-                        ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
-                            HStack {
-                                Button(action: {
-                                    checklistItems[index].isCompleted.toggle()
-                                }) {
-                                    Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(checklistItem.isCompleted ? .green : .gray)
-                                        .font(.title2)
-                                }
-                                .buttonStyle(PlainButtonStyle())
                                 
-                                TextField("Item", text: Binding(
-                                    get: { checklistItems[index].text },
-                                    set: { checklistItems[index].text = $0 }
-                                ))
-                                .strikethrough(checklistItem.isCompleted)
-                                .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                                HStack {
+                                    Text("End")
+                                    Spacer()
+                                    DatePicker("", selection: $item.endTime, displayedComponents: .date)
+                                        .labelsHidden()
+                                    
+                                    if !item.allDay {
+                                        DatePicker("", selection: $item.endTime, displayedComponents: .hourAndMinute)
+                                            .labelsHidden()
+                                    }
+                                }
+                                
+                                // Updated Repeat Section with Custom Frequency Support
+                                HStack {
+                                    Text("Repeat")
+                                    Spacer()
+                                    Menu {
+                                        ForEach(Frequency.allCases) { frequency in
+                                            Button(frequency.displayName) {
+                                                item.frequency = frequency
+                                                if frequency == .custom {
+                                                    showingCustomFrequencyPicker = true
+                                                }
+                                            }
+                                        }
+                                    } label: {
+                                        HStack {
+                                            if item.frequency == .custom {
+                                                Text(customFrequencyConfig.displayDescription())
+                                                    .foregroundColor(.primary)
+                                                    .lineLimit(1)
+                                            } else {
+                                                Text(item.frequency.displayName)
+                                                    .foregroundColor(.primary)
+                                            }
+                                            Image(systemName: "chevron.up.chevron.down")
+                                                .foregroundColor(.secondary)
+                                                .font(.caption2)
+                                        }
+                                    }
+                                }
+                                
+                                // Show end repeat options when frequency is not "Never"
+                                if item.frequency != .never {
+                                    HStack {
+                                        Text("End Repeat")
+                                        Spacer()
+                                        Picker("", selection: $item.endRepeatOption) {
+                                            ForEach(EndRepeatOption.allCases) { option in
+                                                Text(option.displayName).tag(option)
+                                            }
+                                        }
+                                        .pickerStyle(MenuPickerStyle())
+                                    }
+                                    
+                                    // Show date picker when "On Date" is selected
+                                    if item.endRepeatOption == .onDate {
+                                        HStack {
+                                            Text("End Date")
+                                            Spacer()
+                                            DatePicker("", selection: $item.endRepeatDate, displayedComponents: .date)
+                                                .labelsHidden()
+                                        }
+                                    }
+                                }
                             }
-                            .padding(.vertical, 2)
                         }
-                        .onDelete(perform: deleteChecklistItems)
                         
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.green)
-                                .font(.title2)
-                            
-                            TextField("Add subtask", text: $newChecklistItem)
-                                .focused($checklistInputFocused)
-                                .onSubmit {
-                                    addChecklistItem()
+                        Section() {
+                            ZStack(alignment: .topLeading) {
+                                TextEditor(text: $descriptionText)
+                                    .frame(minHeight: 100)
+                                    .focused($descriptionIsFocused)
+                                    .onTapGesture {
+                                        descriptionIsFocused = true
+                                    }
+                                    .onChange(of: descriptionText) { _, newValue in
+                                        item.descriptionText = newValue
+                                    }
+                                    .scrollContentBackground(.hidden)
+                                    .background(Color.clear)
+
+                                if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    Text("Add description...")
+                                        .foregroundColor(.secondary.opacity(0.5))
+                                        .padding(.top, 8)
+                                        .padding(.leading, 6)
+                                        .allowsHitTesting(false)
+                                        .transition(.opacity)
+                                        .animation(.easeInOut(duration: 0.2), value: descriptionText)
                                 }
-                            
-                            if !newChecklistItem.isEmpty {
-                                Button("Add") {
-                                    addChecklistItem()
-                                }
-                                .foregroundColor(.blue)
                             }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
-                    }
-                    
-                    // Delete Section - Only show if onDelete closure is provided (not for new events)
-                    if onDelete != nil {
+
                         Section {
-                            Button("Delete Event") {
-                                if item.frequency == .never {
-                                    // Single event - show simple confirmation
-                                    showingDeleteConfirmation = true
-                                } else {
-                                    // Recurring event - show options
-                                    showingRecurringDeleteOptions = true
+                            ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
+                                HStack {
+                                    Button(action: {
+                                        checklistItems[index].isCompleted.toggle()
+                                    }) {
+                                        Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(checklistItem.isCompleted ? .green : .gray)
+                                            .font(.title2)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    TextField("Item", text: Binding(
+                                        get: { checklistItems[index].text },
+                                        set: { checklistItems[index].text = $0 }
+                                    ))
+                                    .strikethrough(checklistItem.isCompleted)
+                                    .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                                }
+                                .padding(.vertical, 2)
+                            }
+                            .onDelete(perform: deleteChecklistItems)
+                            
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.title2)
+                                
+                                TextField("Add subtask", text: $newChecklistItem)
+                                    .focused($checklistInputFocused)
+                                    .onSubmit {
+                                        addChecklistItem()
+                                    }
+                                
+                                if !newChecklistItem.isEmpty {
+                                    Button("Add") {
+                                        addChecklistItem()
+                                    }
+                                    .foregroundColor(.blue)
                                 }
                             }
-                            .foregroundColor(.red)
+                            .padding(.vertical, 4)
+                        }
+                        
+                        // Delete Section - Only show if onDelete closure is provided (not for new events)
+                        if onDelete != nil {
+                            Section {
+                                Button("Delete Event") {
+                                    if item.frequency == .never {
+                                        // Single event - show simple confirmation
+                                        showingDeleteConfirmation = true
+                                    } else {
+                                        // Recurring event - show options
+                                        showingRecurringDeleteOptions = true
+                                    }
+                                }
+                                .foregroundColor(.red)
+                            }
                         }
                     }
+                    .scrollContentBackground(.hidden) // Hide default Form background
                 }
-                .scrollContentBackground(.hidden)
+                .padding(.top, 8) // Optional: add a little top padding for visual separation
+                // Move the rounded corners to the whole popup (including nav bar)
             }
+            .clipShape(RoundedCorner(radius: 24, corners: [.topLeft, .topRight]))
             .navigationTitle(item.itemType == .todo ? (item.title.isEmpty ? "New Task" : "Edit Task") : (item.title.isEmpty ? "New Event" : "Edit Event"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
