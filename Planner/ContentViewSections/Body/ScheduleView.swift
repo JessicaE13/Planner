@@ -577,20 +577,6 @@ struct ScheduleDetailView: View {
 
 // MARK: - Schedule Edit View with Delete Functionality
 
-// Custom shape for rounding specific corners
-struct RoundedCorner: Shape {
-    var radius: CGFloat = 24.0
-    var corners: UIRectCorner = [.topLeft, .topRight]
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
-
 struct ScheduleEditView: View {
     @State private var item: ScheduleItem
     let selectedDate: Date
@@ -641,10 +627,12 @@ struct ScheduleEditView: View {
     
     private func performLocationSearch() {
         locationSearchTask?.cancel()
+        
         guard !item.location.isEmpty else {
             locationSearchResults = []
             return
         }
+        
         locationSearchTask = Task {
             let request = MKLocalSearch.Request()
             request.naturalLanguageQuery = item.location
@@ -666,7 +654,7 @@ struct ScheduleEditView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Increased opacity for less transparency
+               
                 Color("Background").opacity(0.6)
                     .ignoresSafeArea()
                 
@@ -1016,10 +1004,8 @@ struct ScheduleEditView: View {
                     }
                     .scrollContentBackground(.hidden) // Hide default Form background
                 }
-                .padding(.top, 8) // Optional: add a little top padding for visual separation
-                // Move the rounded corners to the whole popup (including nav bar)
+                .padding(.top, 8)
             }
-            .clipShape(RoundedCorner(radius: 24, corners: [.topLeft, .topRight]))
             .navigationTitle(item.itemType == .todo ? (item.title.isEmpty ? "New Task" : "Edit Task") : (item.title.isEmpty ? "New Event" : "Edit Event"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

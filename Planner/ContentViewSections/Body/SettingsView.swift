@@ -18,7 +18,9 @@ struct SettingsView: View {
     
     var body: some View {
         ZStack {
-            BackgroundView()
+            Color("Background")
+                .opacity(0.6)
+                .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Header
