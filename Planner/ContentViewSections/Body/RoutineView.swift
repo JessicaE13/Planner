@@ -1,10 +1,3 @@
-//
-//  RoutineView.swift
-//  Planner
-//
-//  Created by Jessica Estes on 8/11/25.
-//
-
 import SwiftUI
 
 // MARK: - Enhanced Routine Item with Frequency Support
@@ -231,7 +224,7 @@ struct Routine: Identifiable, Codable {
     }
 }
 
-// MARK: - Enhanced Create Routine View
+// MARK: - Enhanced Create Routine View with Drag and Drop Reordering
 struct CreateRoutineView: View {
     @Binding var routines: [Routine]
     @Environment(\.dismiss) private var dismiss
@@ -252,6 +245,7 @@ struct CreateRoutineView: View {
     @State private var showingCustomFrequencyPicker = false
     @State private var customFrequencyConfig = CustomFrequencyConfig()
     @State private var showingDeleteConfirmation = false
+    @State private var draggedItem: RoutineItem? // State for drag-and-drop
     
     // Item-level frequency editing
     @State private var editingItemIndex: Int?
@@ -281,15 +275,13 @@ struct CreateRoutineView: View {
         // Initialize state with existing routine data
         self._routineName = State(initialValue: editingRoutine.name)
         self._selectedIcon = State(initialValue: editingRoutine.icon)
-        self._selectedColor = State(initialValue: "Color1") // Default since color isn't stored as string
+        self._selectedColor = State(initialValue: editingRoutine.colorName)
         
         // Initialize with routine items, or migrate from simple items
         let initialItems = editingRoutine.routineItems.isEmpty && !editingRoutine.items.isEmpty
             ? editingRoutine.items.map { RoutineItem(name: $0, frequency: .everyDay) }
             : editingRoutine.routineItems
         self._routineItems = State(initialValue: initialItems.isEmpty ? [RoutineItem(name: "", frequency: .everyDay)] : initialItems)
-        
-        self._selectedColor = State(initialValue: editingRoutine.colorName)
         
         self._frequency = State(initialValue: editingRoutine.frequency)
         self._endRepeatOption = State(initialValue: editingRoutine.endRepeatOption)
@@ -334,9 +326,7 @@ struct CreateRoutineView: View {
                         // Color Picker
                         HStack {
                             Text("Choose Color")
-                    
                             Spacer()
-                            
                             HStack(spacing: 12) {
                                 ForEach(Array(availableColors.enumerated()), id: \.offset) { index, colorName in
                                     Button(action: {
@@ -419,37 +409,44 @@ struct CreateRoutineView: View {
                     }
                     
                     Section(header: Text("Routine Items")) {
-                        ForEach(routineItems.indices, id: \.self) { index in
+                        ForEach(routineItems) { item in
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
-                                    // Add drag handle for reordering
+                                    // Drag handle
                                     Image(systemName: "line.3.horizontal")
                                         .foregroundColor(.secondary)
                                         .font(.caption)
                                     
-                                    TextField("Item \(index + 1)", text: $routineItems[index].name)
+                                    TextField("Item \(routineItems.firstIndex(where: { $0.id == item.id })! + 1)", text: Binding(
+                                        get: { item.name },
+                                        set: { newValue in
+                                            if let index = routineItems.firstIndex(where: { $0.id == item.id }) {
+                                                routineItems[index].name = newValue
+                                            }
+                                        }
+                                    ))
                                     
                                     Spacer()
                                     
                                     // Show frequency inline if editing and not "Every Day"
-                                    if isEditing && routineItems[index].frequency != .everyDay {
+                                    if isEditing && item.frequency != .everyDay {
                                         HStack(spacing: 4) {
-                                            if routineItems[index].frequency == .custom {
-                                                Text(routineItems[index].customFrequencyConfig?.displayDescription() ?? "Custom")
+                                            if item.frequency == .custom {
+                                                Text(item.customFrequencyConfig?.displayDescription() ?? "Custom")
                                                     .font(.caption)
                                                     .foregroundColor(.secondary)
                                             } else {
-                                                Text(routineItems[index].frequency.displayName)
+                                                Text(item.frequency.displayName)
                                                     .font(.caption)
                                                     .foregroundColor(.secondary)
                                             }
                                         }
                                     }
                                     
-                                    // Replace delete button with ellipsis menu (only show for non-empty items)
-                                    if !routineItems[index].name.isEmpty || routineItems.count > 1 {
+                                    // Ellipsis menu for item details
+                                    if !item.name.isEmpty || routineItems.count > 1 {
                                         Button(action: {
-                                            editingItemIndex = index
+                                            editingItemIndex = routineItems.firstIndex(where: { $0.id == item.id })
                                             showingItemDetailSheet = true
                                         }) {
                                             Image(systemName: "ellipsis")
@@ -461,8 +458,16 @@ struct CreateRoutineView: View {
                                 }
                             }
                             .padding(.vertical, 4)
+                            .onDrag {
+                                self.draggedItem = item
+                                return NSItemProvider(object: NSString(string: item.id.uuidString))
+                            }
+                            .onDrop(of: [.text], delegate: DropViewDelegate(
+                                destinationItem: item,
+                                routineItems: $routineItems,
+                                draggedItem: $draggedItem
+                            ))
                         }
-                        .onMove(perform: moveItems)
                         
                         Button(action: {
                             routineItems.append(RoutineItem(name: "", frequency: .everyDay))
@@ -474,16 +479,6 @@ struct CreateRoutineView: View {
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
-                    }
-                    
-                    // Delete Section - Only show when editing
-                    if isEditing {
-                        Section {
-                            Button("Delete Routine") {
-                                showingDeleteConfirmation = true
-                            }
-                            .foregroundColor(.red)
-                        }
                     }
                 }
                 .scrollContentBackground(.hidden)
@@ -551,8 +546,34 @@ struct CreateRoutineView: View {
         }
     }
     
-    // MARK: - Icon Auto-Selection Logic
+    // MARK: - Drag and Drop Delegate
+    struct DropViewDelegate: DropDelegate {
+        let destinationItem: RoutineItem
+        @Binding var routineItems: [RoutineItem]
+        @Binding var draggedItem: RoutineItem?
+        
+        func dropEntered(info: DropInfo) {
+            guard let draggedItem = draggedItem,
+                  let fromIndex = routineItems.firstIndex(where: { $0.id == draggedItem.id }),
+                  let toIndex = routineItems.firstIndex(where: { $0.id == destinationItem.id }),
+                  fromIndex != toIndex else { return }
+            
+            withAnimation {
+                routineItems.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
+            }
+        }
+        
+        func dropUpdated(info: DropInfo) -> DropProposal? {
+            return DropProposal(operation: .move)
+        }
+        
+        func performDrop(info: DropInfo) -> Bool {
+            draggedItem = nil
+            return true
+        }
+    }
     
+    // MARK: - Icon Auto-Selection Logic
     private func updateIconBasedOnName(_ name: String) {
         // Don't update if the name is empty or too short
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -572,11 +593,6 @@ struct CreateRoutineView: View {
     }
     
     // MARK: - Helper Methods
-    
-    private func moveItems(from source: IndexSet, to destination: Int) {
-        routineItems.move(fromOffsets: source, toOffset: destination)
-    }
-    
     private func saveRoutine() {
         let trimmedName = routineName.trimmingCharacters(in: .whitespacesAndNewlines)
         let filteredItems = routineItems.compactMap { item in
@@ -636,7 +652,7 @@ struct CreateRoutineView: View {
     }
 }
 
-// MARK: - New Routine Item Detail View
+// MARK: - Routine Item Detail View
 struct RoutineItemDetailView: View {
     @Binding var item: RoutineItem
     let onDelete: () -> Void
@@ -775,7 +791,6 @@ struct RoutineItemDetailView: View {
 }
 
 // MARK: - Updated Bottom Sheet View for Routine Details
-// Updated RoutineDetailBottomSheetView with clear background for routine items
 struct RoutineDetailBottomSheetView: View {
     @Binding var routine: Routine
     let selectedDate: Date
@@ -945,7 +960,6 @@ struct RoutineDetailBottomSheetView: View {
     }
 }
 
-
 // MARK: - Updated Main Routine View to Handle New Model
 struct RoutineView: View {
     var selectedDate: Date
@@ -1012,7 +1026,6 @@ struct RoutineView: View {
                                     .frame(width: 164, height: 100)
                                 VStack {
                                     HStack(alignment: .bottom) {
-                        
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(routineData.routine.name)
                                                 .font(.system(size: 18, weight: .medium, design: .default))
