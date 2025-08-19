@@ -211,8 +211,17 @@ struct ScheduleRowView: View {
     
     var body: some View {
         HStack {
-            // Completion checkbox for todo items
+            ZStack {
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color(item.color))
+                    .frame(width: 50, height: 75)
+                Image(systemName: item.icon)
+                    .foregroundColor(.white)
+            }
+            
+            // Time section or checkbox - this replaces the previous separate sections
             if item.itemType == .todo {
+                // For todo items, show checkbox in place of time
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         var updatedItem = item
@@ -225,22 +234,8 @@ struct ScheduleRowView: View {
                         .foregroundColor(item.isCompleted ? .green : .gray)
                 }
                 .buttonStyle(PlainButtonStyle())
-            }
-            
-            ZStack {
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color(item.color))
-                    .frame(width: 50, height: 75)
-                Image(systemName: item.icon)
-                    .foregroundColor(.white)
-            }
-            
-            // Show "All Day" for todos with dates, or time for scheduled items
-            if item.itemType == .todo && item.hasDate {
-                Text("All Day")
-                    .font(.body)
-                    .foregroundColor(Color.gray)
             } else if item.itemType == .scheduled {
+                // For scheduled items, show time
                 Text(formatTime(item.startTime))
                     .font(.body)
                     .foregroundColor(Color.gray)
@@ -259,13 +254,6 @@ struct ScheduleRowView: View {
             // Add indicator for items moved from to-do
             if item.uniqueKey.hasPrefix("todo-") && item.itemType == .scheduled {
                 Image(systemName: "arrow.right.circle.fill")
-                    .foregroundColor(.blue.opacity(0.6))
-                    .font(.caption)
-            }
-            
-            // Add todo indicator for dated todo items
-            if item.itemType == .todo {
-                Image(systemName: "checklist")
                     .foregroundColor(.blue.opacity(0.6))
                     .font(.caption)
             }
