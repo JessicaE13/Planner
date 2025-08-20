@@ -60,7 +60,7 @@ struct ToDoView: View {
                                     .font(.caption)
                             }
                         }
-                        .foregroundColor(.blue)
+                        .foregroundColor(.primary)
                     }
                     
                     // Clear completed button
@@ -153,7 +153,7 @@ struct ToDoView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
                             .frame(width: 56, height: 56)
-                            .background(Color.blue)
+                            .background(Color.primary)
                             .clipShape(Circle())
                     }
                     .padding(.trailing, 20)
@@ -291,7 +291,7 @@ struct AddToDoView: View {
                                     checklistItems[index].isCompleted.toggle()
                                 }) {
                                     Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(checklistItem.isCompleted ? .green : .gray)
+                                        .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
                                         .font(.title2)
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -309,7 +309,7 @@ struct AddToDoView: View {
                         
                         HStack {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundColor(.primary)
                                 .font(.title2)
                             
                             TextField("Add subtask", text: $newChecklistItem)
@@ -322,7 +322,7 @@ struct AddToDoView: View {
                                 Button("Add") {
                                     addChecklistItem()
                                 }
-                                .foregroundColor(.blue)
+                                .foregroundColor(.primary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -403,7 +403,7 @@ struct ToDoItemRow: View {
             Button(action: onToggle) {
                 Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundColor(item.isCompleted ? .green : .gray)
+                    .foregroundColor(item.isCompleted ? .primary : .gray)
             }
             .buttonStyle(PlainButtonStyle())
             
@@ -595,7 +595,7 @@ struct EditToDoView: View {
                                     item.checklist[index].isCompleted.toggle()
                                 }) {
                                     Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(checklistItem.isCompleted ? .green : .gray)
+                                        .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
                                         .font(.title2)
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -613,7 +613,7 @@ struct EditToDoView: View {
                         
                         HStack {
                             Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundColor(.primary)
                                 .font(.title2)
                             
                             TextField("Add subtask", text: $newChecklistItem)
@@ -626,7 +626,7 @@ struct EditToDoView: View {
                                 Button("Add") {
                                     addChecklistItem()
                                 }
-                                .foregroundColor(.blue)
+                                .foregroundColor(.primary)
                             }
                         }
                         .padding(.vertical, 4)
@@ -718,7 +718,7 @@ struct MoveToScheduleView: View {
                             showingIconPicker = true
                         }) {
                             Image(systemName: selectedIcon)
-                                .foregroundColor(.blue)
+                                .foregroundColor(.primary)
                                 .padding(.trailing, 8)
                         }
                         .buttonStyle(PlainButtonStyle())

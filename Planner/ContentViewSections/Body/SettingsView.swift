@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct SettingsView: View {
-    
     // Function to open URLs
     private func openURL(_ urlString: String) {
         if let url = URL(string: urlString) {
@@ -19,7 +18,6 @@ struct SettingsView: View {
     var body: some View {
         ZStack {
             Color("Background")
-                .opacity(0.6)
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -32,145 +30,56 @@ struct SettingsView: View {
                     }
                     Spacer()
                 }
-                .padding()
+                .padding(.horizontal)
+                .padding(.top)
                 
                 // Settings List
-                ScrollView {
-                    
-                    //
-                    //  Add this to your SettingsView.swift temporarily for testing
-                    //
-
-                    // Add this section to your SettingsView body, in the settings list:
-
-                    // Debug Section (Remove in production)
-                    VStack(spacing: 0) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color(.white))
-                             
-                            
-                            VStack(spacing: 0) {
-                                SettingsRow(
-                                    icon: "star.fill",
-                                    title: "Test Review Prompt",
-                                    action: {
-                                        AppReviewManager.shared.shouldShowReviewPrompt = true
-                                    }
-                                )
-                                
-                                Divider()
-                                    .padding(.leading, 16)
-                                
-                                SettingsRow(
-                                    icon: "arrow.counterclockwise",
-                                    title: "Reset Review Counter",
-                                    action: {
-                                        AppReviewManager.shared.resetReviewPrompt()
-                                    }
-                                )
-                                
-                                Divider()
-                                    .padding(.leading, 16)
-                                
-                                SettingsRow(
-                                    icon: "number",
-                                    title: "Launch Count: \(AppReviewManager.shared.getCurrentLaunchCount())",
-                                    showChevron: false,
-                                    action: nil
-                                )
+                Form {
+                    Section {
+                        SettingsRow(
+                            icon: "person.circle.fill",
+                            title: "Account",
+                            action: {
+                                // Account action
                             }
-                        }
+                        )
+                        SettingsRow(
+                            icon: "bell.fill",
+                            title: "Notifications",
+                            action: {
+                                // Notifications action
+                            }
+                        )
                     }
-                    .padding(.horizontal, 16)
                     
-                    // end test
-                    VStack(spacing: 16) {
-                        // Account Section
-                        VStack(spacing: 0) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color(.secondarySystemBackground))
-                                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                                
-                                VStack(spacing: 0) {
-                                    SettingsRow(
-                                        icon: "person.circle.fill",
-                                        title: "Account",
-                                        action: {
-                                            // Account action
-                                        }
-                                    )
-                                    
-                                    Divider()
-                                        .padding(.leading, 16)
-                                    
-                                    SettingsRow(
-                                        icon: "bell.fill",
-                                        title: "Notifications",
-                                        action: {
-                                            // Notifications action
-                                        }
-                                    )
-                                }
+                    Section {
+                        SettingsRow(
+                            icon: "doc.text.fill",
+                            title: "Terms and Conditions",
+                            action: {
+                                openURL("https://github.com")
                             }
-                        }
-                        .padding(.horizontal, 16)
-                        
-                        // Legal Section
-                        VStack(spacing: 0) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color(.secondarySystemBackground))
-                                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                                
-                                VStack(spacing: 0) {
-                                    SettingsRow(
-                                        icon: "doc.text.fill",
-                                        title: "Terms and Conditions",
-                                        action: {
-                                            openURL("https://github.com")
-                                        }
-                                    )
-                                    
-                                    Divider()
-                                        .padding(.leading, 16)
-                                    
-                                    SettingsRow(
-                                        icon: "lock.fill",
-                                        title: "Privacy Policy",
-                                        action: {
-                                            openURL("https://github.com")
-                                        }
-                                    )
-                                }
+                        )
+                        SettingsRow(
+                            icon: "lock.fill",
+                            title: "Privacy Policy",
+                            action: {
+                                openURL("https://github.com")
                             }
-                        }
-                        .padding(.horizontal, 16)
-                        
-                        // App Info Section
-                        VStack(spacing: 0) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color(.secondarySystemBackground))
-                                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                                
-                                VStack(spacing: 0) {
-                                    SettingsRow(
-                                        icon: "info.circle.fill",
-                                        title: "About",
-                                        showChevron: false,
-                                        action: nil
-                                    )
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        
-                        Spacer(minLength: 100)
+                        )
                     }
-                    .padding(.top, 16)
+                    
+                    Section {
+                        SettingsRow(
+                            icon: "info.circle.fill",
+                            title: "About",
+                            showChevron: false,
+                            action: nil
+                        )
+                    }
                 }
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
             }
         }
     }
@@ -217,8 +126,7 @@ struct SettingsRow: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
+            .padding(.vertical, 4) // Reduced vertical padding for compact row height
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
