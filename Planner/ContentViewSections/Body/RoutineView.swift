@@ -245,7 +245,6 @@ struct CreateRoutineView: View {
     @State private var showingCustomFrequencyPicker = false
     @State private var customFrequencyConfig = CustomFrequencyConfig()
     @State private var showingDeleteConfirmation = false
-    @State private var draggedItem: RoutineItem? // State for drag-and-drop
     
     // Item-level frequency editing
     @State private var editingItemIndex: Int?
@@ -410,64 +409,58 @@ struct CreateRoutineView: View {
                     
                     Section(header: Text("Routine Items")) {
                         ForEach(routineItems) { item in
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    // Drag handle
-                                    Image(systemName: "line.3.horizontal")
-                                        .foregroundColor(.secondary)
-                                        .font(.caption)
-                                    
-                                    TextField("Item \(routineItems.firstIndex(where: { $0.id == item.id })! + 1)", text: Binding(
-                                        get: { item.name },
-                                        set: { newValue in
-                                            if let index = routineItems.firstIndex(where: { $0.id == item.id }) {
-                                                routineItems[index].name = newValue
-                                            }
-                                        }
-                                    ))
-                                    
-                                    Spacer()
-                                    
-                                    // Show frequency inline if editing and not "Every Day"
-                                    if isEditing && item.frequency != .everyDay {
-                                        HStack(spacing: 4) {
-                                            if item.frequency == .custom {
-                                                Text(item.customFrequencyConfig?.displayDescription() ?? "Custom")
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            } else {
-                                                Text(item.frequency.displayName)
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                        }
+                            let index = routineItems.firstIndex(where: { $0.id == item.id }) ?? 0
+                            HStack {
+                                // Drag handle
+                                Image(systemName: "line.3.horizontal")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                                
+                                TextField("Item \(index + 1)", text: Binding(
+                                    get: {
+                                        guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return "" }
+                                        return routineItems[currentIndex].name
+                                    },
+                                    set: { newValue in
+                                        guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
+                                        routineItems[currentIndex].name = newValue
                                     }
-                                    
-                                    // Ellipsis menu for item details
-                                    if !item.name.isEmpty || routineItems.count > 1 {
-                                        Button(action: {
-                                            editingItemIndex = routineItems.firstIndex(where: { $0.id == item.id })
-                                            showingItemDetailSheet = true
-                                        }) {
-                                            Image(systemName: "ellipsis")
+                                ))
+                                
+                                Spacer()
+                                
+                                // Show frequency inline if editing and not "Every Day"
+                                if isEditing && item.frequency != .everyDay {
+                                    HStack(spacing: 4) {
+                                        if item.frequency == .custom {
+                                            Text(item.customFrequencyConfig?.displayDescription() ?? "Custom")
+                                                .font(.caption)
                                                 .foregroundColor(.secondary)
-                                                .frame(width: 20, height: 20)
+                                        } else {
+                                            Text(item.frequency.displayName)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
                                         }
-                                        .buttonStyle(PlainButtonStyle())
                                     }
+                                }
+                                
+                                // Ellipsis menu for item details
+                                if !item.name.isEmpty || routineItems.count > 1 {
+                                    Button(action: {
+                                        guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
+                                        editingItemIndex = currentIndex
+                                        showingItemDetailSheet = true
+                                    }) {
+                                        Image(systemName: "ellipsis")
+                                            .foregroundColor(.secondary)
+                                            .frame(width: 20, height: 20)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
                             }
                             .padding(.vertical, 4)
-                            .onDrag {
-                                self.draggedItem = item
-                                return NSItemProvider(object: NSString(string: item.id.uuidString))
-                            }
-                            .onDrop(of: [.text], delegate: DropViewDelegate(
-                                destinationItem: item,
-                                routineItems: $routineItems,
-                                draggedItem: $draggedItem
-                            ))
                         }
+                        .onMove(perform: moveItems)
                         
                         Button(action: {
                             routineItems.append(RoutineItem(name: "", frequency: .everyDay))
@@ -546,33 +539,6 @@ struct CreateRoutineView: View {
         }
     }
     
-    // MARK: - Drag and Drop Delegate
-    struct DropViewDelegate: DropDelegate {
-        let destinationItem: RoutineItem
-        @Binding var routineItems: [RoutineItem]
-        @Binding var draggedItem: RoutineItem?
-        
-        func dropEntered(info: DropInfo) {
-            guard let draggedItem = draggedItem,
-                  let fromIndex = routineItems.firstIndex(where: { $0.id == draggedItem.id }),
-                  let toIndex = routineItems.firstIndex(where: { $0.id == destinationItem.id }),
-                  fromIndex != toIndex else { return }
-            
-            withAnimation {
-                routineItems.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
-            }
-        }
-        
-        func dropUpdated(info: DropInfo) -> DropProposal? {
-            return DropProposal(operation: .move)
-        }
-        
-        func performDrop(info: DropInfo) -> Bool {
-            draggedItem = nil
-            return true
-        }
-    }
-    
     // MARK: - Icon Auto-Selection Logic
     private func updateIconBasedOnName(_ name: String) {
         // Don't update if the name is empty or too short
@@ -593,6 +559,10 @@ struct CreateRoutineView: View {
     }
     
     // MARK: - Helper Methods
+    private func moveItems(from source: IndexSet, to destination: Int) {
+        routineItems.move(fromOffsets: source, toOffset: destination)
+    }
+    
     private func saveRoutine() {
         let trimmedName = routineName.trimmingCharacters(in: .whitespacesAndNewlines)
         let filteredItems = routineItems.compactMap { item in

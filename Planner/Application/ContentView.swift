@@ -16,13 +16,27 @@ struct ContentView: View {
         Routine(
             name: "Morning",
             icon: "sunrise",
-            items: ["Brush teeth", "Shower", "Make bed", "Breakfast"],
+            routineItems: [
+                RoutineItem(name: "Brush teeth", frequency: .everyDay),
+                RoutineItem(name: "Shower", frequency: .everyDay),
+                RoutineItem(name: "Make bed", frequency: .everyDay),
+                RoutineItem(name: "Breakfast", frequency: .everyDay)
+            ],
+            items: [], // Keep empty for new format
+            colorName: "Color1",
             startDate: Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         ),
         Routine(
             name: "Evening",
             icon: "moon",
-            items: ["Dinner", "Read book", "Skincare", "Set alarm"],
+            routineItems: [
+                RoutineItem(name: "Dinner", frequency: .everyDay),
+                RoutineItem(name: "Read book", frequency: .everyDay),
+                RoutineItem(name: "Skincare", frequency: .everyDay),
+                RoutineItem(name: "Set alarm", frequency: .everyDay)
+            ],
+            items: [], // Keep empty for new format
+            colorName: "Color2",
             startDate: Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         )
     ]
