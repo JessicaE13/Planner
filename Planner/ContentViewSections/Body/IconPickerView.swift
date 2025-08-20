@@ -45,7 +45,7 @@ struct IconPickerView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(Color.gray.opacity(0.1))
+                .background(Color("BackgroundPopup"))
                 .cornerRadius(10)
                 .padding()
                 
@@ -92,7 +92,7 @@ struct IconPickerView: View {
                                 }
                                 .padding(.horizontal)
                                 .padding(.vertical, 8)
-                                .background(Color("Background"))
+                                .background(Color("BackgroundPopup"))
                             }
                         }
                     }

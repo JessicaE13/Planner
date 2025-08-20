@@ -75,7 +75,7 @@ struct ScheduleView: View {
                             .font(.system(size: 40))
                             .foregroundColor(.gray.opacity(0.5))
                         
-                        Text("Your schedule is clear")
+                        Text("Your schedule is empty")
                             .font(.headline)
                             .foregroundColor(.secondary)
                         
@@ -655,7 +655,7 @@ struct ScheduleEditView: View {
         NavigationView {
             ZStack {
                
-                Color("Background").opacity(0.4)
+                Color("BackgroundPopup")
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {

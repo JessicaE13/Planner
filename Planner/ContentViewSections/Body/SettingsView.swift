@@ -17,7 +17,7 @@ struct SettingsView: View {
     
     var body: some View {
         ZStack {
-            Color("Background")
+            Color("BackgroundPopup")
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {

@@ -216,7 +216,7 @@ struct AddToDoView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color("Background").opacity(0.2)
+                Color("BackgroundPopup")
                     .ignoresSafeArea()
                 
                 Form {

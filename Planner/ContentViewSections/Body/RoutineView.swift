@@ -293,7 +293,7 @@ struct CreateRoutineView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color("Background")
+                Color("BackgroundPopup")
                     .edgesIgnoringSafeArea(.all)
                 
                 Form {
@@ -647,7 +647,7 @@ struct RoutineItemDetailView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color("Background")
+                Color("BackgroundPopup")
                     .edgesIgnoringSafeArea(.all)
                 
                 Form {
