@@ -36,7 +36,8 @@ enum DeleteOption: String, CaseIterable {
 struct ScheduleView: View {
     var selectedDate: Date
     @StateObject private var dataManager = UnifiedDataManager.shared
-    @State private var sheetContent: SheetContent? = nil
+    @State private var detailSheetItem: ScheduleItem? = nil // State for detail view
+    @State private var editSheetItem: ScheduleItem? = nil   // State for edit view
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -53,7 +54,7 @@ struct ScheduleView: View {
                 Spacer()
                 
                 Button(action: {
-                    sheetContent = .create
+                    editSheetItem = createNewScheduleItem()
                 }) {
                     Image(systemName: "plus")
                         .font(.title2)
@@ -65,11 +66,9 @@ struct ScheduleView: View {
             .padding(.bottom, 16)
             
             VStack(spacing: 12) {
-                // Get only actual scheduled items for the selected date (no defaults)
                 let allScheduleItems = getActualScheduleItems(selectedDate).sorted { $0.startTime < $1.startTime }
                 
                 if allScheduleItems.isEmpty {
-                    // Show empty state
                     VStack(spacing: 16) {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 40))
@@ -88,7 +87,7 @@ struct ScheduleView: View {
                 } else {
                     ForEach(allScheduleItems, id: \.id) { item in
                         ScheduleRowView(item: item) {
-                            sheetContent = .detail(item)
+                            detailSheetItem = item
                         }
                     }
                 }
@@ -96,57 +95,44 @@ struct ScheduleView: View {
             .padding(.horizontal, 16)
         }
         .padding()
-        .sheet(item: $sheetContent) { content in
-            switch content {
-            case .detail(let item):
-                ScheduleDetailView(
-                    item: item,
-                    selectedDate: selectedDate,
-                    onEdit: { editItem in
-                        sheetContent = .edit(editItem)
-                    },
-                    onSave: { updatedItem in
-                        Task {
-                            await MainActor.run {
-                                dataManager.updateItem(updatedItem)
+                .sheet(item: $detailSheetItem) { item in
+                    ScheduleDetailView(
+                        item: item,
+                        selectedDate: selectedDate,
+                        onEdit: { editItem in
+                            editSheetItem = editItem
+                        },
+                        onSave: { updatedItem in
+                            Task {
+                                await MainActor.run {
+                                    dataManager.updateItem(updatedItem)
+                                    detailSheetItem = updatedItem // Update detail view item
+                                }
+                            }
+                        }
+                    )
+                    .sheet(item: $editSheetItem) { editItem in
+                                    ScheduleEditView(
+                                        item: editItem,
+                                        selectedDate: selectedDate,
+                                        onSave: { updatedItem in
+                                            Task {
+                                                await MainActor.run {
+                                                    dataManager.updateItem(updatedItem)
+                                                    detailSheetItem = updatedItem // Update detail view item
+                                                    editSheetItem = nil // Dismiss edit view
+                                                }
+                                            }
+                                        },
+                                        onDelete: { deleteOption in
+                                            Task {
+                                                await MainActor.run {
+                                                    handleDelete(item: editItem, option: deleteOption)
+                                                    editSheetItem = nil
+                                                    detailSheetItem = nil
                             }
                         }
                     }
-                )
-            case .edit(let item):
-                ScheduleEditView(
-                    item: item,
-                    selectedDate: selectedDate,
-                    onSave: { updatedItem in
-                        Task {
-                            await MainActor.run {
-                                dataManager.updateItem(updatedItem)
-                                sheetContent = nil
-                            }
-                        }
-                    },
-                    onDelete: { deleteOption in
-                        Task {
-                            await MainActor.run {
-                                handleDelete(item: item, option: deleteOption)
-                                sheetContent = nil
-                            }
-                        }
-                    }
-                )
-            case .create:
-                ScheduleEditView(
-                    item: createNewScheduleItem(),
-                    selectedDate: selectedDate,
-                    onSave: { newItem in
-                        Task {
-                            await MainActor.run {
-                                dataManager.addItem(newItem)
-                                sheetContent = nil
-                            }
-                        }
-                    },
-                    onDelete: nil
                 )
             }
         }
@@ -157,17 +143,13 @@ struct ScheduleView: View {
     private func handleDelete(item: ScheduleItem, option: DeleteOption) {
         switch option {
         case .thisEvent:
-            // For single event deletion from a recurring series, we add this date to excluded dates
             dataManager.excludeDateFromRecurring(item: item, excludeDate: selectedDate)
         case .allEvents:
-            // Delete the entire series
             dataManager.deleteItem(item)
         }
     }
     
-    // MARK: - Updated method to get both scheduled items and dated todo items
     private func getActualScheduleItems(_ date: Date) -> [ScheduleItem] {
-        // Get both scheduled items and dated todo items that should appear on this date
         return dataManager.items.filter { item in
             return item.shouldAppear(on: date)
         }
@@ -178,7 +160,6 @@ struct ScheduleView: View {
         let defaultStartTime = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
         let defaultEndTime = calendar.date(byAdding: .hour, value: 1, to: defaultStartTime) ?? defaultStartTime
         
-        // Create a properly structured scheduled item
         return ScheduleItem.createScheduled(
             title: "",
             startTime: defaultStartTime,
