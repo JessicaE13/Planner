@@ -79,8 +79,8 @@ struct ContentView: View {
 struct SectionHeaderStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .font(.system(size: 20, weight: .medium, design: .default))
-            //.kerning(2)
+            .font(.headline)
+            .kerning(1)
             .textCase(.uppercase)
             .foregroundColor(.primary)
     }
