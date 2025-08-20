@@ -38,6 +38,7 @@ struct ScheduleView: View {
     @StateObject private var dataManager = UnifiedDataManager.shared
     @State private var detailSheetItem: ScheduleItem? = nil // State for detail view
     @State private var editSheetItem: ScheduleItem? = nil   // State for edit view
+    @State private var showingNewEventSheet = false // State for new event creation
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -54,7 +55,7 @@ struct ScheduleView: View {
                 Spacer()
                 
                 Button(action: {
-                    editSheetItem = createNewScheduleItem()
+                    showingNewEventSheet = true
                 }) {
                     Image(systemName: "plus")
                         .font(.title2)
@@ -96,8 +97,21 @@ struct ScheduleView: View {
                 }
             )
         }
+        .sheet(isPresented: $showingNewEventSheet) {
+            NewScheduleItemView(
+                selectedDate: selectedDate,
+                onSave: { newItem in
+                    Task {
+                        await MainActor.run {
+                            dataManager.addItem(newItem)
+                            showingNewEventSheet = false
+                        }
+                    }
+                }
+            )
+        }
         .sheet(item: $editSheetItem) { editItem in
-            ScheduleEditView(
+            EditScheduleItemView(
                 item: editItem,
                 selectedDate: selectedDate,
                 onSave: { updatedItem in
@@ -137,34 +151,6 @@ struct ScheduleView: View {
         return dataManager.items.filter { item in
             return item.shouldAppear(on: date)
         }
-    }
-    
-    private func createNewScheduleItem() -> ScheduleItem {
-        let calendar = Calendar.current
-        let defaultStartTime = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
-        let defaultEndTime = calendar.date(byAdding: .hour, value: 1, to: defaultStartTime) ?? defaultStartTime
-        
-        return ScheduleItem.createScheduled(
-            title: "",
-            startTime: defaultStartTime,
-            endTime: defaultEndTime,
-            icon: "calendar",
-            color: "Color1",
-            frequency: .never,
-            descriptionText: "",
-            location: "",
-            allDay: false,
-            checklist: [],
-            category: nil,
-            endRepeatOption: .never,
-            endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStartTime) ?? defaultStartTime
-        )
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: date)
     }
 }
 
@@ -540,26 +526,22 @@ struct ScheduleDetailView: View {
     }
 }
 
-// MARK: - Schedule Edit View with Delete Functionality
+// MARK: - New Schedule Item View (for creating new events)
 
-struct ScheduleEditView: View {
-    @State private var item: ScheduleItem
+struct NewScheduleItemView: View {
     let selectedDate: Date
     let onSave: (ScheduleItem) -> Void
-    let onDelete: ((DeleteOption) -> Void)?
     @Environment(\.dismiss) private var dismiss
+    
+    @State private var item: ScheduleItem
     @State private var locationSearchResults: [IdentifiableMapItem] = []
     @State private var isSearchingLocation = false
     @State private var locationSearchTask: Task<Void, Never>? = nil
     @FocusState private var descriptionIsFocused: Bool
     
-    // Delete confirmation states
-    @State private var showingDeleteConfirmation = false
-    @State private var showingRecurringDeleteOptions = false
-    
     // Custom frequency states
     @State private var showingCustomFrequencyPicker = false
-    @State private var customFrequencyConfig: CustomFrequencyConfig
+    @State private var customFrequencyConfig = CustomFrequencyConfig()
     
     // String representation of the description for editing
     @State private var descriptionText: String = ""
@@ -573,21 +555,30 @@ struct ScheduleEditView: View {
     @State private var selectedCategory: Category?
     @State private var showingManageCategories = false
     
-    init(item: ScheduleItem, selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void, onDelete: ((DeleteOption) -> Void)?) {
-        self._item = State(initialValue: item)
+    init(selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void) {
         self.selectedDate = selectedDate
         self.onSave = onSave
-        self.onDelete = onDelete
-        self._descriptionText = State(initialValue: item.descriptionText)
-        self._checklistItems = State(initialValue: item.checklist)
-        self._selectedCategory = State(initialValue: item.category)
         
-        // Initialize custom frequency config
-        if let existingConfig = item.customFrequencyConfig {
-            self._customFrequencyConfig = State(initialValue: existingConfig)
-        } else {
-            self._customFrequencyConfig = State(initialValue: CustomFrequencyConfig())
-        }
+        // Create a new schedule item with default values
+        let calendar = Calendar.current
+        let defaultStartTime = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+        let defaultEndTime = calendar.date(byAdding: .hour, value: 1, to: defaultStartTime) ?? defaultStartTime
+        
+        self._item = State(initialValue: ScheduleItem.createScheduled(
+            title: "",
+            startTime: defaultStartTime,
+            endTime: defaultEndTime,
+            icon: "calendar",
+            color: "Color1",
+            frequency: .never,
+            descriptionText: "",
+            location: "",
+            allDay: false,
+            checklist: [],
+            category: nil,
+            endRepeatOption: .never,
+            endRepeatDate: calendar.date(byAdding: .month, value: 1, to: defaultStartTime) ?? defaultStartTime
+        ))
     }
     
     private func performLocationSearch() {
@@ -619,7 +610,6 @@ struct ScheduleEditView: View {
     var body: some View {
         NavigationView {
             ZStack {
-               
                 Color("BackgroundPopup")
                     .ignoresSafeArea()
                 
@@ -824,7 +814,7 @@ struct ScheduleEditView: View {
                                     }
                                 }
                                 
-                                // Updated Repeat Section with Custom Frequency Support
+                                // Repeat Section
                                 HStack {
                                     Text("Repeat")
                                     Spacer()
@@ -950,28 +940,12 @@ struct ScheduleEditView: View {
                             }
                             .padding(.vertical, 4)
                         }
-                        
-                        // Delete Section - Only show if onDelete closure is provided (not for new events)
-                        if onDelete != nil {
-                            Section {
-                                Button("Delete Event") {
-                                    if item.frequency == .never {
-                                        // Single event - show simple confirmation
-                                        showingDeleteConfirmation = true
-                                    } else {
-                                        // Recurring event - show options
-                                        showingRecurringDeleteOptions = true
-                                    }
-                                }
-                                .foregroundColor(.red)
-                            }
-                        }
                     }
-                    .scrollContentBackground(.hidden) // Hide default Form background
+                    .scrollContentBackground(.hidden)
                 }
                 .padding(.top, 8)
             }
-            .navigationTitle(item.itemType == .todo ? (item.title.isEmpty ? "New Task" : "Edit Task") : (item.title.isEmpty ? "New Event" : "Edit Event"))
+            .navigationTitle(item.itemType == .todo ? "New Task" : "New Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -992,7 +966,7 @@ struct ScheduleEditView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") {
+                    Button("Cancel") {
                         dismiss()
                     }
                 }
@@ -1033,11 +1007,512 @@ struct ScheduleEditView: View {
                 endRepeatDate: $item.endRepeatDate
             )
         }
+    }
+    
+    // MARK: - Checklist Helper Methods
+    
+    private func addChecklistItem() {
+        guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        let newItem = ChecklistItem(text: newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines))
+        checklistItems.append(newItem)
+        newChecklistItem = ""
+        checklistInputFocused = false
+    }
+    
+    private func deleteChecklistItems(offsets: IndexSet) {
+        checklistItems.remove(atOffsets: offsets)
+    }
+}
+
+// MARK: - Edit Schedule Item View (for editing existing events)
+
+struct EditScheduleItemView: View {
+    let item: ScheduleItem
+    let selectedDate: Date
+    let onSave: (ScheduleItem) -> Void
+    let onDelete: (DeleteOption) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var editableItem: ScheduleItem
+    @State private var locationSearchResults: [IdentifiableMapItem] = []
+    @State private var isSearchingLocation = false
+    @State private var locationSearchTask: Task<Void, Never>? = nil
+    @FocusState private var descriptionIsFocused: Bool
+    
+    // Custom frequency states
+    @State private var showingCustomFrequencyPicker = false
+    @State private var customFrequencyConfig = CustomFrequencyConfig()
+    
+    // String representation of the description for editing
+    @State private var descriptionText: String = ""
+    
+    // Checklist management
+    @State private var checklistItems: [ChecklistItem] = []
+    @State private var newChecklistItem: String = ""
+    @FocusState private var checklistInputFocused: Bool
+    
+    // Category management
+    @State private var selectedCategory: Category?
+    @State private var showingManageCategories = false
+    
+    // Delete confirmation states
+    @State private var showingDeleteConfirmation = false
+    @State private var showingRecurringDeleteOptions = false
+    
+    init(item: ScheduleItem, selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void, onDelete: @escaping (DeleteOption) -> Void) {
+        self.item = item
+        self.selectedDate = selectedDate
+        self.onSave = onSave
+        self.onDelete = onDelete
+        self._editableItem = State(initialValue: item)
+    }
+    
+    private func performLocationSearch() {
+        locationSearchTask?.cancel()
+        
+        guard !editableItem.location.isEmpty else {
+            locationSearchResults = []
+            return
+        }
+        
+        locationSearchTask = Task {
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = editableItem.location
+            let search = MKLocalSearch(request: request)
+            let response = try? await search.start()
+            if let items = response?.mapItems {
+                let mapped = items.prefix(10).map { IdentifiableMapItem(mapItem: $0) }
+                await MainActor.run {
+                    locationSearchResults = mapped
+                }
+            } else {
+                await MainActor.run {
+                    locationSearchResults = []
+                }
+            }
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color("BackgroundPopup")
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    Form {
+                        Section {
+                            HStack {
+                                Image(systemName: editableItem.icon)
+                                    .foregroundColor(.primary)
+                                    .padding(.trailing, 8)
+                                TextField("Title", text: $editableItem.title)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            
+                            TextField("Location", text: $editableItem.location, onEditingChanged: { editing in
+                                isSearchingLocation = editing
+                                if editing { performLocationSearch() }
+                            })
+                            .multilineTextAlignment(.leading)
+                            .onChange(of: editableItem.location) { _, _ in
+                                performLocationSearch()
+                            }
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            
+                            if isSearchingLocation && !locationSearchResults.isEmpty {
+                                ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
+                                    Button(action: {
+                                        let name = itemResult.mapItem.name ?? "Selected Location"
+                                        let address = itemResult.mapItem.placemark.title ?? ""
+                                        editableItem.location = name + (address.isEmpty ? "" : "\n" + address)
+                                        isSearchingLocation = false
+                                        locationSearchResults = []
+                                    }) {
+                                        VStack(alignment: .leading) {
+                                            Text(itemResult.mapItem.name ?? "Unknown")
+                                                .foregroundColor(.primary)
+                                            Text(itemResult.mapItem.placemark.title ?? "")
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                        }
+                                        .padding(.vertical, 4)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Category Section
+                        Section {
+                            HStack {
+                                Text("Category")
+                                Spacer()
+                                Menu {
+                                    Button("None") {
+                                        selectedCategory = nil
+                                    }
+                                    ForEach(CategoryDataManager.shared.categories) { category in
+                                        Button(category.name) {
+                                            selectedCategory = category
+                                        }
+                                    }
+                                    Button("Manage Categories") {
+                                        showingManageCategories = true
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(selectedCategory?.name ?? "None")
+                                            .foregroundColor(.primary)
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .foregroundColor(.secondary)
+                                            .font(.caption2)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Item Type Section
+                        Section {
+                            HStack {
+                                Text("To Do Item")
+                                    .font(.body)
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { editableItem.itemType == .todo },
+                                    set: { newValue in
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            if newValue {
+                                                editableItem.convertToToDo()
+                                            } else {
+                                                // Convert back to scheduled with default values
+                                                let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+                                                let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
+                                                
+                                                editableItem.convertToScheduled(
+                                                    startTime: defaultStart,
+                                                    endTime: defaultEnd,
+                                                    location: editableItem.location,
+                                                    allDay: editableItem.allDay,
+                                                    frequency: .never,
+                                                    endRepeatOption: .never,
+                                                    endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
+                                                )
+                                            }
+                                        }
+                                    }
+                                ))
+                            }
+                            
+                            // Todo-specific options
+                            if editableItem.itemType == .todo {
+                                // Date assignment toggle
+                                HStack {
+                                    Text("Assign Date")
+                                        .font(.body)
+                                    Spacer()
+                                    Toggle("", isOn: Binding(
+                                        get: { editableItem.hasDate },
+                                        set: { newValue in
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                if newValue {
+                                                    // Assign current selected date
+                                                    editableItem.setDate(selectedDate, allDay: true)
+                                                } else {
+                                                    // Remove date assignment
+                                                    editableItem.setDate(nil)
+                                                }
+                                            }
+                                        }
+                                    ))
+                                }
+                                
+                                // Date picker (only show if date is assigned)
+                                if editableItem.hasDate {
+                                    HStack {
+                                        Text("Due Date")
+                                        Spacer()
+                                        DatePicker("", selection: Binding(
+                                            get: { editableItem.startTime },
+                                            set: { newDate in
+                                                editableItem.setDate(newDate, allDay: true)
+                                            }
+                                        ), displayedComponents: .date)
+                                        .labelsHidden()
+                                    }
+                                }
+                                
+                                // Completion toggle
+                                HStack {
+                                    Button(action: {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            editableItem.isCompleted.toggle()
+                                        }
+                                    }) {
+                                        HStack {
+                                            Image(systemName: editableItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                                .foregroundColor(editableItem.isCompleted ? .primary : .gray)
+                                                .font(.title2)
+                                            
+                                            Text("Mark as Completed")
+                                                .font(.body)
+                                                .strikethrough(editableItem.isCompleted)
+                                                .foregroundColor(editableItem.isCompleted ? .secondary : .primary)
+                                            
+                                            Spacer()
+                                        }
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                        }
+                        
+                        // Scheduling Section (only show for scheduled items)
+                        if editableItem.itemType == .scheduled {
+                            Section {
+                                HStack {
+                                    Text("All-day")
+                                    Spacer()
+                                    Toggle("", isOn: $editableItem.allDay)
+                                }
+                                
+                                HStack {
+                                    Text("Start")
+                                    Spacer()
+                                    DatePicker("", selection: $editableItem.startTime, displayedComponents: .date)
+                                        .labelsHidden()
+                                    
+                                    if !editableItem.allDay {
+                                        DatePicker("", selection: $editableItem.startTime, displayedComponents: .hourAndMinute)
+                                            .labelsHidden()
+                                    }
+                                }
+                                
+                                HStack {
+                                    Text("End")
+                                    Spacer()
+                                    DatePicker("", selection: $editableItem.endTime, displayedComponents: .date)
+                                        .labelsHidden()
+                                    
+                                    if !editableItem.allDay {
+                                        DatePicker("", selection: $editableItem.endTime, displayedComponents: .hourAndMinute)
+                                            .labelsHidden()
+                                    }
+                                }
+                                
+                                // Repeat Section
+                                HStack {
+                                    Text("Repeat")
+                                    Spacer()
+                                    Menu {
+                                        ForEach(Frequency.allCases) { frequency in
+                                            Button(frequency.displayName) {
+                                                editableItem.frequency = frequency
+                                                if frequency == .custom {
+                                                    showingCustomFrequencyPicker = true
+                                                }
+                                            }
+                                        }
+                                    } label: {
+                                        HStack {
+                                            if editableItem.frequency == .custom {
+                                                Text(customFrequencyConfig.displayDescription())
+                                                    .foregroundColor(.primary)
+                                                    .lineLimit(1)
+                                            } else {
+                                                Text(editableItem.frequency.displayName)
+                                                    .foregroundColor(.primary)
+                                            }
+                                            Image(systemName: "chevron.up.chevron.down")
+                                                .foregroundColor(.secondary)
+                                                .font(.caption2)
+                                        }
+                                    }
+                                }
+                                
+                                // Show end repeat options when frequency is not "Never"
+                                if editableItem.frequency != .never {
+                                    HStack {
+                                        Text("End Repeat")
+                                        Spacer()
+                                        Picker("", selection: $editableItem.endRepeatOption) {
+                                            ForEach(EndRepeatOption.allCases) { option in
+                                                Text(option.displayName).tag(option)
+                                            }
+                                        }
+                                        .pickerStyle(MenuPickerStyle())
+                                    }
+                                    
+                                    // Show date picker when "On Date" is selected
+                                    if editableItem.endRepeatOption == .onDate {
+                                        HStack {
+                                            Text("End Date")
+                                            Spacer()
+                                            DatePicker("", selection: $editableItem.endRepeatDate, displayedComponents: .date)
+                                                .labelsHidden()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Section() {
+                            ZStack(alignment: .topLeading) {
+                                TextEditor(text: $descriptionText)
+                                    .frame(minHeight: 100)
+                                    .focused($descriptionIsFocused)
+                                    .onTapGesture {
+                                        descriptionIsFocused = true
+                                    }
+                                    .onChange(of: descriptionText) { _, newValue in
+                                        editableItem.descriptionText = newValue
+                                    }
+                                    .scrollContentBackground(.hidden)
+                                    .background(Color.clear)
+
+                                if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    Text("Add description...")
+                                        .foregroundColor(.secondary.opacity(0.5))
+                                        .padding(.top, 8)
+                                        .padding(.leading, 6)
+                                        .allowsHitTesting(false)
+                                        .transition(.opacity)
+                                        .animation(.easeInOut(duration: 0.2), value: descriptionText)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+
+                        Section {
+                            ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
+                                HStack {
+                                    Button(action: {
+                                        checklistItems[index].isCompleted.toggle()
+                                    }) {
+                                        Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
+                                            .font(.title2)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    TextField("Item", text: Binding(
+                                        get: { checklistItems[index].text },
+                                        set: { checklistItems[index].text = $0 }
+                                    ))
+                                    .strikethrough(checklistItem.isCompleted)
+                                    .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                                }
+                                .padding(.vertical, 2)
+                            }
+                            .onDelete(perform: deleteChecklistItems)
+                            
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.primary)
+                                    .font(.title2)
+                                
+                                TextField("Add subtask", text: $newChecklistItem)
+                                    .focused($checklistInputFocused)
+                                    .onSubmit {
+                                        addChecklistItem()
+                                    }
+                                
+                                if !newChecklistItem.isEmpty {
+                                    Button("Add") {
+                                        addChecklistItem()
+                                    }
+                                    .foregroundColor(.primary)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        
+                        // Delete Section
+                        Section {
+                            Button("Delete Event") {
+                                if editableItem.frequency == .never {
+                                    // Single event - show simple confirmation
+                                    showingDeleteConfirmation = true
+                                } else {
+                                    // Recurring event - show options
+                                    showingRecurringDeleteOptions = true
+                                }
+                            }
+                            .foregroundColor(.red)
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                }
+                .padding(.top, 8)
+            }
+            .navigationTitle(editableItem.itemType == .todo ? "Edit Task" : "Edit Event")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        editableItem.descriptionText = descriptionText
+                        editableItem.checklist = checklistItems
+                        editableItem.category = selectedCategory
+                        
+                        // Save custom frequency config if custom is selected
+                        if editableItem.frequency == .custom {
+                            editableItem.customFrequencyConfig = customFrequencyConfig
+                        } else {
+                            editableItem.customFrequencyConfig = nil
+                        }
+                        
+                        onSave(editableItem)
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .onAppear {
+            performLocationSearch()
+            descriptionText = editableItem.descriptionText
+            checklistItems = editableItem.checklist
+            selectedCategory = editableItem.category
+            
+            // Load existing custom frequency config
+            if let existingConfig = editableItem.customFrequencyConfig {
+                customFrequencyConfig = existingConfig
+            }
+        }
+        .onDisappear {
+            locationSearchTask?.cancel()
+        }
+        .onChange(of: editableItem.frequency) { _, newFrequency in
+            // Reset end repeat options when frequency changes to "Never"
+            if newFrequency == .never {
+                editableItem.endRepeatOption = .never
+            }
+            
+            // Show custom frequency picker when custom is selected
+            if newFrequency == .custom {
+                showingCustomFrequencyPicker = true
+            }
+        }
+        .sheet(isPresented: $showingManageCategories) {
+            ManageCategoriesView()
+        }
+        .sheet(isPresented: $showingCustomFrequencyPicker) {
+            CustomFrequencyPickerView(
+                customConfig: $customFrequencyConfig,
+                endRepeatOption: $editableItem.endRepeatOption,
+                endRepeatDate: $editableItem.endRepeatDate
+            )
+        }
         // Simple delete confirmation for single events
         .alert("Delete Event", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                onDelete?(.thisEvent)
+                onDelete(.thisEvent)
             }
         } message: {
             Text("Are you sure you want to delete this event? This action cannot be undone.")
@@ -1045,10 +1520,10 @@ struct ScheduleEditView: View {
         // Recurring event delete options
         .confirmationDialog("Delete Recurring Event", isPresented: $showingRecurringDeleteOptions) {
             Button("Delete This Event Only") {
-                onDelete?(.thisEvent)
+                onDelete(.thisEvent)
             }
             Button("Delete All Events in Series", role: .destructive) {
-                onDelete?(.allEvents)
+                onDelete(.allEvents)
             }
             Button("Cancel", role: .cancel) { }
         } message: {
