@@ -68,23 +68,7 @@ struct ScheduleView: View {
             VStack(spacing: 12) {
                 let allScheduleItems = getActualScheduleItems(selectedDate).sorted { $0.startTime < $1.startTime }
                 
-                if allScheduleItems.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "calendar.badge.clock")
-                            .font(.system(size: 40))
-                            .foregroundColor(.gray.opacity(0.5))
-                        
-                        Text("Your schedule is empty")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                        
-                        Text("Tap the + button to add an event")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 40)
-                } else {
+                if !allScheduleItems.isEmpty {
                     ForEach(allScheduleItems, id: \.id) { item in
                         ScheduleRowView(item: item) {
                             detailSheetItem = item
@@ -95,46 +79,46 @@ struct ScheduleView: View {
             .padding(.horizontal, 16)
         }
         .padding()
-                .sheet(item: $detailSheetItem) { item in
-                    ScheduleDetailView(
-                        item: item,
-                        selectedDate: selectedDate,
-                        onEdit: { editItem in
-                            editSheetItem = editItem
-                        },
-                        onSave: { updatedItem in
-                            Task {
-                                await MainActor.run {
-                                    dataManager.updateItem(updatedItem)
-                                    detailSheetItem = updatedItem // Update detail view item
-                                }
-                            }
-                        }
-                    )
-                    .sheet(item: $editSheetItem) { editItem in
-                                    ScheduleEditView(
-                                        item: editItem,
-                                        selectedDate: selectedDate,
-                                        onSave: { updatedItem in
-                                            Task {
-                                                await MainActor.run {
-                                                    dataManager.updateItem(updatedItem)
-                                                    detailSheetItem = updatedItem // Update detail view item
-                                                    editSheetItem = nil // Dismiss edit view
-                                                }
-                                            }
-                                        },
-                                        onDelete: { deleteOption in
-                                            Task {
-                                                await MainActor.run {
-                                                    handleDelete(item: editItem, option: deleteOption)
-                                                    editSheetItem = nil
-                                                    detailSheetItem = nil
-                            }
+        .sheet(item: $detailSheetItem) { item in
+            ScheduleDetailView(
+                item: item,
+                selectedDate: selectedDate,
+                onEdit: { editItem in
+                    editSheetItem = editItem
+                },
+                onSave: { updatedItem in
+                    Task {
+                        await MainActor.run {
+                            dataManager.updateItem(updatedItem)
+                            detailSheetItem = updatedItem // Update detail view item
                         }
                     }
-                )
-            }
+                }
+            )
+        }
+        .sheet(item: $editSheetItem) { editItem in
+            ScheduleEditView(
+                item: editItem,
+                selectedDate: selectedDate,
+                onSave: { updatedItem in
+                    Task {
+                        await MainActor.run {
+                            dataManager.updateItem(updatedItem)
+                            detailSheetItem = updatedItem // Update detail view item
+                            editSheetItem = nil // Dismiss edit view
+                        }
+                    }
+                },
+                onDelete: { deleteOption in
+                    Task {
+                        await MainActor.run {
+                            handleDelete(item: editItem, option: deleteOption)
+                            editSheetItem = nil
+                            detailSheetItem = nil
+                        }
+                    }
+                }
+            )
         }
     }
     
