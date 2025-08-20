@@ -655,7 +655,7 @@ struct ScheduleEditView: View {
         NavigationView {
             ZStack {
                
-                Color("Background").opacity(0.6)
+                Color("Background").opacity(0.4)
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
@@ -663,7 +663,7 @@ struct ScheduleEditView: View {
                         Section {
                             HStack {
                                 Image(systemName: item.icon)
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(.primary)
                                     .padding(.trailing, 8)
                                 TextField("Title", text: $item.title)
                                     .multilineTextAlignment(.leading)
@@ -980,7 +980,7 @@ struct ScheduleEditView: View {
                                     Button("Add") {
                                         addChecklistItem()
                                     }
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(.primary)
                                 }
                             }
                             .padding(.vertical, 4)

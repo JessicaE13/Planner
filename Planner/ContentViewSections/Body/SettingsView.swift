@@ -47,8 +47,8 @@ struct SettingsView: View {
                     VStack(spacing: 0) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color(.secondarySystemBackground))
-                                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                                .fill(Color(.white))
+                             
                             
                             VStack(spacing: 0) {
                                 SettingsRow(
@@ -198,7 +198,7 @@ struct SettingsRow: View {
                 // Icon
                 Image(systemName: icon)
                     .font(.title2)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.primary)
                     .frame(width: 24, height: 24)
                 
                 // Content
