@@ -231,7 +231,7 @@ struct ScheduleRowView: View {
                 }) {
                     Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.title2)
-                        .foregroundColor(item.isCompleted ? .green : .gray)
+                        .foregroundColor(item.isCompleted ? .primary : .gray)
                 }
                 .buttonStyle(PlainButtonStyle())
             } else if item.itemType == .scheduled {
@@ -393,7 +393,7 @@ struct ScheduleDetailView: View {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
                                     Image(systemName: "checklist")
-                                        .foregroundColor(.green)
+                                        .foregroundColor(.primary)
                                         .frame(width: 20)
                                     Text("Task Status")
                                         .font(.headline)
@@ -409,7 +409,7 @@ struct ScheduleDetailView: View {
                                     }) {
                                         HStack {
                                             Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(item.isCompleted ? .green : .gray)
+                                                .foregroundColor(item.isCompleted ? .primary : .gray)
                                                 .font(.title2)
                                             
                                             Text("Mark as Completed")
@@ -467,7 +467,7 @@ struct ScheduleDetailView: View {
                                         }) {
                                             HStack {
                                                 Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
-                                                    .foregroundColor(checklistItem.isCompleted ? .green : .gray)
+                                                    .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
                                                     .font(.title3)
                                                 
                                                 Text(checklistItem.text)
@@ -810,7 +810,7 @@ struct ScheduleEditView: View {
                                     }) {
                                         HStack {
                                             Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(item.isCompleted ? .green : .gray)
+                                                .foregroundColor(item.isCompleted ? .primary : .gray)
                                                 .font(.title2)
                                             
                                             Text("Mark as Completed")
@@ -949,7 +949,7 @@ struct ScheduleEditView: View {
                                         checklistItems[index].isCompleted.toggle()
                                     }) {
                                         Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(checklistItem.isCompleted ? .green : .gray)
+                                            .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
                                             .font(.title2)
                                     }
                                     .buttonStyle(PlainButtonStyle())
@@ -967,7 +967,7 @@ struct ScheduleEditView: View {
                             
                             HStack {
                                 Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.green)
+                                    .foregroundColor(.primary)
                                     .font(.title2)
                                 
                                 TextField("Add subtask", text: $newChecklistItem)
