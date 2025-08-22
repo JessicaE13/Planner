@@ -58,14 +58,14 @@ struct ScheduleDetailView: View {
                                 .font(.title)
                                 .foregroundColor(.white)
                         }
-                        
+                   
 
                         VStack(alignment: .leading, spacing: 8) {
                             
 
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(item.title)
-                                    .font(.title2)
+                                    .font(.title)
                                     .fontWeight(.semibold)
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -76,11 +76,16 @@ struct ScheduleDetailView: View {
                                     }) {
                                         HStack(alignment: .top) {
                                             VStack(alignment: .leading, spacing: 4) {
-                                                Text(item.location)
-                                                    .font(.caption)
-                                                    .multilineTextAlignment(.leading)
-                                                    .foregroundColor(.blue)
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                HStack(alignment: .top, spacing: 4) {
+                                                    Image(systemName: "location")
+                                                        .font(.caption2)
+                                                        .foregroundColor(.blue)
+                                                    Text(item.location)
+                                                        .font(.caption)
+                                                        .multilineTextAlignment(.leading)
+                                                        .foregroundColor(.blue)
+                                                }
+                                                .frame(maxWidth: .infinity, alignment: .leading)
                                             }
                                             Spacer()
                                             
@@ -91,8 +96,8 @@ struct ScheduleDetailView: View {
                                 }
                             }
                         }
+                        .padding(.leading, 8)
                     }
-                    .padding(.top)
                     .padding(.leading, 24)
                     
                     // Completion Status (only show for todo items)
@@ -141,32 +146,46 @@ struct ScheduleDetailView: View {
                         .padding(.horizontal)
                     }
                     
-                    // Category display
-                    if let category = item.category {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color(category.color))
-                                .frame(width: 12, height: 12)
-                            Text(category.name)
-                                .font(.caption)
-                                .foregroundColor(Color(category.color))
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color(category.color).opacity(0.1))
-                        .cornerRadius(8)
-                    }
-                    
-                    
-                
                     if item.itemType == .scheduled {
                         createTimeView()
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
-                    
-                    
-                    
+                    // Category display - moved below time information with dividers
+                    if let category = item.category {
+                        VStack(spacing: 0) {
+                            Divider()
+                                .padding(.horizontal, 24)
+                            
+                            HStack {
+                                Text("Category")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(Color(category.color))
+                                        .frame(width: 16, height: 16)
+                                    Text(category.name)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(Color(category.color))
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color(category.color).opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 16)
+                            
+                            Divider()
+                                .padding(.horizontal, 24)
+                        }
+                    }
                     
                     // Description
                     if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -186,7 +205,7 @@ struct ScheduleDetailView: View {
                     if !item.checklist.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             
-                            VStack(spacing: 8) {
+                            VStack(spacing: 0) {
                                 ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
                                     Button(action: {
                                         item.checklist[index].isCompleted.toggle()
@@ -205,20 +224,28 @@ struct ScheduleDetailView: View {
                                             Spacer()
                                         }
                                         .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
+                                        .padding(.vertical, 12)
                                         .cornerRadius(8)
                                         .contentShape(Rectangle())
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                     .animation(.easeInOut(duration: 0.2), value: checklistItem.isCompleted)
+                                    
+                                    if index < item.checklist.count  {
+                                        Divider()
+                                            .padding(.leading, 36)
+                                            .padding(.trailing, 12)
+                                    }
                                 }
+                                
                             }
                         }
                         .padding(.horizontal)
                     }
                     
-                    Spacer(minLength: 40)
+                    Spacer()
                 }
+                .padding(.top, 0)
             }
         }
         .navigationTitle(item.itemType == .todo ? "Task Details" : "Event Details")
@@ -380,7 +407,7 @@ struct ScheduleDetailView: View {
                     ChecklistItem(text: "Review project updates", isCompleted: true),
                     ChecklistItem(text: "Schedule follow-ups")
                 ],
-                category: nil,
+                category: .learning,
                 endRepeatOption: .never,
                 endRepeatDate: Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()
             ),
