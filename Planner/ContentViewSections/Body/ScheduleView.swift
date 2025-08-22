@@ -290,7 +290,6 @@ struct ScheduleDetailView: View {
                                 .font(.title)
                                 .foregroundColor(.white)
                         }
-                        .padding(.leading)
                         
 
                         VStack(alignment: .leading, spacing: 8) {
@@ -326,6 +325,7 @@ struct ScheduleDetailView: View {
                         }
                     }
                     .padding(.top)
+                    .padding(.leading, 24)
                     
                     // Completion Status (only show for todo items)
                     if item.itemType == .todo {
