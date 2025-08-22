@@ -517,7 +517,6 @@ struct ScheduleDetailView: View {
                     }
                 }
 
-                // Repeat frequency line
                 if item.frequency != .never {
                     HStack(spacing: 8) {
                         Image(systemName: "repeat")
