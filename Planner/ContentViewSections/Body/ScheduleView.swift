@@ -504,25 +504,44 @@ struct ScheduleDetailView: View {
     
     // MARK: - Updated Time View Creation Helper with Repeat Icon
     private func createTimeView() -> some View {
-        HStack(spacing: 4) {
-            // Time part
+        VStack(alignment: .leading, spacing: 2) {
+            // Date line
+            Text(dateFormatter.string(from: item.startTime))
+                .font(.caption)
+                .foregroundColor(.gray)
+
+            // Time range line
             if item.allDay {
                 Text("All Day")
                     .font(.caption)
                     .foregroundColor(.gray)
             } else {
-                Text("\(timeFormatter.string(from: item.startTime)) - \(timeFormatter.string(from: item.endTime))")
+                Text("from \(timeFormatter.string(from: item.startTime)) to \(timeFormatter.string(from: item.endTime))")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
-            
-            // Add repeat icon and frequency if not "never"
+
+            // Repeat frequency line
             if item.frequency != .never {
-                Image(systemName: "repeat")
-                    .foregroundColor(.gray.opacity(0.6))
-                    .font(.caption)
-                    .padding(.leading, 2)
+                HStack(spacing: 4) {
+                    Image(systemName: "repeat")
+                        .foregroundColor(.gray)
+                        .font(.caption2)
+                    
+                    Text(getFrequencyDisplayText())
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
             }
+        }
+    }
+
+    // MARK: - Helper method to get frequency display text
+    private func getFrequencyDisplayText() -> String {
+        if item.frequency == .custom, let customConfig = item.customFrequencyConfig {
+            return customConfig.displayDescription()
+        } else {
+            return item.frequency.displayName
         }
     }
     
