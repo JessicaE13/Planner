@@ -279,11 +279,11 @@ struct ScheduleDetailView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
-                    // Event Icon and Header Section
+
                     HStack(alignment: .center, spacing: 16) {
-                        // Icon
+      
                         ZStack {
-                            RoundedRectangle(cornerRadius: 24)
+                            RoundedRectangle(cornerRadius: 20)
                                 .fill(Color(item.color))
                                 .frame(width: 56, height: 80)
                             Image(systemName: item.icon)
@@ -292,18 +292,17 @@ struct ScheduleDetailView: View {
                         }
                         .padding(.leading)
                         
-                        // Title and Details Section
+
                         VStack(alignment: .leading, spacing: 8) {
                             
-                            // Event Title - Left Aligned
+
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(item.title)
                                     .font(.title2)
                                     .fontWeight(.semibold)
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                
-                                // Location - Clickable and Left Aligned (only show for scheduled items or if location exists)
+                        
                                 if !item.location.isEmpty {
                                     Button(action: {
                                         showingMapOptions = true
@@ -324,11 +323,6 @@ struct ScheduleDetailView: View {
                                     .buttonStyle(PlainButtonStyle())
                                 }
                             }
-                            
-                            
-
-                            
-                            
                         }
                     }
                     .padding(.top)
@@ -484,7 +478,6 @@ struct ScheduleDetailView: View {
             )
         }
         .onReceive(dataManager.$items) { _ in
-            // Update the item when data changes
             if let updatedItem = dataManager.items.first(where: { $0.id == item.id }) {
                 item = updatedItem
             }
@@ -493,27 +486,27 @@ struct ScheduleDetailView: View {
     
     // MARK: - Updated Time View Creation Helper with Repeat Icon
     private func createTimeView() -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                // Date line with clock icon
-                HStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+        
+                HStack(spacing: 8) {
                     Image(systemName: "calendar")
                         .foregroundColor(.primary)
                         .font(.caption2)
                     Text(dateFormatter.string(from: displayDate))
                         .font(.caption)
-                      //  .fontWeight(.medium)
+     
                         .foregroundColor(.primary)
                 }
 
-                // Time range line
+ 
                 if item.allDay {
                     Text("All Day")
                         .font(.caption)
                      //   .fontWeight(.medium)
                         .foregroundColor(.primary)
                 } else {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 8) {
                         Image(systemName: "clock")
                             .foregroundColor(.primary)
                             .font(.caption2)
@@ -526,7 +519,7 @@ struct ScheduleDetailView: View {
 
                 // Repeat frequency line
                 if item.frequency != .never {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 8) {
                         Image(systemName: "repeat")
                             .foregroundColor(.gray)
                             .font(.caption2)
