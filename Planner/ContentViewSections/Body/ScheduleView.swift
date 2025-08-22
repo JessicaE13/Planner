@@ -493,50 +493,53 @@ struct ScheduleDetailView: View {
     
     // MARK: - Updated Time View Creation Helper with Repeat Icon
     private func createTimeView() -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            // Date line with clock icon
-            HStack(spacing: 4) {
-                Image(systemName: "calendar")
-                    .foregroundColor(.primary)
-                    .font(.caption2)
-                Text(dateFormatter.string(from: displayDate))
-                    .font(.caption)
-                  //  .fontWeight(.medium)
-                    .foregroundColor(.primary)
-            }
-
-            // Time range line
-            if item.allDay {
-                Text("All Day")
-                    .font(.caption)
-                 //   .fontWeight(.medium)
-                    .foregroundColor(.primary)
-            } else {
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                // Date line with clock icon
                 HStack(spacing: 4) {
-                    Image(systemName: "clock")
+                    Image(systemName: "calendar")
                         .foregroundColor(.primary)
                         .font(.caption2)
-                    Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
+                    Text(dateFormatter.string(from: displayDate))
                         .font(.caption)
-                  //      .fontWeight(.medium)
+                      //  .fontWeight(.medium)
                         .foregroundColor(.primary)
                 }
-            }
 
-            // Repeat frequency line
-            if item.frequency != .never {
-                HStack(spacing: 4) {
-                    Image(systemName: "repeat")
-                        .foregroundColor(.gray)
-                        .font(.caption2)
-                    
-                    Text(getFrequencyDisplayText())
+                // Time range line
+                if item.allDay {
+                    Text("All Day")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                     //   .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                            .foregroundColor(.primary)
+                            .font(.caption2)
+                        Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
+                            .font(.caption)
+                      //      .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                    }
+                }
+
+                // Repeat frequency line
+                if item.frequency != .never {
+                    HStack(spacing: 4) {
+                        Image(systemName: "repeat")
+                            .foregroundColor(.gray)
+                            .font(.caption2)
+                        
+                        Text(getFrequencyDisplayText())
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
                 }
             }
+            .padding()
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal)
     }
 
     // Helper to get the correct start time for the occurrence
