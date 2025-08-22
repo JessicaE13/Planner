@@ -359,3 +359,34 @@ struct ScheduleDetailView: View {
         }
     }
 }
+
+// MARK: - Preview
+
+#Preview("Schedule Detail View") {
+    NavigationView {
+        ScheduleDetailView(
+            item: ScheduleItem.createScheduled(
+                title: "Team Meeting",
+                startTime: Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date()) ?? Date(),
+                endTime: Calendar.current.date(bySettingHour: 11, minute: 30, second: 0, of: Date()) ?? Date(),
+                icon: "calendar",
+                color: "Color1",
+                frequency: .everyWeek,
+                descriptionText: "Weekly team standup meeting to discuss project progress and upcoming deliverables.",
+                location: "Conference Room A",
+                allDay: false,
+                checklist: [
+                    ChecklistItem(text: "Prepare agenda"),
+                    ChecklistItem(text: "Review project updates", isCompleted: true),
+                    ChecklistItem(text: "Schedule follow-ups")
+                ],
+                category: nil,
+                endRepeatOption: .never,
+                endRepeatDate: Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()
+            ),
+            selectedDate: Date(),
+            onEdit: { _ in },
+            onSave: { _ in }
+        )
+    }
+}
