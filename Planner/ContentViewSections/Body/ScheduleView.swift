@@ -8,17 +8,35 @@
 import SwiftUI
 import MapKit
 
-// MARK: - Sheet Content Enum
-enum SheetContent: Identifiable {
+// MARK: - Navigation Destination Enum
+enum ScheduleDestination: Hashable, Equatable {
     case detail(ScheduleItem)
     case edit(ScheduleItem)
-    case create // Added case for creating new items
+    case create
     
-    var id: String {
+    func hash(into hasher: inout Hasher) {
         switch self {
-        case .detail(let item): return "detail-\(item.id)"
-        case .edit(let item): return "edit-\(item.id)"
-        case .create: return "create-new"
+        case .detail(let item):
+            hasher.combine("detail")
+            hasher.combine(item.id)
+        case .edit(let item):
+            hasher.combine("edit")
+            hasher.combine(item.id)
+        case .create:
+            hasher.combine("create")
+        }
+    }
+    
+    static func == (lhs: ScheduleDestination, rhs: ScheduleDestination) -> Bool {
+        switch (lhs, rhs) {
+        case (.detail(let lhsItem), .detail(let rhsItem)):
+            return lhsItem.id == rhsItem.id
+        case (.edit(let lhsItem), .edit(let rhsItem)):
+            return lhsItem.id == rhsItem.id
+        case (.create, .create):
+            return true
+        default:
+            return false
         }
     }
 }
@@ -36,9 +54,7 @@ enum DeleteOption: String, CaseIterable {
 struct ScheduleView: View {
     var selectedDate: Date
     @StateObject private var dataManager = UnifiedDataManager.shared
-    @State private var detailSheetItem: ScheduleItem? = nil // State for detail view
-    @State private var editSheetItem: ScheduleItem? = nil   // State for edit view
-    @State private var showingNewEventSheet = false // State for new event creation
+    @State private var navigationPath = NavigationPath() // For navigation stack
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -47,92 +63,101 @@ struct ScheduleView: View {
     }()
     
     var body: some View {
-        VStack {
-            HStack {
-                Text("Schedule")
-                    .sectionHeaderStyle()
-                
-                Spacer()
-                
-                Button(action: {
-                    showingNewEventSheet = true
-                }) {
-                    Image(systemName: "plus")
-                        .font(.title2)
-                        .foregroundColor(.primary)
-                        .contentShape(Rectangle())
+        NavigationStack(path: $navigationPath) {
+            VStack {
+                HStack {
+                    Text("Schedule")
+                        .sectionHeaderStyle()
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        navigationPath.append(ScheduleDestination.create)
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .foregroundColor(.primary)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .buttonStyle(PlainButtonStyle())
+                .padding(.bottom, 16)
+                
+                VStack(spacing: 12) {
+                    let allScheduleItems = getActualScheduleItems(selectedDate).sorted { $0.startTime < $1.startTime }
+                    
+                    if !allScheduleItems.isEmpty {
+                        ForEach(allScheduleItems, id: \.id) { item in
+                            ScheduleRowView(item: item) {
+                                navigationPath.append(ScheduleDestination.detail(item))
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
             }
-            .padding(.bottom, 16)
-            
-            VStack(spacing: 12) {
-                let allScheduleItems = getActualScheduleItems(selectedDate).sorted { $0.startTime < $1.startTime }
-                
-                if !allScheduleItems.isEmpty {
-                    ForEach(allScheduleItems, id: \.id) { item in
-                        ScheduleRowView(item: item) {
-                            detailSheetItem = item
+            .padding()
+            .navigationDestination(for: ScheduleDestination.self) { destination in
+                switch destination {
+                case .detail(let item):
+                    ScheduleDetailView(
+                        item: item,
+                        selectedDate: selectedDate,
+                        onEdit: { editItem in
+                            navigationPath.append(ScheduleDestination.edit(editItem))
+                        },
+                        onSave: { updatedItem in
+                            Task {
+                                await MainActor.run {
+                                    dataManager.updateItem(updatedItem)
+                                    // Update the item in the navigation path if needed
+                                    if let lastIndex = navigationPath.count > 0 ? navigationPath.count - 1 : nil {
+                                        // The detail view will automatically reflect the updated item
+                                    }
+                                }
+                            }
                         }
-                    }
+                    )
+                case .edit(let item):
+                    EditScheduleItemView(
+                        item: item,
+                        selectedDate: selectedDate,
+                        onSave: { updatedItem in
+                            Task {
+                                await MainActor.run {
+                                    dataManager.updateItem(updatedItem)
+                                    navigationPath.removeLast() // Go back to detail view
+                                }
+                            }
+                        },
+                        onDelete: { deleteOption in
+                            Task {
+                                await MainActor.run {
+                                    handleDelete(item: item, option: deleteOption)
+                                    // Remove both edit and detail views from stack
+                                    if navigationPath.count >= 2 {
+                                        navigationPath.removeLast(2)
+                                    } else {
+                                        navigationPath = NavigationPath()
+                                    }
+                                }
+                            }
+                        }
+                    )
+                case .create:
+                    NewScheduleItemView(
+                        selectedDate: selectedDate,
+                        onSave: { newItem in
+                            Task {
+                                await MainActor.run {
+                                    dataManager.addItem(newItem)
+                                    navigationPath.removeLast() // Go back to schedule list
+                                }
+                            }
+                        }
+                    )
                 }
             }
-            .padding(.horizontal, 16)
-        }
-        .padding()
-        .sheet(item: $detailSheetItem) { item in
-            ScheduleDetailView(
-                item: item,
-                selectedDate: selectedDate,
-                onEdit: { editItem in
-                    editSheetItem = editItem
-                },
-                onSave: { updatedItem in
-                    Task {
-                        await MainActor.run {
-                            dataManager.updateItem(updatedItem)
-                            detailSheetItem = updatedItem // Update detail view item
-                        }
-                    }
-                }
-            )
-        }
-        .sheet(isPresented: $showingNewEventSheet) {
-            NewScheduleItemView(
-                selectedDate: selectedDate,
-                onSave: { newItem in
-                    Task {
-                        await MainActor.run {
-                            dataManager.addItem(newItem)
-                            showingNewEventSheet = false
-                        }
-                    }
-                }
-            )
-        }
-        .sheet(item: $editSheetItem) { editItem in
-            EditScheduleItemView(
-                item: editItem,
-                selectedDate: selectedDate,
-                onSave: { updatedItem in
-                    Task {
-                        await MainActor.run {
-                            dataManager.updateItem(updatedItem)
-                            detailSheetItem = updatedItem // Update detail view item
-                            editSheetItem = nil // Dismiss edit view
-                        }
-                    }
-                },
-                onDelete: { deleteOption in
-                    Task {
-                        await MainActor.run {
-                            handleDelete(item: editItem, option: deleteOption)
-                            editSheetItem = nil
-                            detailSheetItem = nil
-                        }
-                    }
-                }
-            )
         }
     }
     
@@ -231,8 +256,8 @@ struct ScheduleDetailView: View {
     let selectedDate: Date
     let onEdit: (ScheduleItem) -> Void
     let onSave: (ScheduleItem) -> Void
-    @Environment(\.dismiss) private var dismiss
     @State private var showingMapOptions = false
+    @StateObject private var dataManager = UnifiedDataManager.shared
     
     init(item: ScheduleItem, selectedDate: Date, onEdit: @escaping (ScheduleItem) -> Void, onSave: @escaping (ScheduleItem) -> Void) {
         self._item = State(initialValue: item)
@@ -254,208 +279,203 @@ struct ScheduleDetailView: View {
     }()
     
     var body: some View {
-        NavigationView {
-            ZStack {
-               
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Event Icon and Header Section
-                        HStack(alignment: .center, spacing: 16) {
-                            // Icon
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 24)
-                                    .fill(Color(item.color))
-                                    .frame(width: 56, height: 80)
-                                Image(systemName: item.icon)
-                                    .font(.title)
-                                    .foregroundColor(.white)
-                            }
-                            .padding(.leading)
+        ZStack {
+           
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Event Icon and Header Section
+                    HStack(alignment: .center, spacing: 16) {
+                        // Icon
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(Color(item.color))
+                                .frame(width: 56, height: 80)
+                            Image(systemName: item.icon)
+                                .font(.title)
+                                .foregroundColor(.white)
+                        }
+                        .padding(.leading)
+                        
+                        // Title and Details Section
+                        VStack(alignment: .leading, spacing: 8) {
                             
-                            // Title and Details Section
+                            // Event Title - Left Aligned
                             VStack(alignment: .leading, spacing: 8) {
-                                
-                                // Event Title - Left Aligned
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(item.title)
-                                        .font(.title2)
-                                        .fontWeight(.semibold)
-                                        .multilineTextAlignment(.leading)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                Text(item.title)
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                                    // Category display
-                                    if let category = item.category {
-                                        HStack(spacing: 4) {
-                                            Circle()
-                                                .fill(Color(category.color))
-                                                .frame(width: 12, height: 12)
-                                            Text(category.name)
-                                                .font(.caption)
-                                                .foregroundColor(Color(category.color))
-                                        }
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color(category.color).opacity(0.1))
-                                        .cornerRadius(8)
-                                    }
-                                }
-                                
-                                // Updated time information with repeat icon (only show for scheduled items)
-                                if item.itemType == .scheduled {
+                                // Category display
+                                if let category = item.category {
                                     HStack(spacing: 4) {
-                                        Image(systemName: "clock")
-                                            .foregroundColor(.gray)
+                                        Circle()
+                                            .fill(Color(category.color))
+                                            .frame(width: 12, height: 12)
+                                        Text(category.name)
                                             .font(.caption)
+                                            .foregroundColor(Color(category.color))
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color(category.color).opacity(0.1))
+                                    .cornerRadius(8)
+                                }
+                            }
+                            
+                            // Updated time information with repeat icon (only show for scheduled items)
+                            if item.itemType == .scheduled {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "clock")
+                                        .foregroundColor(.gray)
+                                        .font(.caption)
+                                    
+                                    // Create the time string with repeat icon using HStack
+                                    createTimeView()
+                                    
+                                    Spacer()
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            
+                            // Location - Clickable and Left Aligned (only show for scheduled items or if location exists)
+                            if !item.location.isEmpty {
+                                Button(action: {
+                                    showingMapOptions = true
+                                }) {
+                                    HStack(alignment: .top) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(item.location)
+                                                .font(.caption)
+                                                .multilineTextAlignment(.leading)
+                                                .foregroundColor(.blue)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                        Spacer()
+                               
+                                    }
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                    }
+                    .padding(.top)
+                    
+                    // Completion Status (only show for todo items)
+                    if item.itemType == .todo {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "checklist")
+                                    .foregroundColor(.primary)
+                                    .frame(width: 20)
+                                Text("Task Status")
+                                    .font(.headline)
+                                Spacer()
+                            }
+                            
+                            HStack {
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        item.isCompleted.toggle()
+                                        onSave(item)
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(item.isCompleted ? .primary : .gray)
+                                            .font(.title2)
                                         
-                                        // Create the time string with repeat icon using HStack
-                                        createTimeView()
+                                        Text("Mark as Completed")
+                                            .font(.body)
+                                            .strikethrough(item.isCompleted)
+                                            .foregroundColor(item.isCompleted ? .secondary : .primary)
                                         
                                         Spacer()
                                     }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                                
-                                // Location - Clickable and Left Aligned (only show for scheduled items or if location exists)
-                                if !item.location.isEmpty {
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.gray.opacity(0.05))
+                            .cornerRadius(8)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.gray.opacity(0.05))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                    }
+                    
+                    // Description
+                    if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "text.alignleft")
+                                    .foregroundColor(.purple)
+                                    .frame(width: 20)
+                                Text("Description")
+                                    .font(.headline)
+                                Spacer()
+                            }
+                            
+                            Text(item.descriptionText)
+                                .font(.body)
+                                .padding()
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
+                        }
+                        .padding(.horizontal)
+                    }
+                    
+                    // Checklist - Full row tap functionality
+                    if !item.checklist.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            
+                            VStack(spacing: 8) {
+                                ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
                                     Button(action: {
-                                        showingMapOptions = true
+                                        item.checklist[index].isCompleted.toggle()
+                                        onSave(item)
                                     }) {
-                                        HStack(alignment: .top) {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(item.location)
-                                                    .font(.caption)
-                                                    .multilineTextAlignment(.leading)
-                                                    .foregroundColor(.blue)
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                            }
+                                        HStack {
+                                            Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                                .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
+                                                .font(.title3)
+                                            
+                                            Text(checklistItem.text)
+                                                .strikethrough(checklistItem.isCompleted)
+                                                .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                                                .font(.body)
+                                            
                                             Spacer()
-                                   
                                         }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color.gray.opacity(0.05))
+                                        .cornerRadius(8)
                                         .contentShape(Rectangle())
                                     }
                                     .buttonStyle(PlainButtonStyle())
+                                    .animation(.easeInOut(duration: 0.2), value: checklistItem.isCompleted)
                                 }
                             }
                         }
-                        .padding(.top)
-                        
-                        // Completion Status (only show for todo items)
-                        if item.itemType == .todo {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Image(systemName: "checklist")
-                                        .foregroundColor(.primary)
-                                        .frame(width: 20)
-                                    Text("Task Status")
-                                        .font(.headline)
-                                    Spacer()
-                                }
-                                
-                                HStack {
-                                    Button(action: {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            item.isCompleted.toggle()
-                                            onSave(item)
-                                        }
-                                    }) {
-                                        HStack {
-                                            Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(item.isCompleted ? .primary : .gray)
-                                                .font(.title2)
-                                            
-                                            Text("Mark as Completed")
-                                                .font(.body)
-                                                .strikethrough(item.isCompleted)
-                                                .foregroundColor(item.isCompleted ? .secondary : .primary)
-                                            
-                                            Spacer()
-                                        }
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.gray.opacity(0.05))
-                                .cornerRadius(8)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(Color.gray.opacity(0.05))
-                            .cornerRadius(12)
-                            .padding(.horizontal)
-                        }
-                        
-                        // Description
-                        if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Image(systemName: "text.alignleft")
-                                        .foregroundColor(.purple)
-                                        .frame(width: 20)
-                                    Text("Description")
-                                        .font(.headline)
-                                    Spacer()
-                                }
-                                
-                                Text(item.descriptionText)
-                                    .font(.body)
-                                    .padding()
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(12)
-                            }
-                            .padding(.horizontal)
-                        }
-                        
-                        // Checklist - Full row tap functionality
-                        if !item.checklist.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                
-                                VStack(spacing: 8) {
-                                    ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
-                                        Button(action: {
-                                            item.checklist[index].isCompleted.toggle()
-                                            onSave(item)
-                                        }) {
-                                            HStack {
-                                                Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
-                                                    .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
-                                                    .font(.title3)
-                                                
-                                                Text(checklistItem.text)
-                                                    .strikethrough(checklistItem.isCompleted)
-                                                    .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
-                                                    .font(.body)
-                                                
-                                                Spacer()
-                                            }
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 8)
-                                            .background(Color.gray.opacity(0.05))
-                                            .cornerRadius(8)
-                                            .contentShape(Rectangle())
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                        .animation(.easeInOut(duration: 0.2), value: checklistItem.isCompleted)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        
-                        Spacer(minLength: 40)
+                        .padding(.horizontal)
                     }
+                    
+                    Spacer(minLength: 40)
                 }
             }
-            .navigationTitle(item.itemType == .todo ? "Task Details" : "Event Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Edit") {
-                        onEdit(item)
-                    }
+        }
+        .navigationTitle(item.itemType == .todo ? "Task Details" : "Event Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Edit") {
+                    onEdit(item)
                 }
             }
         }
@@ -473,6 +493,12 @@ struct ScheduleDetailView: View {
                     .cancel()
                 ]
             )
+        }
+        .onReceive(dataManager.$items) { _ in
+            // Update the item when data changes
+            if let updatedItem = dataManager.items.first(where: { $0.id == item.id }) {
+                item = updatedItem
+            }
         }
     }
     
