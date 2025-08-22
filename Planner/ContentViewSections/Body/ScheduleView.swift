@@ -398,17 +398,8 @@ struct ScheduleDetailView: View {
                     
                 
                     if item.itemType == .scheduled {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .foregroundColor(.gray)
-                                .font(.caption)
-                            
-         
-                            createTimeView()
-                            
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        createTimeView()
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
                     
@@ -501,20 +492,33 @@ struct ScheduleDetailView: View {
     // MARK: - Updated Time View Creation Helper with Repeat Icon
     private func createTimeView() -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            // Date line
-            Text(dateFormatter.string(from: displayDate))
-                .font(.caption)
-                .foregroundColor(.gray)
+            // Date line with clock icon
+            HStack(spacing: 4) {
+                Image(systemName: "calendar")
+                    .foregroundColor(.primary)
+                    .font(.caption2)
+                Text(dateFormatter.string(from: displayDate))
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+            }
 
             // Time range line
             if item.allDay {
                 Text("All Day")
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
             } else {
-                Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .foregroundColor(.primary)
+                        .font(.caption2)
+                    Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                }
             }
 
             // Repeat frequency line
@@ -530,6 +534,7 @@ struct ScheduleDetailView: View {
                 }
             }
         }
+        .padding(.horizontal, 16)
     }
 
     // Helper to get the correct start time for the occurrence
