@@ -100,7 +100,7 @@ struct ScheduleDetailView: View {
                     }
                     .padding(.leading, 24)
                     
-                    // Completion Status (only show for todo items)
+                    
                     if item.itemType == .todo {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
@@ -151,7 +151,6 @@ struct ScheduleDetailView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
-                    // Category display - moved below time information with dividers
                     if let category = item.category {
                         VStack(spacing: 0) {
                             Divider()
@@ -170,13 +169,9 @@ struct ScheduleDetailView: View {
                                         .fill(Color(category.color))
                                         .frame(width: 16, height: 16)
                                     Text(category.name)
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(Color(category.color))
+                                 
                                 }
                                 .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color(category.color).opacity(0.1))
                                 .cornerRadius(12)
                             }
                             .padding(.horizontal, 24)
@@ -286,12 +281,12 @@ struct ScheduleDetailView: View {
         
                 HStack(spacing: 8) {
                     Image(systemName: "calendar")
-                        .foregroundColor(.primary)
+                        .foregroundColor(.gray)
                         .font(.caption2)
                     Text(dateFormatter.string(from: displayDate))
                         .font(.caption)
      
-                        .foregroundColor(.primary)
+                        .foregroundColor(.gray)
                 }
 
  
@@ -299,7 +294,7 @@ struct ScheduleDetailView: View {
                     Text("All Day")
                         .font(.caption)
                      //   .fontWeight(.medium)
-                        .foregroundColor(.primary)
+                        .foregroundColor(.gray)
                 } else {
                     HStack(spacing: 8) {
                         Image(systemName: "clock")
@@ -308,7 +303,7 @@ struct ScheduleDetailView: View {
                         Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
                             .font(.caption)
                       //      .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                            .foregroundColor(.gray)
                     }
                 }
 
@@ -329,7 +324,6 @@ struct ScheduleDetailView: View {
         .padding(.horizontal)
     }
 
-    // Helper to get the correct start time for the occurrence
     private func displayDateForTimeRangeStart() -> Date {
         if item.frequency != .never {
             // Use selectedDate with the time from item.startTime
@@ -340,7 +334,7 @@ struct ScheduleDetailView: View {
             return item.startTime
         }
     }
-    // Helper to get the correct end time for the occurrence
+    
     private func displayDateForTimeRangeEnd() -> Date {
         if item.frequency != .never {
             _ = Calendar.current
