@@ -54,7 +54,9 @@ enum DeleteOption: String, CaseIterable {
 struct ScheduleView: View {
     var selectedDate: Date
     @StateObject private var dataManager = UnifiedDataManager.shared
-    @State private var navigationPath = NavigationPath() // For navigation stack
+    @State private var showingNewItem = false
+    @State private var showingDetail: ScheduleItem?
+    @State private var showingEdit: ScheduleItem?
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -63,101 +65,90 @@ struct ScheduleView: View {
     }()
     
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            VStack {
-                HStack {
-                    Text("Schedule")
-                        .sectionHeaderStyle()
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        navigationPath.append(ScheduleDestination.create)
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title2)
-                            .foregroundColor(.primary)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-                .padding(.bottom, 16)
+        VStack {
+            HStack {
+                Text("Schedule")
+                    .sectionHeaderStyle()
                 
-                VStack(spacing: 12) {
-                    let allScheduleItems = getActualScheduleItems(selectedDate).sorted { $0.startTime < $1.startTime }
-                    
-                    if !allScheduleItems.isEmpty {
-                        ForEach(allScheduleItems, id: \.id) { item in
-                            ScheduleRowView(item: item) {
-                                navigationPath.append(ScheduleDestination.detail(item))
-                            }
+                Spacer()
+                
+                Button(action: {
+                    showingNewItem = true
+                }) {
+                    Image(systemName: "plus")
+                        .font(.title2)
+                        .foregroundColor(.primary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.bottom, 16)
+            
+            VStack(spacing: 12) {
+                let allScheduleItems = getActualScheduleItems(selectedDate).sorted { $0.startTime < $1.startTime }
+                
+                if !allScheduleItems.isEmpty {
+                    ForEach(allScheduleItems, id: \.id) { item in
+                        ScheduleRowView(item: item) {
+                            showingDetail = item
+                        }
+                    }
+                } else {
+                    // Debug: Show when no items
+                    Text("No schedule items for today")
+                        .foregroundColor(.gray)
+                        .font(.caption)
+                        .padding()
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .padding()
+        .sheet(isPresented: $showingNewItem) {
+            NewScheduleItemView(
+                selectedDate: selectedDate,
+                onSave: { newItem in
+                    dataManager.addItem(newItem)
+                    showingNewItem = false
+                }
+            )
+        }
+        .sheet(item: $showingDetail) { item in
+            NavigationView {
+                ScheduleDetailView(
+                    item: item,
+                    selectedDate: selectedDate,
+                    onEdit: { editItem in
+                        showingDetail = nil
+                        showingEdit = editItem
+                    },
+                    onSave: { updatedItem in
+                        dataManager.updateItem(updatedItem)
+                    }
+                )
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Done") {
+                            showingDetail = nil
                         }
                     }
                 }
-                .padding(.horizontal, 16)
             }
-            .padding()
-            .navigationDestination(for: ScheduleDestination.self) { destination in
-                switch destination {
-                case .detail(let item):
-                    ScheduleDetailView(
-                        item: item,
-                        selectedDate: selectedDate,
-                        onEdit: { editItem in
-                            navigationPath.append(ScheduleDestination.edit(editItem))
-                        },
-                        onSave: { updatedItem in
-                            Task {
-                                await MainActor.run {
-                                    dataManager.updateItem(updatedItem)
-                                    // Update the item in the navigation path if needed
-                                    if let lastIndex = navigationPath.count > 0 ? navigationPath.count - 1 : nil {
-                                        // The detail view will automatically reflect the updated item
-                                    }
-                                }
-                            }
-                        }
-                    )
-                case .edit(let item):
-                    EditScheduleItemView(
-                        item: item,
-                        selectedDate: selectedDate,
-                        onSave: { updatedItem in
-                            Task {
-                                await MainActor.run {
-                                    dataManager.updateItem(updatedItem)
-                                    navigationPath.removeLast() // Go back to detail view
-                                }
-                            }
-                        },
-                        onDelete: { deleteOption in
-                            Task {
-                                await MainActor.run {
-                                    handleDelete(item: item, option: deleteOption)
-                                    // Remove both edit and detail views from stack
-                                    if navigationPath.count >= 2 {
-                                        navigationPath.removeLast(2)
-                                    } else {
-                                        navigationPath = NavigationPath()
-                                    }
-                                }
-                            }
-                        }
-                    )
-                case .create:
-                    NewScheduleItemView(
-                        selectedDate: selectedDate,
-                        onSave: { newItem in
-                            Task {
-                                await MainActor.run {
-                                    dataManager.addItem(newItem)
-                                    navigationPath.removeLast() // Go back to schedule list
-                                }
-                            }
-                        }
-                    )
+        }
+        .sheet(item: $showingEdit) { item in
+            EditScheduleItemView(
+                item: item,
+                selectedDate: selectedDate,
+                onSave: { updatedItem in
+                    dataManager.updateItem(updatedItem)
+                    showingEdit = nil
+                },
+                onDelete: { deleteOption in
+                    handleDelete(item: item, option: deleteOption)
+                    showingEdit = nil
                 }
-            }
+            )
         }
     }
     
