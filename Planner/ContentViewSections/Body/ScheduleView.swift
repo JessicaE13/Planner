@@ -553,7 +553,7 @@ struct ScheduleDetailView: View {
     // Helper to get the correct end time for the occurrence
     private func displayDateForTimeRangeEnd() -> Date {
         if item.frequency != .never {
-            let calendar = Calendar.current
+            _ = Calendar.current
             let duration = item.endTime.timeIntervalSince(item.startTime)
             let start = displayDateForTimeRangeStart()
             return start.addingTimeInterval(duration)
