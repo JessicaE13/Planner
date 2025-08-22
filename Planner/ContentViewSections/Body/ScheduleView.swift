@@ -270,7 +270,7 @@ struct ScheduleDetailView: View {
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
+        formatter.dateFormat = "EEEE, MMM d, yyyy"
         return formatter
     }()
     
@@ -412,6 +412,8 @@ struct ScheduleDetailView: View {
                                
                             Text(item.descriptionText)
                                 .font(.body)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding()
     
                         }
@@ -499,7 +501,7 @@ struct ScheduleDetailView: View {
                     .font(.caption2)
                 Text(dateFormatter.string(from: displayDate))
                     .font(.caption)
-                    .fontWeight(.medium)
+                  //  .fontWeight(.medium)
                     .foregroundColor(.primary)
             }
 
@@ -507,7 +509,7 @@ struct ScheduleDetailView: View {
             if item.allDay {
                 Text("All Day")
                     .font(.caption)
-                    .fontWeight(.medium)
+                 //   .fontWeight(.medium)
                     .foregroundColor(.primary)
             } else {
                 HStack(spacing: 4) {
@@ -516,7 +518,7 @@ struct ScheduleDetailView: View {
                         .font(.caption2)
                     Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
                         .font(.caption)
-                        .fontWeight(.medium)
+                  //      .fontWeight(.medium)
                         .foregroundColor(.primary)
                 }
             }
