@@ -271,7 +271,7 @@ struct ScheduleDetailView: View {
     
     var body: some View {
         ZStack {
-           
+            
             ScrollView {
                 VStack(spacing: 24) {
                     // Event Icon and Header Section
@@ -297,59 +297,33 @@ struct ScheduleDetailView: View {
                                     .fontWeight(.semibold)
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-
-                                // Category display
-                                if let category = item.category {
-                                    HStack(spacing: 4) {
-                                        Circle()
-                                            .fill(Color(category.color))
-                                            .frame(width: 12, height: 12)
-                                        Text(category.name)
-                                            .font(.caption)
-                                            .foregroundColor(Color(category.color))
-                                    }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color(category.color).opacity(0.1))
-                                    .cornerRadius(8)
-                                }
-                            }
-                            
-                            // Updated time information with repeat icon (only show for scheduled items)
-                            if item.itemType == .scheduled {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "clock")
-                                        .foregroundColor(.gray)
-                                        .font(.caption)
-                                    
-                                    // Create the time string with repeat icon using HStack
-                                    createTimeView()
-                                    
-                                    Spacer()
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            
-                            // Location - Clickable and Left Aligned (only show for scheduled items or if location exists)
-                            if !item.location.isEmpty {
-                                Button(action: {
-                                    showingMapOptions = true
-                                }) {
-                                    HStack(alignment: .top) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(item.location)
-                                                .font(.caption)
-                                                .multilineTextAlignment(.leading)
-                                                .foregroundColor(.blue)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                // Location - Clickable and Left Aligned (only show for scheduled items or if location exists)
+                                if !item.location.isEmpty {
+                                    Button(action: {
+                                        showingMapOptions = true
+                                    }) {
+                                        HStack(alignment: .top) {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(item.location)
+                                                    .font(.caption)
+                                                    .multilineTextAlignment(.leading)
+                                                    .foregroundColor(.blue)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                            }
+                                            Spacer()
+                                            
                                         }
-                                        Spacer()
-                               
+                                        .contentShape(Rectangle())
                                     }
-                                    .contentShape(Rectangle())
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
+                            
+                            
+
+                            
+                            
                         }
                     }
                     .padding(.top)
@@ -400,13 +374,48 @@ struct ScheduleDetailView: View {
                         .padding(.horizontal)
                     }
                     
+                    // Category display
+                    if let category = item.category {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color(category.color))
+                                .frame(width: 12, height: 12)
+                            Text(category.name)
+                                .font(.caption)
+                                .foregroundColor(Color(category.color))
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color(category.color).opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                    
+                    
+                    // Updated time information with repeat icon (only show for scheduled items)
+                    if item.itemType == .scheduled {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .foregroundColor(.gray)
+                                .font(.caption)
+                            
+                            // Create the time string with repeat icon using HStack
+                            createTimeView()
+                            
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    
+                    
+                    
+                    
+                    
                     // Description
                     if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Image(systemName: "text.alignleft")
-                                    .foregroundColor(.purple)
-                                    .frame(width: 20)
+                      
                                 Text("Description")
                                     .font(.headline)
                                 Spacer()
@@ -530,12 +539,12 @@ struct ScheduleDetailView: View {
     private func openInGoogleMaps() {
         let encodedLocation = item.location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         
-
+        
         if let googleMapsURL = URL(string: "comgooglemaps://?q=\(encodedLocation)"),
            UIApplication.shared.canOpenURL(googleMapsURL) {
             UIApplication.shared.open(googleMapsURL)
         } else {
-      
+            
             if let webURL = URL(string: "https://www.google.com/maps/search/?api=1&query=\(encodedLocation)") {
                 UIApplication.shared.open(webURL)
             }
@@ -900,7 +909,7 @@ struct NewScheduleItemView: View {
                                     }
                                     .scrollContentBackground(.hidden)
                                     .background(Color.clear)
-
+                                
                                 if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                     Text("Add description...")
                                         .foregroundColor(.secondary.opacity(0.5))
@@ -913,7 +922,7 @@ struct NewScheduleItemView: View {
                             }
                             .padding(.vertical, 4)
                         }
-
+                        
                         Section {
                             ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
                                 HStack {
@@ -1387,7 +1396,7 @@ struct EditScheduleItemView: View {
                                     }
                                     .scrollContentBackground(.hidden)
                                     .background(Color.clear)
-
+                                
                                 if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                     Text("Add description...")
                                         .foregroundColor(.secondary.opacity(0.5))
@@ -1400,7 +1409,7 @@ struct EditScheduleItemView: View {
                             }
                             .padding(.vertical, 4)
                         }
-
+                        
                         Section {
                             ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
                                 HStack {
