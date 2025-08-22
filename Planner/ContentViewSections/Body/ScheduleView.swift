@@ -250,6 +250,11 @@ struct ScheduleDetailView: View {
     @State private var showingMapOptions = false
     @StateObject private var dataManager = UnifiedDataManager.shared
     
+    // Add computed property for display date
+    private var displayDate: Date {
+        item.frequency != .never ? selectedDate : item.startTime
+    }
+    
     init(item: ScheduleItem, selectedDate: Date, onEdit: @escaping (ScheduleItem) -> Void, onSave: @escaping (ScheduleItem) -> Void) {
         self._item = State(initialValue: item)
         self.selectedDate = selectedDate
@@ -506,7 +511,7 @@ struct ScheduleDetailView: View {
     private func createTimeView() -> some View {
         VStack(alignment: .leading, spacing: 2) {
             // Date line
-            Text(dateFormatter.string(from: item.startTime))
+            Text(dateFormatter.string(from: displayDate))
                 .font(.caption)
                 .foregroundColor(.gray)
 
@@ -516,7 +521,7 @@ struct ScheduleDetailView: View {
                     .font(.caption)
                     .foregroundColor(.gray)
             } else {
-                Text("from \(timeFormatter.string(from: item.startTime)) to \(timeFormatter.string(from: item.endTime))")
+                Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
@@ -536,6 +541,29 @@ struct ScheduleDetailView: View {
         }
     }
 
+    // Helper to get the correct start time for the occurrence
+    private func displayDateForTimeRangeStart() -> Date {
+        if item.frequency != .never {
+            // Use selectedDate with the time from item.startTime
+            let calendar = Calendar.current
+            let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: item.startTime)
+            return calendar.date(bySettingHour: timeComponents.hour ?? 0, minute: timeComponents.minute ?? 0, second: timeComponents.second ?? 0, of: selectedDate) ?? selectedDate
+        } else {
+            return item.startTime
+        }
+    }
+    // Helper to get the correct end time for the occurrence
+    private func displayDateForTimeRangeEnd() -> Date {
+        if item.frequency != .never {
+            let calendar = Calendar.current
+            let duration = item.endTime.timeIntervalSince(item.startTime)
+            let start = displayDateForTimeRangeStart()
+            return start.addingTimeInterval(duration)
+        } else {
+            return item.endTime
+        }
+    }
+    
     // MARK: - Helper method to get frequency display text
     private func getFrequencyDisplayText() -> String {
         if item.frequency == .custom, let customConfig = item.customFrequencyConfig {
