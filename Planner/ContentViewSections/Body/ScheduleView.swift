@@ -396,14 +396,14 @@ struct ScheduleDetailView: View {
                     }
                     
                     
-                    // Updated time information with repeat icon (only show for scheduled items)
+                
                     if item.itemType == .scheduled {
                         HStack(spacing: 4) {
                             Image(systemName: "clock")
                                 .foregroundColor(.gray)
                                 .font(.caption)
                             
-                            // Create the time string with repeat icon using HStack
+         
                             createTimeView()
                             
                             Spacer()
@@ -415,22 +415,14 @@ struct ScheduleDetailView: View {
                     
                     
                     
-                    
                     // Description
                     if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                      
-                                Text("Description")
-                                    .font(.headline)
-                                Spacer()
-                            }
-                            
+                               
                             Text(item.descriptionText)
                                 .font(.body)
                                 .padding()
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(12)
+    
                         }
                         .padding(.horizontal)
                     }
@@ -459,7 +451,6 @@ struct ScheduleDetailView: View {
                                         }
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 8)
-                                        .background(Color.gray.opacity(0.05))
                                         .cornerRadius(8)
                                         .contentShape(Rectangle())
                                     }
