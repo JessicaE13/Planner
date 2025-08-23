@@ -15,12 +15,12 @@ struct PlannerApp: App {
         WindowGroup {
             MainTabView()
                 .onAppear {
-                    // Increment launch count when app appears
+
                     reviewManager.incrementLaunchCount()
                 }
                 .sheet(isPresented: $reviewManager.shouldShowReviewPrompt) {
                     ReviewPromptView(reviewManager: reviewManager)
-                        .interactiveDismissDisabled() // Prevents dismissing by swipe
+                        .interactiveDismissDisabled()
                 }
                 .sheet(isPresented: $reviewManager.showingFeedbackSheet) {
                     FeedbackView()

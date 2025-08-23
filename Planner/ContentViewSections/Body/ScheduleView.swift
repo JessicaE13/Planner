@@ -93,12 +93,6 @@ struct ScheduleView: View {
                             showingDetail = item
                         }
                     }
-                } else {
-                    // Debug: Show when no items
-                    Text("No schedule items for today")
-                        .foregroundColor(.gray)
-                        .font(.caption)
-                        .padding()
                 }
             }
             .padding(.horizontal, 16)

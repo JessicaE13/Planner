@@ -1,9 +1,4 @@
-//
-//  ContentView.swift
-//  Planner
-//
-//  Created by Jessica Estes on 8/11/25.
-//
+
 
 import SwiftUI
 
@@ -12,7 +7,7 @@ struct ContentView: View {
     @State private var showRoutineDetail = false
     @State private var selectedRoutineIndex: Int? = nil
     @State private var routines = [
-        // Initialize with start dates from a week ago so they show in past days
+
         Routine(
             name: "Morning",
             icon: "sunrise",
@@ -22,7 +17,7 @@ struct ContentView: View {
                 RoutineItem(name: "Make bed", frequency: .everyDay),
                 RoutineItem(name: "Breakfast", frequency: .everyDay)
             ],
-            items: [], // Keep empty for new format
+            items: [],
             colorName: "Color1",
             startDate: Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         ),
