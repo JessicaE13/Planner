@@ -211,7 +211,6 @@ struct ScheduleDetailView: View {
                             .padding(.bottom, 0)
                     }
                     
-                    // Description
                     if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Description")
@@ -233,8 +232,7 @@ struct ScheduleDetailView: View {
                         
                    
                     }
-                    
-                    // Checklist - Full row tap functionality
+
                     if !item.checklist.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Checklist")
