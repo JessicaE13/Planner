@@ -32,7 +32,8 @@ struct ToDoView: View {
     
     var body: some View {
         ZStack {
-            BackgroundView()
+            Color("BackgroundPopup")
+                .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Header

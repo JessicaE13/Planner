@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - Enhanced Routine Item with Frequency Support
 struct RoutineItem: Identifiable, Codable, Equatable {
     let id = UUID()
     var name: String
@@ -17,7 +16,6 @@ struct RoutineItem: Identifiable, Codable, Equatable {
         self.endRepeatDate = endRepeatDate
     }
     
-    // Custom Codable implementation
     enum CodingKeys: String, CodingKey {
         case id, name, frequency, customFrequencyConfig, endRepeatOption, endRepeatDate
     }
@@ -40,32 +38,21 @@ struct RoutineItem: Identifiable, Codable, Equatable {
         try container.encode(endRepeatDate, forKey: .endRepeatDate)
     }
     
-    // Check if this item should appear on a given date based on the routine's start date
     func shouldAppear(on date: Date, routineStartDate: Date) -> Bool {
-        // If item frequency is never, only show on the exact start date
         if frequency == .never {
             return Calendar.current.isDate(routineStartDate, inSameDayAs: date)
         }
-        
-        // Check if the item should trigger based on frequency from routine start date
         let shouldTrigger = frequency.shouldTrigger(on: date, from: routineStartDate, customConfig: customFrequencyConfig)
-        
-        // If it shouldn't trigger based on frequency, don't show
         if !shouldTrigger {
             return false
         }
-        
-        // Check end repeat conditions
         if endRepeatOption == .onDate {
             return date <= endRepeatDate
         }
-        
-        // If endRepeatOption is .never, show indefinitely (as long as frequency matches)
         return true
     }
 }
 
-// MARK: - Updated Routine Model
 struct Routine: Identifiable, Codable {
     let id = UUID()
     var name: String
@@ -82,14 +69,12 @@ struct Routine: Identifiable, Codable {
     
     var completedItemsByDate: [String: Set<String>] = [:]
     
-
     var frequency: Frequency = .everyDay
     var customFrequencyConfig: CustomFrequencyConfig? = nil
     var endRepeatOption: EndRepeatOption = .never
     var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     var startDate: Date = Date()
     
-
     init(name: String, icon: String, routineItems: [RoutineItem] = [], items: [String] = [], colorName: String = "Color1", frequency: Frequency = .everyDay, customFrequencyConfig: CustomFrequencyConfig? = nil, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(), startDate: Date = Date()) {
         self.name = name
         self.icon = icon
@@ -102,13 +87,11 @@ struct Routine: Identifiable, Codable {
         self.endRepeatDate = endRepeatDate
         self.startDate = startDate
         
-
         if routineItems.isEmpty && !items.isEmpty {
             self.routineItems = items.map { RoutineItem(name: $0, frequency: .everyDay) }
         }
     }
     
-
     enum CodingKeys: String, CodingKey {
         case id, name, icon, routineItems, items, completedItemsByDate, frequency, customFrequencyConfig, endRepeatOption, endRepeatDate, startDate, colorName
     }
@@ -125,10 +108,7 @@ struct Routine: Identifiable, Codable {
         endRepeatOption = try container.decodeIfPresent(EndRepeatOption.self, forKey: .endRepeatOption) ?? .never
         endRepeatDate = try container.decodeIfPresent(Date.self, forKey: .endRepeatDate) ?? Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
         startDate = try container.decodeIfPresent(Date.self, forKey: .startDate) ?? Date()
-        
         colorName = try container.decodeIfPresent(String.self, forKey: .colorName) ?? "Color1"
-        
-
         if routineItems.isEmpty && !items.isEmpty {
             routineItems = items.map { RoutineItem(name: $0, frequency: .everyDay) }
         }
@@ -149,82 +129,65 @@ struct Routine: Identifiable, Codable {
         try container.encode(colorName, forKey: .colorName)
     }
     
- 
     private func dateKey(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
     
-
     func completedItems(for date: Date) -> Set<String> {
         let key = dateKey(for: date)
         return completedItemsByDate[key] ?? []
     }
     
-
     func visibleItems(for date: Date) -> [RoutineItem] {
         return routineItems.filter { item in
             item.shouldAppear(on: date, routineStartDate: startDate)
         }
     }
     
-
     func progress(for date: Date) -> Double {
         let visibleItems = self.visibleItems(for: date)
         guard !visibleItems.isEmpty else { return 0 }
-        
         let completed = completedItems(for: date)
         let visibleItemNames = Set(visibleItems.map { $0.name })
         let completedVisibleItems = completed.intersection(visibleItemNames)
-        
         return Double(completedVisibleItems.count) / Double(visibleItems.count)
     }
 
     mutating func toggleItem(_ itemName: String, for date: Date) {
         let key = dateKey(for: date)
         var completedForDate = completedItemsByDate[key] ?? []
-        
         if completedForDate.contains(itemName) {
             completedForDate.remove(itemName)
         } else {
             completedForDate.insert(itemName)
         }
-        
         completedItemsByDate[key] = completedForDate
     }
     
-
     func isItemCompleted(_ itemName: String, for date: Date) -> Bool {
         let completed = completedItems(for: date)
         return completed.contains(itemName)
     }
     
-
     func shouldAppear(on date: Date) -> Bool {
-   
         let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate, customConfig: customFrequencyConfig)
-        
         if !shouldTrigger {
             return false
         }
-
         if endRepeatOption == .onDate {
             return date <= endRepeatDate
         }
-        
         return true
     }
 }
 
-// MARK: - Enhanced Create Routine View with Drag and Drop Reordering
 struct CreateRoutineView: View {
     @Binding var routines: [Routine]
     @Environment(\.dismiss) private var dismiss
-    
     let isEditing: Bool
     let editingIndex: Int?
-    
     @State private var routineName = ""
     @State private var selectedIcon = "sunrise"
     @State private var selectedColor = "Color1"
@@ -240,34 +203,26 @@ struct CreateRoutineView: View {
     @State private var editingItemIndex: Int?
     @State private var showingItemDetailSheet = false
     @State private var hasManuallySelectedIcon = false
-    
     private let availableColors: [String] = [
         "Color1", "Color2", "Color3", "Color4", "Color5"
     ]
-    
     private let iconDataSource = IconDataSource.shared
-    
-    // Initializers for create and edit modes
     init(routines: Binding<[Routine]>) {
         self._routines = routines
         self.isEditing = false
         self.editingIndex = nil
     }
-    
     init(routines: Binding<[Routine]>, editingRoutine: Routine, editingIndex: Int) {
         self._routines = routines
         self.isEditing = true
         self.editingIndex = editingIndex
-    
         self._routineName = State(initialValue: editingRoutine.name)
         self._selectedIcon = State(initialValue: editingRoutine.icon)
         self._selectedColor = State(initialValue: editingRoutine.colorName)
-        
         let initialItems = editingRoutine.routineItems.isEmpty && !editingRoutine.items.isEmpty
             ? editingRoutine.items.map { RoutineItem(name: $0, frequency: .everyDay) }
             : editingRoutine.routineItems
         self._routineItems = State(initialValue: initialItems.isEmpty ? [RoutineItem(name: "", frequency: .everyDay)] : initialItems)
-        
         self._frequency = State(initialValue: editingRoutine.frequency)
         self._endRepeatOption = State(initialValue: editingRoutine.endRepeatOption)
         self._endRepeatDate = State(initialValue: editingRoutine.endRepeatDate)
@@ -275,13 +230,11 @@ struct CreateRoutineView: View {
         self._customFrequencyConfig = State(initialValue: editingRoutine.customFrequencyConfig ?? CustomFrequencyConfig())
         self._hasManuallySelectedIcon = State(initialValue: true)
     }
-    
     var body: some View {
         NavigationView {
             ZStack {
                 Color("BackgroundPopup")
                     .edgesIgnoringSafeArea(.all)
-                
                 Form {
                     Section(header: Text("Routine Details")) {
                         HStack {
@@ -294,21 +247,17 @@ struct CreateRoutineView: View {
                             }
                             TextField("Routine Name", text: $routineName)
                                 .onChange(of: routineName) { _, newValue in
-                                  
                                     if !hasManuallySelectedIcon && !isEditing {
                                         updateIconBasedOnName(newValue)
                                     }
                                 }
                         }
-                        
                         HStack {
                             Text("Start Date")
                             Spacer()
                             DatePicker("", selection: $startDate, displayedComponents: .date)
                                 .labelsHidden()
                         }
-                        
-
                         HStack {
                             Text("Choose Color")
                             Spacer()
@@ -331,10 +280,8 @@ struct CreateRoutineView: View {
                         }
                         .padding(.vertical, 8)
                     }
-   
                     if isEditing {
                         Section(header: Text("Overall Routine Frequency")) {
-                            // Overall Routine Frequency
                             HStack {
                                 Text("Routine Repeat")
                                 Spacer()
@@ -363,7 +310,6 @@ struct CreateRoutineView: View {
                                     }
                                 }
                             }
-                            
                             if frequency != .never {
                                 HStack {
                                     Text("End Repeat")
@@ -375,7 +321,6 @@ struct CreateRoutineView: View {
                                     }
                                     .pickerStyle(MenuPickerStyle())
                                 }
-                                
                                 if endRepeatOption == .onDate {
                                     HStack {
                                         Text("End Date")
@@ -385,22 +330,18 @@ struct CreateRoutineView: View {
                                     }
                                 }
                             }
-                            
                             Text("This controls when the entire routine appears in your daily view. Individual items can have their own frequencies.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                     }
-                    
                     Section(header: Text("Routine Items")) {
                         ForEach(routineItems) { item in
                             let index = routineItems.firstIndex(where: { $0.id == item.id }) ?? 0
                             HStack {
-                                // Drag handle
                                 Image(systemName: "line.3.horizontal")
                                     .foregroundColor(.secondary)
                                     .font(.caption)
-                                
                                 TextField("Item \(index + 1)", text: Binding(
                                     get: {
                                         guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return "" }
@@ -411,9 +352,7 @@ struct CreateRoutineView: View {
                                         routineItems[currentIndex].name = newValue
                                     }
                                 ))
-                                
                                 Spacer()
-
                                 if isEditing && item.frequency != .everyDay {
                                     HStack(spacing: 4) {
                                         if item.frequency == .custom {
@@ -427,8 +366,6 @@ struct CreateRoutineView: View {
                                         }
                                     }
                                 }
-                                
-                                // Ellipsis menu for item details
                                 if !item.name.isEmpty || routineItems.count > 1 {
                                     Button(action: {
                                         guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
@@ -445,7 +382,6 @@ struct CreateRoutineView: View {
                             .padding(.vertical, 4)
                         }
                         .onMove(perform: moveItems)
-                        
                         Button(action: {
                             routineItems.append(RoutineItem(name: "", frequency: .everyDay))
                         }) {
@@ -468,7 +404,6 @@ struct CreateRoutineView: View {
                         dismiss()
                     }
                 }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         saveRoutine()
@@ -479,7 +414,6 @@ struct CreateRoutineView: View {
             .sheet(isPresented: $showingIconPicker) {
                 IconPickerView(selectedIcon: $selectedIcon, initialSearchText: routineName)
                     .onDisappear {
-                        // Mark that user has manually selected an icon
                         hasManuallySelectedIcon = true
                     }
             }
@@ -515,38 +449,26 @@ struct CreateRoutineView: View {
             if newFrequency == .never {
                 endRepeatOption = .never
             }
-            
-            // Show custom frequency picker when custom is selected
             if newFrequency == .custom {
                 showingCustomFrequencyPicker = true
             }
         }
     }
-    
-    // MARK: - Icon Auto-Selection Logic
     private func updateIconBasedOnName(_ name: String) {
-        // Don't update if the name is empty or too short
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return
         }
-        
-        // Use the enhanced word-by-word matching from IconDataSource
         let matchedIcon = iconDataSource.getFirstMatchingIconByWords(
             searchText: name,
-            defaultIcon: selectedIcon // Keep current icon if no match found
+            defaultIcon: selectedIcon
         )
-        
-        // Only update if we found a different icon
         if matchedIcon != selectedIcon {
             selectedIcon = matchedIcon
         }
     }
-    
-    // MARK: - Helper Methods
     private func moveItems(from source: IndexSet, to destination: Int) {
         routineItems.move(fromOffsets: source, toOffset: destination)
     }
-    
     private func saveRoutine() {
         let trimmedName = routineName.trimmingCharacters(in: .whitespacesAndNewlines)
         let filteredItems = routineItems.compactMap { item in
@@ -559,31 +481,26 @@ struct CreateRoutineView: View {
                 endRepeatDate: item.endRepeatDate
             )
         }
-        
         guard !trimmedName.isEmpty, !filteredItems.isEmpty else { return }
-        
         if isEditing, let index = editingIndex {
-            // Update existing routine
             var updatedRoutine = routines[index]
             updatedRoutine.name = trimmedName
             updatedRoutine.icon = selectedIcon
             updatedRoutine.colorName = selectedColor
             updatedRoutine.routineItems = filteredItems
-            updatedRoutine.items = [] // Clear legacy items
+            updatedRoutine.items = []
             updatedRoutine.frequency = frequency
             updatedRoutine.customFrequencyConfig = frequency == .custom ? customFrequencyConfig : nil
             updatedRoutine.endRepeatOption = endRepeatOption
             updatedRoutine.endRepeatDate = endRepeatDate
             updatedRoutine.startDate = startDate
-            
             routines[index] = updatedRoutine
         } else {
-            // Create new routine
             let newRoutine = Routine(
                 name: trimmedName,
                 icon: selectedIcon,
                 routineItems: filteredItems,
-                items: [], // Start with empty legacy items
+                items: [],
                 colorName: selectedColor,
                 frequency: frequency,
                 customFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil,
@@ -591,13 +508,10 @@ struct CreateRoutineView: View {
                 endRepeatDate: endRepeatDate,
                 startDate: startDate
             )
-            
             routines.append(newRoutine)
         }
-        
         dismiss()
     }
-    
     private func deleteRoutine() {
         if let index = editingIndex {
             routines.remove(at: index)
@@ -606,39 +520,31 @@ struct CreateRoutineView: View {
     }
 }
 
-// MARK: - Routine Item Detail View
 struct RoutineItemDetailView: View {
     @Binding var item: RoutineItem
     let onDelete: () -> Void
     @Environment(\.dismiss) private var dismiss
-    
     @State private var showingCustomFrequencyPicker = false
     @State private var customFrequencyConfig: CustomFrequencyConfig
     @State private var showingDeleteConfirmation = false
-    
     init(item: Binding<RoutineItem>, onDelete: @escaping () -> Void) {
         self._item = item
         self.onDelete = onDelete
-        
-        // Initialize custom frequency config
         if let existingConfig = item.wrappedValue.customFrequencyConfig {
             self._customFrequencyConfig = State(initialValue: existingConfig)
         } else {
             self._customFrequencyConfig = State(initialValue: CustomFrequencyConfig())
         }
     }
-    
     var body: some View {
         NavigationView {
             ZStack {
                 Color("BackgroundPopup")
                     .edgesIgnoringSafeArea(.all)
-                
                 Form {
                     Section(header: Text("Item Details")) {
                         TextField("Item Name", text: $item.name)
                     }
-                    
                     Section(header: Text("Frequency")) {
                         ForEach(Frequency.allCases) { frequency in
                             Button(action: {
@@ -655,9 +561,7 @@ struct RoutineItemDetailView: View {
                                         Text(frequency.displayName)
                                             .foregroundColor(.primary)
                                     }
-                                    
                                     Spacer()
-                                    
                                     if item.frequency == frequency {
                                         Image(systemName: "checkmark")
                                             .foregroundColor(.blue)
@@ -666,7 +570,6 @@ struct RoutineItemDetailView: View {
                             }
                         }
                     }
-                    
                     if item.frequency != .never {
                         Section(header: Text("End Repeat")) {
                             Picker("End Repeat", selection: $item.endRepeatOption) {
@@ -675,19 +578,16 @@ struct RoutineItemDetailView: View {
                                 }
                             }
                             .pickerStyle(SegmentedPickerStyle())
-                            
                             if item.endRepeatOption == .onDate {
                                 DatePicker("End Date", selection: $item.endRepeatDate, displayedComponents: .date)
                             }
                         }
                     }
-                    
                     Section {
                         Button("Delete Item", role: .destructive) {
                             showingDeleteConfirmation = true
                         }
                     }
-                    
                     Section {
                         Text("This frequency will override the routine's overall frequency for this specific item.")
                             .font(.caption)
@@ -705,7 +605,6 @@ struct RoutineItemDetailView: View {
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Done") {
-                            // Save custom frequency config if custom is selected
                             if item.frequency == .custom {
                                 item.customFrequencyConfig = customFrequencyConfig
                             } else {
@@ -735,7 +634,6 @@ struct RoutineItemDetailView: View {
                 if newFrequency == .never {
                     item.endRepeatOption = .never
                 }
-                
                 if newFrequency == .custom {
                     showingCustomFrequencyPicker = true
                 }
@@ -744,16 +642,13 @@ struct RoutineItemDetailView: View {
     }
 }
 
-// MARK: - Updated Bottom Sheet View for Routine Details
 struct RoutineDetailBottomSheetView: View {
     @Binding var routine: Routine
     let selectedDate: Date
     let onEdit: () -> Void
     @Environment(\.dismiss) private var dismiss
-    
     @State private var originalRoutine: Routine
     @State private var workingRoutine: Routine
-    
     init(routine: Binding<Routine>, selectedDate: Date, onEdit: @escaping () -> Void) {
         self._routine = routine
         self.selectedDate = selectedDate
@@ -761,33 +656,24 @@ struct RoutineDetailBottomSheetView: View {
         self._originalRoutine = State(initialValue: routine.wrappedValue)
         self._workingRoutine = State(initialValue: routine.wrappedValue)
     }
-    
-    // Get visible items for the selected date
     private var visibleItems: [RoutineItem] {
         return workingRoutine.visibleItems(for: selectedDate)
     }
-    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header Section
                 VStack(spacing: 16) {
                     Image(systemName: workingRoutine.icon)
                         .font(.system(size: 48))
                         .foregroundColor(workingRoutine.color)
-                    
                     Text(workingRoutine.name + " Routine")
                         .font(.title2)
                         .fontWeight(.semibold)
-                    
-                    // Updated progress calculation using visible items
                     ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
                         .progressViewStyle(LinearProgressViewStyle(tint: workingRoutine.color))
                         .scaleEffect(y: 1.5)
                         .frame(maxWidth: 200)
                         .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
-                    
-                    // Show count of visible vs total items
                     if visibleItems.count != workingRoutine.routineItems.count {
                         Text("\(visibleItems.count) of \(workingRoutine.routineItems.count) items today")
                             .font(.caption)
@@ -796,18 +682,14 @@ struct RoutineDetailBottomSheetView: View {
                 }
                 .padding(.top, 24)
                 .padding(.bottom, 32)
-
-                // Routine Items List - Only show visible items with clear background
                 if !visibleItems.isEmpty {
                     VStack(spacing: 0) {
                         VStack(spacing: 0) {
                             ForEach(visibleItems.indices, id: \.self) { index in
                                 let item = visibleItems[index]
-                                
                                 Button(action: {
                                     withAnimation(.easeInOut(duration: 0.3)) {
                                         workingRoutine.toggleItem(item.name, for: selectedDate)
-                                        // Auto-save changes immediately
                                         routine = workingRoutine
                                     }
                                 }) {
@@ -815,14 +697,11 @@ struct RoutineDetailBottomSheetView: View {
                                         Image(systemName: workingRoutine.isItemCompleted(item.name, for: selectedDate) ? "checkmark.circle.fill" : "circle")
                                             .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .primary : .gray)
                                             .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(item.name, for: selectedDate))
-                                        
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(item.name)
                                                 .strikethrough(workingRoutine.isItemCompleted(item.name, for: selectedDate))
                                                 .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .secondary : .primary)
                                                 .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(item.name, for: selectedDate))
-                                            
-                                            // Show item frequency if different from routine frequency
                                             if item.frequency != workingRoutine.frequency {
                                                 HStack(spacing: 4) {
                                                     Image(systemName: "repeat")
@@ -838,7 +717,6 @@ struct RoutineDetailBottomSheetView: View {
                                                 .foregroundColor(.secondary)
                                             }
                                         }
-                                        
                                         Spacer()
                                     }
                                     .padding(.vertical, 12)
@@ -846,7 +724,6 @@ struct RoutineDetailBottomSheetView: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(PlainButtonStyle())
-                                
                                 if index < visibleItems.count - 1 {
                                     Divider()
                                         .padding(.leading, 16)
@@ -856,16 +733,13 @@ struct RoutineDetailBottomSheetView: View {
                         .padding(.horizontal, 16)
                     }
                 } else {
-                    // Show message when no items are visible today
                     VStack(spacing: 16) {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 40))
                             .foregroundColor(.gray.opacity(0.5))
-                        
                         Text("No items scheduled for today")
                             .font(.headline)
                             .foregroundColor(.secondary)
-                        
                         Text("This routine has items with different frequencies. Check back on other days or edit the routine to adjust item schedules.")
                             .font(.body)
                             .foregroundColor(.secondary)
@@ -874,10 +748,7 @@ struct RoutineDetailBottomSheetView: View {
                     }
                     .padding(.top, 40)
                 }
-                
                 Spacer()
-                
-                // Done Button - Now just closes the sheet since changes are auto-saved
                 Button("Done") {
                     dismiss()
                 }
@@ -894,16 +765,13 @@ struct RoutineDetailBottomSheetView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
-                        // Revert to original state when canceling
                         routine = originalRoutine
                         dismiss()
                     }
                     .foregroundColor(.primary)
                 }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Edit") {
-                        // Save current state before editing
                         routine = workingRoutine
                         onEdit()
                     }
@@ -914,7 +782,6 @@ struct RoutineDetailBottomSheetView: View {
     }
 }
 
-// MARK: - Updated Main Routine View to Handle New Model
 struct RoutineView: View {
     var selectedDate: Date
     @Binding var routines: [Routine]
@@ -923,14 +790,11 @@ struct RoutineView: View {
     @State private var showCreateRoutine = false
     @State private var editingRoutine: Routine?
     @State private var editingRoutineIndex: Int?
-    
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMM d"
         return formatter
     }()
-    
-    // Filter routines that should appear on the selected date
     private var visibleRoutines: [(routine: Routine, index: Int)] {
         return routines.enumerated().compactMap { index, routine in
             if routine.shouldAppear(on: selectedDate) {
@@ -939,15 +803,12 @@ struct RoutineView: View {
             return nil
         }
     }
-    
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
                 Text("Routines")
                     .sectionHeaderStyle()
-                
                 Spacer()
-                
                 Button(action: {
                     showCreateRoutine = true
                 }) {
@@ -959,16 +820,12 @@ struct RoutineView: View {
                 .buttonStyle(PlainButtonStyle())
             }
             .padding(.bottom, 16)
-            
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack (spacing: 16) {
                     ForEach(visibleRoutines, id: \.routine.id) { routineData in
                         Button(action: {
-                            // Clear any existing selection first
                             selectedRoutineIndex = nil
                             showRoutineDetail = false
-                            
-                            // Set new selection after a brief delay to ensure clean state
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 selectedRoutineIndex = routineData.index
                                 showRoutineDetail = true
@@ -983,36 +840,27 @@ struct RoutineView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(routineData.routine.name)
                                                 .font(.system(size: 18, weight: .medium, design: .default))
-                                             //   .kerning(0.5)
                                                 .foregroundColor(.primary)
-                                               
                                             Text("Routine")
                                                 .font(.system(size: 10, weight: .regular, design: .default))
-                                               // .kerning(0.5)
                                                 .textCase(.uppercase)
                                                 .foregroundColor(.primary.opacity(0.75))
-                                             
                                         }
                                         Spacer()
-                                        
                                         Image(systemName: routineData.routine.icon)
                                             .frame(width: 36, height: 36)
                                             .font(.largeTitle)
                                             .foregroundColor(Color(routineData.routine.color).opacity(0.75))
-                                
                                     }
                                     .padding(.horizontal, 8)
-                                    
-                                    // Updated to use progress for specific date (with item-level frequency support)
                                     ProgressView(value: routineData.routine.progress(for: selectedDate), total: 1.0)
                                         .progressViewStyle(LinearProgressViewStyle(tint: Color(routineData.routine.color)))
-                                        .scaleEffect(y: 1.5) // Makes the progress bar taller
+                                        .scaleEffect(y: 1.5)
                                         .padding(.top, 8)
                                         .animation(.easeInOut(duration: 0.3), value: routineData.routine.progress(for: selectedDate))
                                 }
                                 .frame(width: 144)
                             }
-                            
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
@@ -1035,11 +883,8 @@ struct RoutineView: View {
                     routine: $routines[index],
                     selectedDate: selectedDate,
                     onEdit: {
-                        // Set up edit state
                         editingRoutineIndex = index
                         editingRoutine = routines[index]
-                        
-                        // Close the detail sheet
                         selectedRoutineIndex = nil
                         showRoutineDetail = false
                     }
@@ -1068,7 +913,6 @@ struct RoutineView: View {
                     editingIndex: editIndex
                 )
                 .onDisappear {
-                    // Clean up edit state when sheet is dismissed
                     editingRoutine = nil
                     editingRoutineIndex = nil
                 }
@@ -1079,39 +923,29 @@ struct RoutineView: View {
             migrateRoutines()
         }
     }
-    
     private func updateDefaultRoutinesStartDate() {
         let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        
         for index in routines.indices {
             if Calendar.current.isDate(routines[index].startDate, inSameDayAs: Date()) {
                 routines[index].startDate = weekAgo
             }
         }
     }
-    
-    // Migration helper to convert legacy string items to RoutineItem objects and set default colors
     private func migrateRoutines() {
         var needsUpdate = false
         let defaultColors = ["Color1", "Color2", "Color3", "Color4", "Color5"]
-        
         for index in routines.indices {
-            // Migrate legacy string items to RoutineItem objects
             if routines[index].routineItems.isEmpty && !routines[index].items.isEmpty {
                 routines[index].routineItems = routines[index].items.map {
                     RoutineItem(name: $0, frequency: .everyDay)
                 }
                 needsUpdate = true
             }
-            
-            // Set default color if none exists (for existing routines)
             if routines[index].colorName.isEmpty {
                 routines[index].colorName = defaultColors[index % defaultColors.count]
                 needsUpdate = true
             }
         }
-        
-        // Note: In a real app, you'd want to save this migration back to persistent storage
         if needsUpdate {
             print("Migrated routines from legacy format and assigned default colors")
         }
