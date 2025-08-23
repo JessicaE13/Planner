@@ -60,7 +60,7 @@ struct ScheduleDetailView: View {
                                 .font(.title)
                                 .foregroundColor(.white)
                         }
-                        // Measure the height of the VStack (title, time & location)
+                        // Measure the height of the VStack (title, time)
                         VStack(alignment: .leading, spacing: 8) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(item.title)
@@ -68,41 +68,14 @@ struct ScheduleDetailView: View {
                                     .fontWeight(.semibold)
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                // --- TIME PART MOVED UP HERE ---
                                 if item.itemType == .scheduled {
                                     createTimeView()
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 0)
                                 }
-                                // --- LOCATION PART MOVED BELOW TIME ---
-                                if !item.location.isEmpty {
-                                    Button(action: {
-                                        showingMapOptions = true
-                                    }) {
-                                        HStack(alignment: .top) {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                HStack(alignment: .top, spacing: 4) {
-                                                    Image(systemName: "location")
-                                                        .font(.caption2)
-                                                        .foregroundColor(.blue)
-                                                    Text(item.location)
-                                                        .font(.caption)
-                                                        .multilineTextAlignment(.leading)
-                                                        .foregroundColor(.blue)
-                                                }
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                            }
-                                            Spacer()
-                                            
-                                        }
-                                        .contentShape(Rectangle())
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
                             }
                         }
                         .padding(.leading, 8)
-                        // GeometryReader to measure height
                         .background(
                             GeometryReader { geometry in
                                 Color.clear
@@ -116,8 +89,35 @@ struct ScheduleDetailView: View {
                         )
                     }
                     .padding(.leading, 24)
-                    .padding(.top, 32) // Added top padding here
+                    .padding(.top, 32)
+
+                    if !item.location.isEmpty {
+                        Button(action: {
+                            showingMapOptions = true
+                        }) {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(alignment: .top, spacing: 4) {
+                                        Image(systemName: "location")
+                                            .foregroundColor(.blue)
+                                        Text(item.location)
+                                            .multilineTextAlignment(.leading)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                Spacer()
+                            }
+                            .font(.title)
+                            .contentShape(Rectangle())
+                        }
                     
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.leading, 24)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+                    }
                     
                     if item.itemType == .todo {
                         VStack(alignment: .leading, spacing: 12) {
@@ -346,7 +346,7 @@ struct ScheduleDetailView: View {
                 }
             }
         }
-        .padding(.horizontal, 24)
+        // Remove horizontal padding so time aligns with title
     }
 
     private func displayDateForTimeRangeStart() -> Date {
