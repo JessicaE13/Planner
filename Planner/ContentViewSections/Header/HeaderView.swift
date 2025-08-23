@@ -35,7 +35,9 @@ struct HeaderView: View {
         VStack(spacing: 20) {
             HStack {
                 Image(systemName: "person.circle.fill")
+                 
                 Text("Hello, Jessica")
+                   
                 Spacer()
                 
                 // Previous week button
@@ -45,6 +47,7 @@ struct HeaderView: View {
                     }
                 } label: {
                     Image(systemName: "chevron.left")
+                       
                 }
                 .padding(.trailing, 8)
                 
@@ -55,6 +58,7 @@ struct HeaderView: View {
                     }
                 } label: {
                     Image(systemName: "chevron.right")
+                       
                 }
                 
                 Button("Today") {
@@ -63,6 +67,7 @@ struct HeaderView: View {
                         selectedDate = Date()
                     }
                 }
+             
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(Color.gray.opacity(0.001))
@@ -73,8 +78,10 @@ struct HeaderView: View {
                     showingDatePicker = true
                 } label: {
                     Image(systemName: "calendar")
+                      
                 }
             }
+            .font(.title3)
             
             HStack {
                 ForEach(weekDates, id: \.self) { date in
