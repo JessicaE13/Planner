@@ -60,7 +60,7 @@ struct ScheduleDetailView: View {
                                 .font(.title)
                                 .foregroundColor(.white)
                         }
-                        // Measure the height of the VStack (title & location)
+                        // Measure the height of the VStack (title, time & location)
                         VStack(alignment: .leading, spacing: 8) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(item.title)
@@ -68,6 +68,13 @@ struct ScheduleDetailView: View {
                                     .fontWeight(.semibold)
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
+                                // --- TIME PART MOVED UP HERE ---
+                                if item.itemType == .scheduled {
+                                    createTimeView()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 0)
+                                }
+                                // --- LOCATION PART MOVED BELOW TIME ---
                                 if !item.location.isEmpty {
                                     Button(action: {
                                         showingMapOptions = true
@@ -159,9 +166,8 @@ struct ScheduleDetailView: View {
                     
                     
                     if item.itemType == .scheduled {
-                        createTimeView()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 16)
+                        // removed: createTimeView()
+                        EmptyView()
                     }
              
                     

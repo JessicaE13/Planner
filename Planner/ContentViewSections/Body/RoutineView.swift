@@ -822,7 +822,8 @@ struct RoutineView: View {
             .padding(.bottom, 16)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack (spacing: 16) {
-                    ForEach(visibleRoutines, id: \.routine.id) { routineData in
+                    ForEach(visibleRoutines.indices, id: \.self) { idx in
+                        let routineData = visibleRoutines[idx]
                         Button(action: {
                             selectedRoutineIndex = nil
                             showRoutineDetail = false
@@ -865,9 +866,10 @@ struct RoutineView: View {
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .padding(.leading, idx == 0 ? 16 : 0)
+                        .padding(.trailing, idx == visibleRoutines.count - 1 ? 16 : 0)
                     }
                 }
-                .padding(.horizontal, 16)
             }
         }
         .padding()
