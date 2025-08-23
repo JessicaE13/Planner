@@ -60,7 +60,7 @@ struct ScheduleDetailView: View {
                                 .font(.title)
                                 .foregroundColor(.white)
                         }
-                        // Measure the height of the VStack (title, time)
+                        
                         VStack(alignment: .leading, spacing: 8) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(item.title)
@@ -319,32 +319,21 @@ struct ScheduleDetailView: View {
         
                 HStack(spacing: 8) {
                     Image(systemName: "calendar")
-                        .foregroundColor(.primary)
-                        .font(.caption2)
                     Text(dateFormatter.string(from: displayDate))
-                        .font(.caption)
-     
-                        .foregroundColor(.primary)
                 }
-
  
                 if item.allDay {
                     Text("All Day")
-                        .font(.caption)
-                     //   .fontWeight(.medium)
-                        .foregroundColor(.primary)
                 } else {
                     HStack(spacing: 8) {
                         Image(systemName: "clock")
-                            .foregroundColor(.primary)
-                            .font(.caption2)
                         Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
-                            .font(.caption)
-                      //      .fontWeight(.medium)
-                            .foregroundColor(.primary)
+            
                     }
                 }
             }
+            .font(.footnote)
+            .foregroundColor(.primary)
         }
         // Remove horizontal padding so time aligns with title
     }
