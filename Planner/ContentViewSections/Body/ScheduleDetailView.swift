@@ -17,6 +17,8 @@ struct ScheduleDetailView: View {
     let onSave: (ScheduleItem) -> Void
     @State private var showingMapOptions = false
     @StateObject private var dataManager = UnifiedDataManager.shared
+    // Add state to track the height of the VStack (title & location)
+    @State private var vStackHeight: CGFloat = 80
     
     // Add computed property for display date
     private var displayDate: Date {
@@ -44,33 +46,28 @@ struct ScheduleDetailView: View {
     
     var body: some View {
         ZStack {
-            
             ScrollView {
                 VStack(spacing: 24) {
 
                     // Add top padding to move icon/title section down
-                    HStack(alignment: .center, spacing: 16) {
-      
+                    HStack(alignment: .top, spacing: 16) {
+                        // Use the measured height for the ZStack
                         ZStack {
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(Color(item.color))
-                                .frame(width: 56, height: 80)
+                                .frame(width: 56, height: vStackHeight)
                             Image(systemName: item.icon)
                                 .font(.title)
                                 .foregroundColor(.white)
                         }
-                   
-
+                        // Measure the height of the VStack (title & location)
                         VStack(alignment: .leading, spacing: 8) {
-                            
-
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(item.title)
                                     .font(.title)
                                     .fontWeight(.semibold)
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                        
                                 if !item.location.isEmpty {
                                     Button(action: {
                                         showingMapOptions = true
@@ -98,6 +95,18 @@ struct ScheduleDetailView: View {
                             }
                         }
                         .padding(.leading, 8)
+                        // GeometryReader to measure height
+                        .background(
+                            GeometryReader { geometry in
+                                Color.clear
+                                    .onAppear {
+                                        vStackHeight = geometry.size.height
+                                    }
+                                    .onChange(of: geometry.size.height) { newValue, _ in
+                                        vStackHeight = newValue
+                                    }
+                            }
+                        )
                     }
                     .padding(.leading, 24)
                     .padding(.top, 32) // Added top padding here
@@ -148,7 +157,16 @@ struct ScheduleDetailView: View {
                         .padding(.horizontal)
                     }
                     
+                    
+                    if item.itemType == .scheduled {
+                        createTimeView()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    
                     if let category = item.category {
+                  
+                            
                         HStack {
                             Text("Category")
                                 .font(.headline)
@@ -165,16 +183,12 @@ struct ScheduleDetailView: View {
                             .padding(.horizontal, 12)
                             .cornerRadius(12)
                         }
-                        .padding(.vertical, 16)
                         .padding(.horizontal, 24)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 8)
+                       
+                        
                     }
                     
-                    if item.itemType == .scheduled {
-                        createTimeView()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+           
                     
                     // Description
                     if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -189,11 +203,13 @@ struct ScheduleDetailView: View {
                                 .font(.body)
                                 .multilineTextAlignment(.leading)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                            
                         }
-                        .padding(.vertical, 16)
-                        .padding(.horizontal, 24)
+
                         .padding(.horizontal, 24)
                         .padding(.vertical, 8)
+                        
+                   
                     }
                     
                     // Checklist - Full row tap functionality
@@ -221,7 +237,7 @@ struct ScheduleDetailView: View {
                                                 .font(.body)
                                             Spacer()
                                         }
-                                        .padding(.vertical, 8)
+                                        .padding(.vertical, 4)
                                         .cornerRadius(8)
                                         .contentShape(Rectangle())
                                     }
@@ -235,8 +251,6 @@ struct ScheduleDetailView: View {
                                 }
                             }
                         }
-                        .padding(.vertical, 16)
-                        .padding(.horizontal, 24)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 8)
                     }
@@ -322,9 +336,8 @@ struct ScheduleDetailView: View {
                     }
                 }
             }
-            .padding()
         }
-        .padding(.horizontal)
+        .padding(.horizontal, 24)
     }
 
     private func displayDateForTimeRangeStart() -> Date {
@@ -390,7 +403,7 @@ struct ScheduleDetailView: View {
     NavigationView {
         ScheduleDetailView(
             item: ScheduleItem.createScheduled(
-                title: "Team Meeting",
+                title: "Team Meeting asdasdcascasdcasdcasdcsadc",
                 startTime: Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date()) ?? Date(),
                 endTime: Calendar.current.date(bySettingHour: 11, minute: 30, second: 0, of: Date()) ?? Date(),
                 icon: "calendar",
