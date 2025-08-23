@@ -47,7 +47,7 @@ struct ScheduleDetailView: View {
     var body: some View {
         ZStack {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing:8) {
 
                     // Add top padding to move icon/title section down
                     HStack(alignment: .top, spacing: 16) {
@@ -55,7 +55,7 @@ struct ScheduleDetailView: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(Color(item.color))
-                                .frame(width: 56, height: vStackHeight)
+                                .frame(width: 56, height: max(vStackHeight, 75))
                             Image(systemName: item.icon)
                                 .font(.title)
                                 .foregroundColor(.white)
@@ -161,17 +161,18 @@ struct ScheduleDetailView: View {
                     if item.itemType == .scheduled {
                         createTimeView()
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 16)
                     }
-                    
+             
                     
                     if let category = item.category {
-                  
-                            
+                        Divider()
+                            .padding(.horizontal, 24)
                         HStack {
                             Text("Category")
-                                .font(.headline)
-                                .kerning(1)
-                                .textCase(.uppercase)
+                            //.font(.headline)
+                            //.kerning(1)
+                            // .textCase(.uppercase)
                                 .foregroundColor(.primary)
                             Spacer()
                             HStack(spacing: 8) {
@@ -184,8 +185,10 @@ struct ScheduleDetailView: View {
                             .cornerRadius(12)
                         }
                         .padding(.horizontal, 24)
-                       
-                        
+                        // Reduced vertical padding
+                        Divider()
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 16)
                     }
                     
            
@@ -207,7 +210,7 @@ struct ScheduleDetailView: View {
                         }
 
                         .padding(.horizontal, 24)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 16)
                         
                    
                     }
@@ -252,7 +255,7 @@ struct ScheduleDetailView: View {
                             }
                         }
                         .padding(.horizontal, 24)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 16)
                     }
                     
                     Spacer()
@@ -298,12 +301,12 @@ struct ScheduleDetailView: View {
         
                 HStack(spacing: 8) {
                     Image(systemName: "calendar")
-                        .foregroundColor(.gray)
+                        .foregroundColor(.primary)
                         .font(.caption2)
                     Text(dateFormatter.string(from: displayDate))
                         .font(.caption)
      
-                        .foregroundColor(.gray)
+                        .foregroundColor(.primary)
                 }
 
  
@@ -311,7 +314,7 @@ struct ScheduleDetailView: View {
                     Text("All Day")
                         .font(.caption)
                      //   .fontWeight(.medium)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.primary)
                 } else {
                     HStack(spacing: 8) {
                         Image(systemName: "clock")
@@ -320,19 +323,19 @@ struct ScheduleDetailView: View {
                         Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
                             .font(.caption)
                       //      .fontWeight(.medium)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.primary)
                     }
                 }
 
                 if item.frequency != .never {
                     HStack(spacing: 8) {
                         Image(systemName: "repeat")
-                            .foregroundColor(.gray)
+                            .foregroundColor(.primary)
                             .font(.caption2)
                         
                         Text(getFrequencyDisplayText())
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.primary)
                     }
                 }
             }
