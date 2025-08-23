@@ -166,7 +166,6 @@ struct ScheduleDetailView: View {
                     
                     
                     if item.itemType == .scheduled {
-                        // removed: createTimeView()
                         EmptyView()
                     }
              
@@ -188,12 +187,12 @@ struct ScheduleDetailView: View {
                             .cornerRadius(12)
                         }
                         .padding(.horizontal, 24)
+                        .padding(.top, 16)
                         Divider()
                             .padding(.horizontal, 24)
                             .padding(.bottom, 0)
                     }
 
-                    // Repeat row (recurrence)
                     if item.frequency != .never {
                         HStack {
                             Text("Repeat")
