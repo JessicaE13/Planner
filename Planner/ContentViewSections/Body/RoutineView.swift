@@ -833,16 +833,18 @@ struct RoutineView: View {
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color("Background").opacity(0.75))
+                                    .fill(Color(.systemBackground))
                                     .frame(width: 164, height: 100)
                                 VStack {
                                     HStack(alignment: .bottom) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(routineData.routine.name)
-                                                .font(.system(size: 18, weight: .medium, design: .default))
+                                                .font(.body)
+                                                //.kerning(0.5)
                                                 .foregroundColor(.primary)
                                             Text("Routine")
-                                                .font(.system(size: 10, weight: .regular, design: .default))
+                                                .font(.caption2)
+                                               // .kerning(0.5)
                                                 .textCase(.uppercase)
                                                 .foregroundColor(.primary.opacity(0.75))
                                         }
@@ -954,6 +956,9 @@ struct RoutineView: View {
 
 #Preview {
     ZStack {
+        Color("BackgroundPopup")
+            .ignoresSafeArea()
+        
         RoutineView(
             selectedDate: Date(),
             routines: .constant([
