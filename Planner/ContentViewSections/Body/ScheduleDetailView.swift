@@ -170,9 +170,6 @@ struct ScheduleDetailView: View {
                             .padding(.horizontal, 24)
                         HStack {
                             Text("Category")
-                            //.font(.headline)
-                            //.kerning(1)
-                            // .textCase(.uppercase)
                                 .foregroundColor(.primary)
                             Spacer()
                             HStack(spacing: 8) {
@@ -185,13 +182,28 @@ struct ScheduleDetailView: View {
                             .cornerRadius(12)
                         }
                         .padding(.horizontal, 24)
-                        // Reduced vertical padding
                         Divider()
                             .padding(.horizontal, 24)
-                            .padding(.bottom, 16)
+                            .padding(.bottom, 0)
                     }
-                    
-           
+
+                    // Repeat row (recurrence)
+                    if item.frequency != .never {
+                        HStack {
+                            Text("Repeat")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            HStack(spacing: 8) {
+                                Text(getFrequencyDisplayText())
+                            }
+                            .padding(.horizontal, 12)
+                            .cornerRadius(12)
+                        }
+                        .padding(.horizontal, 24)
+                        Divider()
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 0)
+                    }
                     
                     // Description
                     if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -323,18 +335,6 @@ struct ScheduleDetailView: View {
                         Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
                             .font(.caption)
                       //      .fontWeight(.medium)
-                            .foregroundColor(.primary)
-                    }
-                }
-
-                if item.frequency != .never {
-                    HStack(spacing: 8) {
-                        Image(systemName: "repeat")
-                            .foregroundColor(.primary)
-                            .font(.caption2)
-                        
-                        Text(getFrequencyDisplayText())
-                            .font(.caption)
                             .foregroundColor(.primary)
                     }
                 }
