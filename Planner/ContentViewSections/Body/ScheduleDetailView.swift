@@ -403,7 +403,7 @@ struct ScheduleDetailView: View {
     NavigationView {
         ScheduleDetailView(
             item: ScheduleItem.createScheduled(
-                title: "Team Meeting asdasdcascasdcasdcasdcsadc",
+                title: "Team Meeting",
                 startTime: Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date()) ?? Date(),
                 endTime: Calendar.current.date(bySettingHour: 11, minute: 30, second: 0, of: Date()) ?? Date(),
                 icon: "calendar",
