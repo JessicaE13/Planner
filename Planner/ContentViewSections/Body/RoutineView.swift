@@ -70,29 +70,26 @@ struct Routine: Identifiable, Codable {
     let id = UUID()
     var name: String
     var icon: String
-    var routineItems: [RoutineItem] = [] // New: structured items with frequency
-    var items: [String] = [] // Keep for backward compatibility during migration
-    
-    // Add missing properties for compatibility
+    var routineItems: [RoutineItem] = []
+    var items: [String] = []
     var iconName: String {
         return icon
     }
-    var colorName: String = "Color1" // Store color as string name
+    var colorName: String = "Color1"
     var color: Color {
         return Color(colorName)
     }
     
-    // Changed from Set<String> to [String: Set<String>] to track completion per date
     var completedItemsByDate: [String: Set<String>] = [:]
     
-    // Overall routine frequency properties
+
     var frequency: Frequency = .everyDay
     var customFrequencyConfig: CustomFrequencyConfig? = nil
     var endRepeatOption: EndRepeatOption = .never
     var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     var startDate: Date = Date()
     
-    // Custom initializer
+
     init(name: String, icon: String, routineItems: [RoutineItem] = [], items: [String] = [], colorName: String = "Color1", frequency: Frequency = .everyDay, customFrequencyConfig: CustomFrequencyConfig? = nil, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(), startDate: Date = Date()) {
         self.name = name
         self.icon = icon
@@ -105,13 +102,13 @@ struct Routine: Identifiable, Codable {
         self.endRepeatDate = endRepeatDate
         self.startDate = startDate
         
-        // Auto-migrate simple items to routine items if needed
+
         if routineItems.isEmpty && !items.isEmpty {
             self.routineItems = items.map { RoutineItem(name: $0, frequency: .everyDay) }
         }
     }
     
-    // Custom Codable implementation
+
     enum CodingKeys: String, CodingKey {
         case id, name, icon, routineItems, items, completedItemsByDate, frequency, customFrequencyConfig, endRepeatOption, endRepeatDate, startDate, colorName
     }
@@ -131,7 +128,7 @@ struct Routine: Identifiable, Codable {
         
         colorName = try container.decodeIfPresent(String.self, forKey: .colorName) ?? "Color1"
         
-        // Migration: Convert simple items to routine items if needed
+
         if routineItems.isEmpty && !items.isEmpty {
             routineItems = items.map { RoutineItem(name: $0, frequency: .everyDay) }
         }
@@ -152,27 +149,27 @@ struct Routine: Identifiable, Codable {
         try container.encode(colorName, forKey: .colorName)
     }
     
-    // Helper method to get date key
+ 
     private func dateKey(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
     
-    // Get completed items for a specific date
+
     func completedItems(for date: Date) -> Set<String> {
         let key = dateKey(for: date)
         return completedItemsByDate[key] ?? []
     }
     
-    // Get visible items for a specific date (considering individual item frequencies)
+
     func visibleItems(for date: Date) -> [RoutineItem] {
         return routineItems.filter { item in
             item.shouldAppear(on: date, routineStartDate: startDate)
         }
     }
     
-    // Calculate progress for a specific date based on visible items
+
     func progress(for date: Date) -> Double {
         let visibleItems = self.visibleItems(for: date)
         guard !visibleItems.isEmpty else { return 0 }
@@ -183,8 +180,7 @@ struct Routine: Identifiable, Codable {
         
         return Double(completedVisibleItems.count) / Double(visibleItems.count)
     }
-    
-    // Toggle item completion for a specific date
+
     mutating func toggleItem(_ itemName: String, for date: Date) {
         let key = dateKey(for: date)
         var completedForDate = completedItemsByDate[key] ?? []
@@ -198,28 +194,25 @@ struct Routine: Identifiable, Codable {
         completedItemsByDate[key] = completedForDate
     }
     
-    // Check if item is completed for a specific date
+
     func isItemCompleted(_ itemName: String, for date: Date) -> Bool {
         let completed = completedItems(for: date)
         return completed.contains(itemName)
     }
     
-    // Check if routine should appear based on overall frequency
+
     func shouldAppear(on date: Date) -> Bool {
-        // Check if the routine should trigger based on frequency from start date (including custom config)
+   
         let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate, customConfig: customFrequencyConfig)
         
-        // If it shouldn't trigger based on frequency, don't show
         if !shouldTrigger {
             return false
         }
-        
-        // Check end repeat conditions
+
         if endRepeatOption == .onDate {
             return date <= endRepeatDate
         }
         
-        // If endRepeatOption is .never, show indefinitely (as long as frequency matches)
         return true
     }
 }
@@ -229,7 +222,6 @@ struct CreateRoutineView: View {
     @Binding var routines: [Routine]
     @Environment(\.dismiss) private var dismiss
     
-    // New properties for edit functionality
     let isEditing: Bool
     let editingIndex: Int?
     
@@ -245,12 +237,8 @@ struct CreateRoutineView: View {
     @State private var showingCustomFrequencyPicker = false
     @State private var customFrequencyConfig = CustomFrequencyConfig()
     @State private var showingDeleteConfirmation = false
-    
-    // Item-level frequency editing
     @State private var editingItemIndex: Int?
     @State private var showingItemDetailSheet = false
-    
-    // Track if user has manually selected an icon
     @State private var hasManuallySelectedIcon = false
     
     private let availableColors: [String] = [
@@ -270,13 +258,11 @@ struct CreateRoutineView: View {
         self._routines = routines
         self.isEditing = true
         self.editingIndex = editingIndex
-        
-        // Initialize state with existing routine data
+    
         self._routineName = State(initialValue: editingRoutine.name)
         self._selectedIcon = State(initialValue: editingRoutine.icon)
         self._selectedColor = State(initialValue: editingRoutine.colorName)
         
-        // Initialize with routine items, or migrate from simple items
         let initialItems = editingRoutine.routineItems.isEmpty && !editingRoutine.items.isEmpty
             ? editingRoutine.items.map { RoutineItem(name: $0, frequency: .everyDay) }
             : editingRoutine.routineItems
@@ -287,7 +273,7 @@ struct CreateRoutineView: View {
         self._endRepeatDate = State(initialValue: editingRoutine.endRepeatDate)
         self._startDate = State(initialValue: editingRoutine.startDate)
         self._customFrequencyConfig = State(initialValue: editingRoutine.customFrequencyConfig ?? CustomFrequencyConfig())
-        self._hasManuallySelectedIcon = State(initialValue: true) // Assume manually selected when editing
+        self._hasManuallySelectedIcon = State(initialValue: true)
     }
     
     var body: some View {
@@ -308,7 +294,7 @@ struct CreateRoutineView: View {
                             }
                             TextField("Routine Name", text: $routineName)
                                 .onChange(of: routineName) { _, newValue in
-                                    // Only auto-update icon if user hasn't manually selected one and we're not editing
+                                  
                                     if !hasManuallySelectedIcon && !isEditing {
                                         updateIconBasedOnName(newValue)
                                     }
@@ -322,7 +308,7 @@ struct CreateRoutineView: View {
                                 .labelsHidden()
                         }
                         
-                        // Color Picker
+
                         HStack {
                             Text("Choose Color")
                             Spacer()
@@ -345,8 +331,7 @@ struct CreateRoutineView: View {
                         }
                         .padding(.vertical, 8)
                     }
-                    
-                    // Show overall routine frequency section only when editing
+   
                     if isEditing {
                         Section(header: Text("Overall Routine Frequency")) {
                             // Overall Routine Frequency
@@ -428,8 +413,7 @@ struct CreateRoutineView: View {
                                 ))
                                 
                                 Spacer()
-                                
-                                // Show frequency inline if editing and not "Every Day"
+
                                 if isEditing && item.frequency != .everyDay {
                                     HStack(spacing: 4) {
                                         if item.frequency == .custom {
