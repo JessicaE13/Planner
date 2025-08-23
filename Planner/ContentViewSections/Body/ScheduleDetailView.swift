@@ -48,6 +48,7 @@ struct ScheduleDetailView: View {
             ScrollView {
                 VStack(spacing: 24) {
 
+                    // Add top padding to move icon/title section down
                     HStack(alignment: .center, spacing: 16) {
       
                         ZStack {
@@ -99,6 +100,7 @@ struct ScheduleDetailView: View {
                         .padding(.leading, 8)
                     }
                     .padding(.leading, 24)
+                    .padding(.top, 32) // Added top padding here
                     
                     
                     if item.itemType == .todo {
@@ -146,60 +148,63 @@ struct ScheduleDetailView: View {
                         .padding(.horizontal)
                     }
                     
+                    if let category = item.category {
+                        HStack {
+                            Text("Category")
+                                .font(.headline)
+                                .kerning(1)
+                                .textCase(.uppercase)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(Color(category.color))
+                                    .frame(width: 16, height: 16)
+                                Text(category.name)
+                            }
+                            .padding(.horizontal, 12)
+                            .cornerRadius(12)
+                        }
+                        .padding(.vertical, 16)
+                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 8)
+                    }
+                    
                     if item.itemType == .scheduled {
                         createTimeView()
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     
-                    if let category = item.category {
-                        VStack(spacing: 0) {
-                            Divider()
-                                .padding(.horizontal, 24)
-                            
-                            HStack {
-                                Text("Category")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                
-                                Spacer()
-                                
-                                HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(Color(category.color))
-                                        .frame(width: 16, height: 16)
-                                    Text(category.name)
-                                 
-                                }
-                                .padding(.horizontal, 12)
-                                .cornerRadius(12)
-                            }
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 16)
-                            
-                            Divider()
-                                .padding(.horizontal, 24)
-                        }
-                    }
-                    
                     // Description
                     if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                               
+                            Text("Description")
+                                .font(.headline)
+                                .kerning(1)
+                                .textCase(.uppercase)
+                                .foregroundColor(.primary)
+                                .padding(.bottom, 4)
                             Text(item.descriptionText)
                                 .font(.body)
                                 .multilineTextAlignment(.leading)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding()
-    
                         }
-                        .padding(.horizontal)
+                        .padding(.vertical, 16)
+                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 8)
                     }
                     
                     // Checklist - Full row tap functionality
                     if !item.checklist.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Checklist")
+                                .font(.headline)
+                                .kerning(1)
+                                .textCase(.uppercase)
+                                .foregroundColor(.primary)
+                                .padding(.bottom, 4)
                             VStack(spacing: 0) {
                                 ForEach(Array(item.checklist.enumerated()), id: \.element.id) { index, checklistItem in
                                     Button(action: {
@@ -210,32 +215,30 @@ struct ScheduleDetailView: View {
                                             Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
                                                 .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
                                                 .font(.title3)
-                                            
                                             Text(checklistItem.text)
                                                 .strikethrough(checklistItem.isCompleted)
                                                 .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
                                                 .font(.body)
-                                            
                                             Spacer()
                                         }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 12)
+                                        .padding(.vertical, 8)
                                         .cornerRadius(8)
                                         .contentShape(Rectangle())
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                     .animation(.easeInOut(duration: 0.2), value: checklistItem.isCompleted)
-                                    
                                     if index < item.checklist.count  {
                                         Divider()
                                             .padding(.leading, 36)
                                             .padding(.trailing, 12)
                                     }
                                 }
-                                
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.vertical, 16)
+                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 8)
                     }
                     
                     Spacer()

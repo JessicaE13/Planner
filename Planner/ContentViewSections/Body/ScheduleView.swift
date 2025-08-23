@@ -765,6 +765,7 @@ struct EditScheduleItemView: View {
     @State private var checklistItems: [ChecklistItem] = []
     @State private var newChecklistItem: String = ""
     @FocusState private var checklistInputFocused: Bool
+    @Environment(\.editMode) private var editMode // Add edit mode environment
     
     // Category management
     @State private var selectedCategory: Category?
@@ -1120,6 +1121,7 @@ struct EditScheduleItemView: View {
                                 .padding(.vertical, 2)
                             }
                             .onDelete(perform: deleteChecklistItems)
+                            .onMove(perform: moveChecklistItems) // Enable reordering
                             
                             HStack {
                                 Image(systemName: "plus.circle.fill")
@@ -1184,6 +1186,9 @@ struct EditScheduleItemView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    EditButton() // Add edit button for reordering
                 }
             }
         }
@@ -1258,6 +1263,10 @@ struct EditScheduleItemView: View {
     
     private func deleteChecklistItems(offsets: IndexSet) {
         checklistItems.remove(atOffsets: offsets)
+    }
+    
+    private func moveChecklistItems(from source: IndexSet, to destination: Int) {
+        checklistItems.move(fromOffsets: source, toOffset: destination)
     }
 }
 
