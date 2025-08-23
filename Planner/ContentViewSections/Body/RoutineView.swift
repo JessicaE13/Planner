@@ -839,8 +839,8 @@ struct RoutineView: View {
                                     HStack(alignment: .bottom) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(routineData.routine.name)
-                                                .font(.body)
-                                                //.kerning(0.5)
+                                                .font(.headline)
+                                                .kerning(0.5)
                                                 .foregroundColor(.primary)
                                             Text("Routine")
                                                 .font(.caption2)
