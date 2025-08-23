@@ -65,7 +65,7 @@ struct ScheduleDetailView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(item.title)
                                     .font(.title)
-                                    .fontWeight(.semibold)
+                                    .fontWeight(.bold)
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 if item.itemType == .scheduled {
@@ -217,6 +217,7 @@ struct ScheduleDetailView: View {
                             Text("Description")
                                 .font(.headline)
                                 .kerning(1)
+                                .fontWeight(.bold)
                                 .textCase(.uppercase)
                                 .foregroundColor(.primary)
                                 .padding(.bottom, 4)
@@ -239,6 +240,7 @@ struct ScheduleDetailView: View {
                             Text("Checklist")
                                 .font(.headline)
                                 .kerning(1)
+                                .fontWeight(.bold)
                                 .textCase(.uppercase)
                                 .foregroundColor(.primary)
                                 .padding(.bottom, 4)
