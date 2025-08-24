@@ -91,7 +91,11 @@ struct ScheduleView: View {
             .padding(.bottom, 16)
             
             VStack(spacing: 12) {
-                let allScheduleItems = getActualScheduleItems(selectedDate).sorted { $0.startTime < $1.startTime }
+                let allScheduleItems = getActualScheduleItems(selectedDate).sorted { item1, item2 in
+                    let time1 = getActualTimeForDate(item1, on: selectedDate)
+                    let time2 = getActualTimeForDate(item2, on: selectedDate)
+                    return time1 < time2
+                }
                 
                 if !allScheduleItems.isEmpty {
                     ForEach(allScheduleItems, id: \.id) { item in
@@ -157,6 +161,30 @@ struct ScheduleView: View {
     }
     
     // MARK: - Helper Methods
+    
+    private func getActualTimeForDate(_ item: ScheduleItem, on date: Date) -> Date {
+        let calendar = Calendar.current
+        
+        // For non-recurring items or todo items, use the original time
+        if item.frequency == .never || item.itemType == .todo {
+            return item.startTime
+        }
+        
+        // For recurring items, we need to get the time components from the original startTime
+        // and apply them to the current date
+        let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: item.startTime)
+        let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
+        
+        var combinedComponents = DateComponents()
+        combinedComponents.year = dateComponents.year
+        combinedComponents.month = dateComponents.month
+        combinedComponents.day = dateComponents.day
+        combinedComponents.hour = timeComponents.hour
+        combinedComponents.minute = timeComponents.minute
+        combinedComponents.second = timeComponents.second
+        
+        return calendar.date(from: combinedComponents) ?? item.startTime
+    }
     
     private func handleDelete(item: ScheduleItem, option: DeleteOption) {
         switch option {
