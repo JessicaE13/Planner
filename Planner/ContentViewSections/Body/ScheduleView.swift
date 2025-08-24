@@ -1173,8 +1173,7 @@ struct EditScheduleItemView: View {
                     editableItem.descriptionText = descriptionText
                     editableItem.checklist = checklistItems
                     editableItem.category = selectedCategory
-                    
-                    // Save custom frequency config if custom is selected
+
                     if editableItem.frequency == .custom {
                         editableItem.customFrequencyConfig = customFrequencyConfig
                     } else {
@@ -1185,14 +1184,6 @@ struct EditScheduleItemView: View {
                     dismiss()
                 }
             }
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                EditButton() // Add edit button for reordering
-            }
         }
         .onAppear {
             performLocationSearch()
@@ -1200,7 +1191,6 @@ struct EditScheduleItemView: View {
             checklistItems = editableItem.checklist
             selectedCategory = editableItem.category
             
-            // Load existing custom frequency config
             if let existingConfig = editableItem.customFrequencyConfig {
                 customFrequencyConfig = existingConfig
             }
