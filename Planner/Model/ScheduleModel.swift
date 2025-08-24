@@ -84,6 +84,7 @@ struct ScheduleItem: Identifiable, Codable {
     var endRepeatDate: Date = Date()
     var excludedDates: Set<Date> = []
     var hasDate: Bool = false // New property to track if todo has a date assigned
+    var url: String = "" // New property to store an optional URL for each event or task
     
     // Legacy properties for compatibility
     var type: String {
@@ -304,7 +305,7 @@ struct ScheduleItem: Identifiable, Codable {
     
     // Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, title, time, icon, color, frequency, customFrequencyConfig, descriptionText, location, allDay, itemType, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates, hasDate
+        case id, title, time, icon, color, frequency, customFrequencyConfig, descriptionText, location, allDay, itemType, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates, hasDate, url
     }
     
     init(from decoder: Decoder) throws {
@@ -339,6 +340,7 @@ struct ScheduleItem: Identifiable, Codable {
         endRepeatDate = try container.decode(Date.self, forKey: .endRepeatDate)
         excludedDates = try container.decodeIfPresent(Set<Date>.self, forKey: .excludedDates) ?? []
         hasDate = try container.decodeIfPresent(Bool.self, forKey: .hasDate) ?? (itemType == .scheduled) // Default based on type
+        url = try container.decodeIfPresent(String.self, forKey: .url) ?? "" // Decode URL if present
     }
     
     func encode(to encoder: Encoder) throws {
@@ -365,6 +367,7 @@ struct ScheduleItem: Identifiable, Codable {
         try container.encode(endRepeatDate, forKey: .endRepeatDate)
         try container.encode(excludedDates, forKey: .excludedDates)
         try container.encode(hasDate, forKey: .hasDate)
+        try container.encode(url, forKey: .url) // Encode URL
     }
     
     // Updated shouldAppear method - now includes dated todo items

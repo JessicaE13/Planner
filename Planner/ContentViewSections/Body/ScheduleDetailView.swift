@@ -115,8 +115,8 @@ struct ScheduleDetailView: View {
                     
                         .buttonStyle(PlainButtonStyle())
                         .padding(.leading, 24)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
+                        .padding(.top, 24)
+                    
                     }
                     
                     if item.itemType == .todo {
@@ -173,6 +173,7 @@ struct ScheduleDetailView: View {
                     if let category = item.category {
                         Divider()
                             .padding(.horizontal, 24)
+                            .padding(.top, 16)
                         HStack {
                             Text("Category")
                                 .foregroundColor(.primary)
@@ -187,7 +188,6 @@ struct ScheduleDetailView: View {
                             .cornerRadius(12)
                         }
                         .padding(.horizontal, 24)
-                        .padding(.top, 16)
                         Divider()
                             .padding(.horizontal, 24)
                             .padding(.bottom, 0)
