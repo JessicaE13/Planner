@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RoutineItem: Identifiable, Codable, Equatable {
-    let id = UUID()
+    var id = UUID()
     var name: String
     var frequency: Frequency = .everyDay
     var customFrequencyConfig: CustomFrequencyConfig? = nil
@@ -22,6 +22,7 @@ struct RoutineItem: Identifiable, Codable, Equatable {
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         name = try container.decode(String.self, forKey: .name)
         frequency = try container.decodeIfPresent(Frequency.self, forKey: .frequency) ?? .everyDay
         customFrequencyConfig = try container.decodeIfPresent(CustomFrequencyConfig.self, forKey: .customFrequencyConfig)
@@ -31,6 +32,7 @@ struct RoutineItem: Identifiable, Codable, Equatable {
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(frequency, forKey: .frequency)
         try container.encode(customFrequencyConfig, forKey: .customFrequencyConfig)
@@ -53,8 +55,8 @@ struct RoutineItem: Identifiable, Codable, Equatable {
     }
 }
 
-struct Routine: Identifiable, Codable {
-    let id = UUID()
+struct Routine: Identifiable, Codable, Equatable {
+    var id = UUID()
     var name: String
     var icon: String
     var routineItems: [RoutineItem] = []
@@ -98,11 +100,12 @@ struct Routine: Identifiable, Codable {
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         name = try container.decode(String.self, forKey: .name)
         icon = try container.decode(String.self, forKey: .icon)
         routineItems = try container.decodeIfPresent([RoutineItem].self, forKey: .routineItems) ?? []
         items = try container.decodeIfPresent([String].self, forKey: .items) ?? []
-        completedItemsByDate = try container.decode([String: Set<String>].self, forKey: .completedItemsByDate)
+        completedItemsByDate = try container.decodeIfPresent([String: Set<String>].self, forKey: .completedItemsByDate) ?? [:]
         frequency = try container.decodeIfPresent(Frequency.self, forKey: .frequency) ?? .everyDay
         customFrequencyConfig = try container.decodeIfPresent(CustomFrequencyConfig.self, forKey: .customFrequencyConfig)
         endRepeatOption = try container.decodeIfPresent(EndRepeatOption.self, forKey: .endRepeatOption) ?? .never
@@ -116,6 +119,7 @@ struct Routine: Identifiable, Codable {
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(icon, forKey: .icon)
         try container.encode(routineItems, forKey: .routineItems)
