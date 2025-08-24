@@ -235,218 +235,15 @@ struct CreateRoutineView: View {
         self._hasManuallySelectedIcon = State(initialValue: true)
     }
     var body: some View {
-        NavigationView {
-            ZStack {
-                Color("BackgroundPopup")
-                    .edgesIgnoringSafeArea(.all)
-                Form {
-                    Section(header: Text("Routine Details")) {
-                        HStack {
-                            Button(action: {
-                                showingIconPicker = true
-                            }) {
-                                Image(systemName: selectedIcon)
-                                    .foregroundColor(Color(selectedColor))
-                                    .frame(width: 30)
-                            }
-                            TextField("Routine Name", text: $routineName)
-                                .onChange(of: routineName) { _, newValue in
-                                    if !hasManuallySelectedIcon && !isEditing {
-                                        updateIconBasedOnName(newValue)
-                                    }
-                                }
-                        }
-                        HStack {
-                            Text("Start Date")
-                            Spacer()
-                            DatePicker("", selection: $startDate, displayedComponents: .date)
-                                .labelsHidden()
-                        }
-                        HStack {
-                            Text("Choose Color")
-                            Spacer()
-                            HStack(spacing: 12) {
-                                ForEach(Array(availableColors.enumerated()), id: \.offset) { index, colorName in
-                                    Button(action: {
-                                        selectedColor = colorName
-                                    }) {
-                                        Circle()
-                                            .fill(Color(colorName))
-                                            .frame(width: 30, height: 30)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(selectedColor == colorName ? Color.primary : Color.clear, lineWidth: 2)
-                                            )
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    if isEditing {
-                        Section(header: Text("Overall Routine Frequency")) {
-                            HStack {
-                                Text("Routine Repeat")
-                                Spacer()
-                                Menu {
-                                    ForEach(Frequency.allCases) { freq in
-                                        Button(freq.displayName) {
-                                            frequency = freq
-                                            if freq == .custom {
-                                                showingCustomFrequencyPicker = true
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    HStack {
-                                        if frequency == .custom {
-                                            Text(customFrequencyConfig.displayDescription())
-                                                .foregroundColor(.primary)
-                                                .lineLimit(1)
-                                        } else {
-                                            Text(frequency.displayName)
-                                                .foregroundColor(.primary)
-                                        }
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .foregroundColor(.secondary)
-                                            .font(.caption2)
-                                    }
-                                }
-                            }
-                            if frequency != .never {
-                                HStack {
-                                    Text("End Repeat")
-                                    Spacer()
-                                    Picker("", selection: $endRepeatOption) {
-                                        ForEach(EndRepeatOption.allCases) { option in
-                                            Text(option.displayName).tag(option)
-                                        }
-                                    }
-                                    .pickerStyle(MenuPickerStyle())
-                                }
-                                if endRepeatOption == .onDate {
-                                    HStack {
-                                        Text("End Date")
-                                        Spacer()
-                                        DatePicker("", selection: $endRepeatDate, displayedComponents: .date)
-                                            .labelsHidden()
-                                    }
-                                }
-                            }
-                            Text("This controls when the entire routine appears in your daily view. Individual items can have their own frequencies.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    Section(header: Text("Routine Items")) {
-                        ForEach(routineItems) { item in
-                            let index = routineItems.firstIndex(where: { $0.id == item.id }) ?? 0
-                            HStack {
-                                Image(systemName: "line.3.horizontal")
-                                    .foregroundColor(.secondary)
-                                    .font(.caption)
-                                TextField("Item \(index + 1)", text: Binding(
-                                    get: {
-                                        guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return "" }
-                                        return routineItems[currentIndex].name
-                                    },
-                                    set: { newValue in
-                                        guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
-                                        routineItems[currentIndex].name = newValue
-                                    }
-                                ))
-                                Spacer()
-                                if isEditing && item.frequency != .everyDay {
-                                    HStack(spacing: 4) {
-                                        if item.frequency == .custom {
-                                            Text(item.customFrequencyConfig?.displayDescription() ?? "Custom")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        } else {
-                                            Text(item.frequency.displayName)
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
-                                }
-                                if !item.name.isEmpty || routineItems.count > 1 {
-                                    Button(action: {
-                                        guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
-                                        editingItemIndex = currentIndex
-                                        showingItemDetailSheet = true
-                                    }) {
-                                        Image(systemName: "ellipsis")
-                                            .foregroundColor(.secondary)
-                                            .frame(width: 20, height: 20)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                        .onMove(perform: moveItems)
-                        Button(action: {
-                            routineItems.append(RoutineItem(name: "", frequency: .everyDay))
-                        }) {
-                            HStack {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.green)
-                                Text("Add Item")
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
+        Group {
+            if isEditing {
+                // For editing, don't wrap in NavigationView
+                contentView
+            } else {
+                // For creating new routines, wrap in NavigationView
+                NavigationView {
+                    contentView
                 }
-                .scrollContentBackground(.hidden)
-            }
-            .navigationTitle(isEditing ? "Edit Routine" : "New Routine")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveRoutine()
-                    }
-                    .disabled(routineName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-            .sheet(isPresented: $showingIconPicker) {
-                IconPickerView(selectedIcon: $selectedIcon, initialSearchText: routineName)
-                    .onDisappear {
-                        hasManuallySelectedIcon = true
-                    }
-            }
-            .sheet(isPresented: $showingCustomFrequencyPicker) {
-                CustomFrequencyPickerView(
-                    customConfig: $customFrequencyConfig,
-                    endRepeatOption: $endRepeatOption,
-                    endRepeatDate: $endRepeatDate
-                )
-            }
-            .sheet(isPresented: $showingItemDetailSheet) {
-                if let editingIndex = editingItemIndex {
-                    RoutineItemDetailView(
-                        item: $routineItems[editingIndex],
-                        onDelete: {
-                            routineItems.remove(at: editingIndex)
-                            showingItemDetailSheet = false
-                            self.editingItemIndex = nil
-                        }
-                    )
-                }
-            }
-            .alert("Delete Routine", isPresented: $showingDeleteConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Delete", role: .destructive) {
-                    deleteRoutine()
-                }
-            } message: {
-                Text("Are you sure you want to delete this routine? This action cannot be undone.")
             }
         }
         .onChange(of: frequency) { _, newFrequency in
@@ -458,6 +255,224 @@ struct CreateRoutineView: View {
             }
         }
     }
+    
+    private var contentView: some View {
+        ZStack {
+            Color("BackgroundPopup")
+                .edgesIgnoringSafeArea(.all)
+            Form {
+                Section(header: Text("Routine Details")) {
+                    HStack {
+                        Button(action: {
+                            showingIconPicker = true
+                        }) {
+                            Image(systemName: selectedIcon)
+                                .foregroundColor(Color(selectedColor))
+                                .frame(width: 30)
+                        }
+                        TextField("Routine Name", text: $routineName)
+                            .onChange(of: routineName) { _, newValue in
+                                if !hasManuallySelectedIcon && !isEditing {
+                                    updateIconBasedOnName(newValue)
+                                }
+                            }
+                    }
+                    HStack {
+                        Text("Start Date")
+                        Spacer()
+                        DatePicker("", selection: $startDate, displayedComponents: .date)
+                            .labelsHidden()
+                    }
+                    HStack {
+                        Text("Choose Color")
+                        Spacer()
+                        HStack(spacing: 12) {
+                            ForEach(Array(availableColors.enumerated()), id: \.offset) { index, colorName in
+                                Button(action: {
+                                    selectedColor = colorName
+                                }) {
+                                    Circle()
+                                        .fill(Color(colorName))
+                                        .frame(width: 30, height: 30)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(selectedColor == colorName ? Color.primary : Color.clear, lineWidth: 2)
+                                        )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+                if isEditing {
+                    Section(header: Text("Overall Routine Frequency")) {
+                        HStack {
+                            Text("Routine Repeat")
+                            Spacer()
+                            Menu {
+                                ForEach(Frequency.allCases) { freq in
+                                    Button(freq.displayName) {
+                                        frequency = freq
+                                        if freq == .custom {
+                                            showingCustomFrequencyPicker = true
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    if frequency == .custom {
+                                        Text(customFrequencyConfig.displayDescription())
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                    } else {
+                                        Text(frequency.displayName)
+                                            .foregroundColor(.primary)
+                                    }
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .foregroundColor(.secondary)
+                                        .font(.caption2)
+                                }
+                            }
+                        }
+                        if frequency != .never {
+                            HStack {
+                                Text("End Repeat")
+                                Spacer()
+                                Picker("", selection: $endRepeatOption) {
+                                    ForEach(EndRepeatOption.allCases) { option in
+                                        Text(option.displayName).tag(option)
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                            }
+                            if endRepeatOption == .onDate {
+                                HStack {
+                                    Text("End Date")
+                                    Spacer()
+                                    DatePicker("", selection: $endRepeatDate, displayedComponents: .date)
+                                        .labelsHidden()
+                                }
+                            }
+                        }
+                        Text("This controls when the entire routine appears in your daily view. Individual items can have their own frequencies.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                Section(header: Text("Routine Items")) {
+                    ForEach(routineItems) { item in
+                        let index = routineItems.firstIndex(where: { $0.id == item.id }) ?? 0
+                        HStack {
+                            Image(systemName: "line.3.horizontal")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                            TextField("Item \(index + 1)", text: Binding(
+                                get: {
+                                    guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return "" }
+                                    return routineItems[currentIndex].name
+                                },
+                                set: { newValue in
+                                    guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
+                                    routineItems[currentIndex].name = newValue
+                                }
+                            ))
+                            Spacer()
+                            if isEditing && item.frequency != .everyDay {
+                                HStack(spacing: 4) {
+                                    if item.frequency == .custom {
+                                        Text(item.customFrequencyConfig?.displayDescription() ?? "Custom")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    } else {
+                                        Text(item.frequency.displayName)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                            if !item.name.isEmpty || routineItems.count > 1 {
+                                Button(action: {
+                                    guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
+                                    editingItemIndex = currentIndex
+                                    showingItemDetailSheet = true
+                                }) {
+                                    Image(systemName: "ellipsis")
+                                        .foregroundColor(.secondary)
+                                        .frame(width: 20, height: 20)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .onMove(perform: moveItems)
+                    Button(action: {
+                        routineItems.append(RoutineItem(name: "", frequency: .everyDay))
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.green)
+                            Text("Add Item")
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            .scrollContentBackground(.hidden)
+        }
+        .navigationTitle(isEditing ? "Edit Routine" : "New Routine")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !isEditing {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") {
+                    saveRoutine()
+                }
+                .disabled(routineName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .sheet(isPresented: $showingIconPicker) {
+            IconPickerView(selectedIcon: $selectedIcon, initialSearchText: routineName)
+                .onDisappear {
+                    hasManuallySelectedIcon = true
+                }
+        }
+        .sheet(isPresented: $showingCustomFrequencyPicker) {
+            CustomFrequencyPickerView(
+                customConfig: $customFrequencyConfig,
+                endRepeatOption: $endRepeatOption,
+                endRepeatDate: $endRepeatDate
+            )
+        }
+        .sheet(isPresented: $showingItemDetailSheet) {
+            if let editingIndex = editingItemIndex {
+                RoutineItemDetailView(
+                    item: $routineItems[editingIndex],
+                    onDelete: {
+                        routineItems.remove(at: editingIndex)
+                        showingItemDetailSheet = false
+                        self.editingItemIndex = nil
+                    }
+                )
+            }
+        }
+        .alert("Delete Routine", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteRoutine()
+            }
+        } message: {
+            Text("Are you sure you want to delete this routine? This action cannot be undone.")
+        }
+    }
+    
     private func updateIconBasedOnName(_ name: String) {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return
@@ -765,7 +780,7 @@ struct RoutineDetailBottomSheetView: View {
             .padding(.horizontal, 32)
             .padding(.bottom, 24)
         }
-        .navigationTitle("Routine Details")
+        .navigationTitle("Routine")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
