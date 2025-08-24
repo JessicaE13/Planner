@@ -649,138 +649,159 @@ struct RoutineItemDetailView: View {
 struct RoutineDetailBottomSheetView: View {
     @Binding var routine: Routine
     let selectedDate: Date
-    let onEdit: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var originalRoutine: Routine
     @State private var workingRoutine: Routine
-    init(routine: Binding<Routine>, selectedDate: Date, onEdit: @escaping () -> Void) {
+    
+    init(routine: Binding<Routine>, selectedDate: Date) {
         self._routine = routine
         self.selectedDate = selectedDate
-        self.onEdit = onEdit
         self._originalRoutine = State(initialValue: routine.wrappedValue)
         self._workingRoutine = State(initialValue: routine.wrappedValue)
     }
+    
     private var visibleItems: [RoutineItem] {
         return workingRoutine.visibleItems(for: selectedDate)
     }
+    
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                VStack(spacing: 16) {
-                    Image(systemName: workingRoutine.icon)
-                        .font(.system(size: 48))
-                        .foregroundColor(workingRoutine.color)
-                    Text(workingRoutine.name + " Routine")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
-                        .progressViewStyle(LinearProgressViewStyle(tint: workingRoutine.color))
-                        .scaleEffect(y: 1.5)
-                        .frame(maxWidth: 200)
-                        .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
-                    if visibleItems.count != workingRoutine.routineItems.count {
-                        Text("\(visibleItems.count) of \(workingRoutine.routineItems.count) items today")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+        VStack(spacing: 0) {
+            VStack(spacing: 16) {
+                Image(systemName: workingRoutine.icon)
+                    .font(.system(size: 48))
+                    .foregroundColor(workingRoutine.color)
+                Text(workingRoutine.name + " Routine")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
+                    .progressViewStyle(LinearProgressViewStyle(tint: workingRoutine.color))
+                    .scaleEffect(y: 1.5)
+                    .frame(maxWidth: 200)
+                    .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
+                if visibleItems.count != workingRoutine.routineItems.count {
+                    Text("\(visibleItems.count) of \(workingRoutine.routineItems.count) items today")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                .padding(.top, 24)
-                .padding(.bottom, 32)
-                if !visibleItems.isEmpty {
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 32)
+            if !visibleItems.isEmpty {
+                VStack(spacing: 0) {
                     VStack(spacing: 0) {
-                        VStack(spacing: 0) {
-                            ForEach(visibleItems.indices, id: \.self) { index in
-                                let item = visibleItems[index]
-                                Button(action: {
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        workingRoutine.toggleItem(item.name, for: selectedDate)
-                                        routine = workingRoutine
-                                    }
-                                }) {
-                                    HStack {
-                                        Image(systemName: workingRoutine.isItemCompleted(item.name, for: selectedDate) ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .primary : .gray)
+                        ForEach(visibleItems.indices, id: \.self) { index in
+                            let item = visibleItems[index]
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    workingRoutine.toggleItem(item.name, for: selectedDate)
+                                    routine = workingRoutine
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: workingRoutine.isItemCompleted(item.name, for: selectedDate) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .primary : .gray)
+                                        .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(item.name, for: selectedDate))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.name)
+                                            .strikethrough(workingRoutine.isItemCompleted(item.name, for: selectedDate))
+                                            .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .secondary : .primary)
                                             .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(item.name, for: selectedDate))
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(item.name)
-                                                .strikethrough(workingRoutine.isItemCompleted(item.name, for: selectedDate))
-                                                .foregroundColor(workingRoutine.isItemCompleted(item.name, for: selectedDate) ? .secondary : .primary)
-                                                .animation(.easeInOut(duration: 0.3), value: workingRoutine.isItemCompleted(item.name, for: selectedDate))
-                                            if item.frequency != workingRoutine.frequency {
-                                                HStack(spacing: 4) {
-                                                    Image(systemName: "repeat")
+                                        if item.frequency != workingRoutine.frequency {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "repeat")
+                                                    .font(.caption2)
+                                                if item.frequency == .custom {
+                                                    Text(item.customFrequencyConfig?.displayDescription() ?? "Custom")
                                                         .font(.caption2)
-                                                    if item.frequency == .custom {
-                                                        Text(item.customFrequencyConfig?.displayDescription() ?? "Custom")
-                                                            .font(.caption2)
-                                                    } else {
-                                                        Text(item.frequency.displayName)
-                                                            .font(.caption2)
-                                                    }
+                                                } else {
+                                                    Text(item.frequency.displayName)
+                                                        .font(.caption2)
                                                 }
-                                                .foregroundColor(.secondary)
                                             }
+                                            .foregroundColor(.secondary)
                                         }
-                                        Spacer()
                                     }
-                                    .padding(.vertical, 12)
-                                    .padding(.horizontal, 16)
-                                    .contentShape(Rectangle())
+                                    Spacer()
                                 }
-                                .buttonStyle(PlainButtonStyle())
-                                if index < visibleItems.count - 1 {
-                                    Divider()
-                                        .padding(.leading, 16)
-                                }
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 16)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            if index < visibleItems.count - 1 {
+                                Divider()
+                                    .padding(.leading, 16)
                             }
                         }
-                        .padding(.horizontal, 16)
                     }
-                } else {
-                    VStack(spacing: 16) {
-                        Image(systemName: "calendar.badge.clock")
-                            .font(.system(size: 40))
-                            .foregroundColor(.gray.opacity(0.5))
-                        Text("No items scheduled for today")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                        Text("This routine has items with different frequencies. Check back on other days or edit the routine to adjust item schedules.")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
-                    }
-                    .padding(.top, 40)
+                    .padding(.horizontal, 16)
                 }
-                Spacer()
-                Button("Done") {
-                    dismiss()
+            } else {
+                VStack(spacing: 16) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 40))
+                        .foregroundColor(.gray.opacity(0.5))
+                    Text("No items scheduled for today")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("This routine has items with different frequencies. Check back on other days or edit the routine to adjust item schedules.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
                 }
-                .font(.headline)
-                .padding(.vertical, 12)
-                .frame(maxWidth: .infinity)
-                .background(workingRoutine.color.opacity(0.9))
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 24)
+                .padding(.top, 40)
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        routine = originalRoutine
-                        dismiss()
-                    }
-                    .foregroundColor(.primary)
+            Spacer()
+            Button("Done") {
+                dismiss()
+            }
+            .font(.headline)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
+            .background(workingRoutine.color.opacity(0.9))
+            .foregroundColor(.white)
+            .cornerRadius(12)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 24)
+        }
+        .navigationTitle("Routine Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: EditRoutineNavigationView(routine: $routine)) {
+                    Text("Edit")
+                        .foregroundColor(.primary)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Edit") {
-                        routine = workingRoutine
-                        onEdit()
-                    }
-                    .foregroundColor(.primary)
-                }
+            }
+        }
+    }
+}
+
+// Create a wrapper view for editing routines that provides proper navigation
+struct EditRoutineNavigationView: View {
+    @Binding var routine: Routine
+    @State private var routines: [Routine] = []
+    @State private var routineIndex: Int = 0
+    
+    init(routine: Binding<Routine>) {
+        self._routine = routine
+    }
+    
+    var body: some View {
+        CreateRoutineView(
+            routines: $routines,
+            editingRoutine: routine,
+            editingIndex: routineIndex
+        )
+        .onAppear {
+            routines = [routine]
+            routineIndex = 0
+        }
+        .onDisappear {
+            // Update the original routine binding when the edit view disappears
+            if routines.indices.contains(routineIndex) {
+                routine = routines[routineIndex]
             }
         }
     }
@@ -879,12 +900,7 @@ struct RoutineView: View {
                 NavigationView {
                     RoutineDetailBottomSheetView(
                         routine: $routines[index],
-                        selectedDate: selectedDate,
-                        onEdit: {
-                            editingRoutineIndex = index
-                            editingRoutine = routines[index]
-                            showingRoutineDetail = nil
-                        }
+                        selectedDate: selectedDate
                     )
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
