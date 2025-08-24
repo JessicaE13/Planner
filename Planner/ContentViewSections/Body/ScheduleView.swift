@@ -71,88 +71,92 @@ struct ScheduleView: View {
     }()
     
     var body: some View {
-        VStack {
-            HStack {
-                Text("Schedule")
-                    .sectionHeaderStyle()
-                
-                Spacer()
-                
-                Button(action: {
-                    showingNewItem = true
-                }) {
-                    Image(systemName: "plus")
-                        .font(.title2)
-                        .foregroundColor(.primary)
-                        .contentShape(Rectangle())
+        ZStack {
+            Color("BackgroundPopup")
+                .ignoresSafeArea()
+            VStack {
+                HStack {
+                    Text("Schedule")
+                        .sectionHeaderStyle()
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        showingNewItem = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .foregroundColor(.primary)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .buttonStyle(PlainButtonStyle())
+                .padding(.vertical, 16)
+                
+                VStack(spacing: 12) {
+                    let allScheduleItems = getActualScheduleItems(selectedDate).sorted { item1, item2 in
+                        let time1 = getActualTimeForDate(item1, on: selectedDate)
+                        let time2 = getActualTimeForDate(item2, on: selectedDate)
+                        return time1 < time2
+                    }
+                    
+                    if !allScheduleItems.isEmpty {
+                        ForEach(allScheduleItems, id: \.id) { item in
+                            ScheduleRowView(item: item) {
+                                showingDetail = item
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
             }
-            .padding(.vertical, 16)
-            
-            VStack(spacing: 12) {
-                let allScheduleItems = getActualScheduleItems(selectedDate).sorted { item1, item2 in
-                    let time1 = getActualTimeForDate(item1, on: selectedDate)
-                    let time2 = getActualTimeForDate(item2, on: selectedDate)
-                    return time1 < time2
-                }
-                
-                if !allScheduleItems.isEmpty {
-                    ForEach(allScheduleItems, id: \.id) { item in
-                        ScheduleRowView(item: item) {
-                            showingDetail = item
+            .padding()
+            .sheet(isPresented: $showingNewItem) {
+                NewScheduleItemView(
+                    selectedDate: selectedDate,
+                    onSave: { newItem in
+                        dataManager.addItem(newItem)
+                        showingNewItem = false
+                    }
+                )
+            }
+            .sheet(item: $showingDetail) { item in
+                NavigationView {
+                    ScheduleDetailView(
+                        item: item,
+                        selectedDate: selectedDate,
+                        onSave: { updatedItem in
+                            dataManager.updateItem(updatedItem)
+                        }
+                    )
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Done") {
+                                showingDetail = nil
+                            }
                         }
                     }
                 }
             }
-            .padding(.horizontal, 16)
-        }
-        .padding()
-        .sheet(isPresented: $showingNewItem) {
-            NewScheduleItemView(
-                selectedDate: selectedDate,
-                onSave: { newItem in
-                    dataManager.addItem(newItem)
-                    showingNewItem = false
-                }
-            )
-        }
-        .sheet(item: $showingDetail) { item in
-            NavigationView {
-                ScheduleDetailView(
-                    item: item,
-                    selectedDate: selectedDate,
-                    onSave: { updatedItem in
-                        dataManager.updateItem(updatedItem)
-                    }
-                )
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Done") {
-                            showingDetail = nil
+            .sheet(item: $showingEdit) { item in
+                NavigationView {
+                    EditScheduleItemView(
+                        item: item,
+                        selectedDate: selectedDate,
+                        onSave: { updatedItem in
+                            dataManager.updateItem(updatedItem)
+                        },
+                        onDelete: { deleteOption in
+                            handleDelete(item: item, option: deleteOption)
                         }
-                    }
-                }
-            }
-        }
-        .sheet(item: $showingEdit) { item in
-            NavigationView {
-                EditScheduleItemView(
-                    item: item,
-                    selectedDate: selectedDate,
-                    onSave: { updatedItem in
-                        dataManager.updateItem(updatedItem)
-                    },
-                    onDelete: { deleteOption in
-                        handleDelete(item: item, option: deleteOption)
-                    }
-                )
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Done") {
-                            showingEdit = nil
+                    )
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Done") {
+                                showingEdit = nil
+                            }
                         }
                     }
                 }

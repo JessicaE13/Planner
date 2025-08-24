@@ -47,6 +47,8 @@ struct ScheduleDetailView: View {
     
     var body: some View {
         ZStack {
+            Color("BackgroundPopup")
+                .ignoresSafeArea()
             ScrollView {
                 VStack(spacing:8) {
 

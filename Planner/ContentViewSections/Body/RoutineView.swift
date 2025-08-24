@@ -259,7 +259,7 @@ struct CreateRoutineView: View {
     private var contentView: some View {
         ZStack {
             Color("BackgroundPopup")
-                .edgesIgnoringSafeArea(.all)
+                .ignoresSafeArea()
             Form {
                 Section(header: Text("Routine Details")) {
                     HStack {
@@ -420,6 +420,7 @@ struct CreateRoutineView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .background(Color.clear)
         }
         .navigationTitle(isEditing ? "Edit Routine" : "New Routine")
         .navigationBarTitleDisplayMode(.inline)
@@ -879,7 +880,7 @@ struct RoutineView: View {
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color(.systemBackground))
+                                    .fill(Color("Background"))
                                     .frame(width: 176, height: 100)
                                 VStack {
                                     HStack(alignment: .bottom) {

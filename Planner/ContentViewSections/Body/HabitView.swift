@@ -219,64 +219,68 @@ struct HabitView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center) {
-                Text("Habits")
-                    .sectionHeaderStyle()
-                Spacer()
-                Button(action: {
-                    showManageHabits = true
-                }) {
-                    Image(systemName: "plus")
-                        .font(.title2)
-                        .foregroundColor(.primary)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .padding(.bottom, 24)
-            
-            VStack(spacing: 0) {
-                ForEach(habitManager.habits.indices, id: \.self) { index in
-                    if habitManager.habits[index].shouldAppear(on: selectedDate) {
-                        Button(action: {
-                            habitManager.toggleHabit(at: index, for: selectedDate)
-                        }) {
-                            HStack {
-                                Image(systemName: habitManager.habits[index].isCompleted(for: selectedDate) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(habitManager.habits[index].isCompleted(for: selectedDate) ? .primary : .gray)
-                                Text(habitManager.habits[index].name)
-                                    .strikethrough(habitManager.habits[index].isCompleted(for: selectedDate))
-                                    .foregroundColor(habitManager.habits[index].isCompleted(for: selectedDate) ? .secondary : .primary)
-                                Spacer()
-                            }
+        ZStack {
+            Color("BackgroundPopup")
+                .ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .center) {
+                    Text("Habits")
+                        .sectionHeaderStyle()
+                    Spacer()
+                    Button(action: {
+                        showManageHabits = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .foregroundColor(.primary)
                             .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    
-                        if index < habitManager.habits.count - 1 && habitManager.habits[(index + 1)...].contains(where: { $0.shouldAppear(on: selectedDate) }) {
-                            Divider()
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                .padding(.bottom, 24)
+                
+                VStack(spacing: 0) {
+                    ForEach(habitManager.habits.indices, id: \.self) { index in
+                        if habitManager.habits[index].shouldAppear(on: selectedDate) {
+                            Button(action: {
+                                habitManager.toggleHabit(at: index, for: selectedDate)
+                            }) {
+                                HStack {
+                                    Image(systemName: habitManager.habits[index].isCompleted(for: selectedDate) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(habitManager.habits[index].isCompleted(for: selectedDate) ? .primary : .gray)
+                                    Text(habitManager.habits[index].name)
+                                        .strikethrough(habitManager.habits[index].isCompleted(for: selectedDate))
+                                        .foregroundColor(habitManager.habits[index].isCompleted(for: selectedDate) ? .secondary : .primary)
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        
+                            if index < habitManager.habits.count - 1 && habitManager.habits[(index + 1)...].contains(where: { $0.shouldAppear(on: selectedDate) }) {
+                                Divider()
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 8)
+                            }
                         }
                     }
                 }
+                .padding(.leading, 16)
+            
+                Spacer()
             }
-            .padding(.leading, 16)
-        
-            Spacer()
-        }
-        .padding()
-        .sheet(isPresented: $showManageHabits) {
-            ManageHabitsView(habitManager: habitManager)
-        }
-        .onAppear {
-            // Uncomment this line to see debug info in console
-            // debugHabitVisibility()
-        }
-        .onChange(of: selectedDate) { _, _ in
-            // Uncomment this line to see debug info when date changes
-            // debugHabitVisibility()
+            .padding()
+            .sheet(isPresented: $showManageHabits) {
+                ManageHabitsView(habitManager: habitManager)
+            }
+            .onAppear {
+                // Uncomment this line to see debug info in console
+                // debugHabitVisibility()
+            }
+            .onChange(of: selectedDate) { _, _ in
+                // Uncomment this line to see debug info when date changes
+                // debugHabitVisibility()
+            }
         }
     }
 }
