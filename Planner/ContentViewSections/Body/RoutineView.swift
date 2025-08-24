@@ -846,7 +846,10 @@ struct RoutineView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             }
+            .padding(.horizontal)
+            .padding(.top, 24)
             .padding(.bottom, 16)
+            
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack (spacing: 16) {
                     ForEach(visibleRoutines.indices, id: \.self) { idx in
@@ -888,13 +891,12 @@ struct RoutineView: View {
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .padding(.leading, idx == 0 ? 16 : 0)
+                        .padding(.leading, idx == 0 ? 36 : 0)
                         .padding(.trailing, idx == visibleRoutines.count - 1 ? 16 : 0)
                     }
                 }
             }
         }
-        .padding()
         .sheet(item: $showingRoutineDetail) { routine in
             if let index = routines.firstIndex(where: { $0.id == routine.id }) {
                 NavigationView {

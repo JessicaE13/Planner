@@ -88,7 +88,7 @@ struct ScheduleView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
             }
-            .padding(.bottom, 16)
+            .padding(.vertical, 16)
             
             VStack(spacing: 12) {
                 let allScheduleItems = getActualScheduleItems(selectedDate).sorted { item1, item2 in
