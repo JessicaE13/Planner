@@ -276,6 +276,35 @@ struct ScheduleDetailView: View {
                         .padding(.vertical, 16)
                     }
                     
+                    // URL Section
+                    if !item.url.isEmpty {
+                        Button(action: {
+                            if let url = URL(string: item.url) {
+                                UIApplication.shared.open(url)
+                            }
+                        }) {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(alignment: .top, spacing: 4) {
+                                        Image(systemName: "link")
+                                            .foregroundColor(.blue)
+                                        Text(item.url)
+                                            .multilineTextAlignment(.leading)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                Spacer()
+                            }
+                            .font(.title)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.leading, 24)
+                        .padding(.top, 24)
+                    }
+                    
                     Spacer()
                 }
                 .padding(.top, 0)

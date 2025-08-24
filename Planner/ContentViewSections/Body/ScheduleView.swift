@@ -381,6 +381,12 @@ struct NewScheduleItemView: View {
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
                             
+                            TextField("URL", text: $item.url)
+                                .multilineTextAlignment(.leading)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
+                                .keyboardType(.URL)
+                            
                             if isSearchingLocation && !locationSearchResults.isEmpty {
                                 ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
                                     Button(action: {
@@ -867,6 +873,12 @@ struct EditScheduleItemView: View {
                         }
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                        
+                        TextField("URL", text: $editableItem.url)
+                            .multilineTextAlignment(.leading)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .keyboardType(.URL)
                         
                         if isSearchingLocation && !locationSearchResults.isEmpty {
                             ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
