@@ -682,17 +682,21 @@ struct RoutineDetailBottomSheetView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 16) {
-                Image(systemName: workingRoutine.icon)
-                    .font(.system(size: 48))
-                    .foregroundColor(workingRoutine.color)
-                Text(workingRoutine.name + " Routine")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: workingRoutine.color))
-                    .scaleEffect(y: 1.5)
-                    .frame(maxWidth: 200)
-                    .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: workingRoutine.icon)
+                        .font(.system(size: 48))
+                        .foregroundColor(workingRoutine.color)
+                        .frame(minHeight: 56, alignment: .center)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(workingRoutine.name + " Routine")
+                            .font(.title)
+                            .fontWeight(.semibold)
+                        ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
+                            .progressViewStyle(LinearProgressViewStyle(tint: workingRoutine.color))
+                            .scaleEffect(y: 1.5)
+                            .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
+                    }
+                }
                 if visibleItems.count != workingRoutine.routineItems.count {
                     Text("\(visibleItems.count) of \(workingRoutine.routineItems.count) items today")
                         .font(.caption)
@@ -701,6 +705,7 @@ struct RoutineDetailBottomSheetView: View {
             }
             .padding(.top, 24)
             .padding(.bottom, 32)
+            .padding(.horizontal, 32)
             if !visibleItems.isEmpty {
                 VStack(spacing: 0) {
                     VStack(spacing: 0) {
