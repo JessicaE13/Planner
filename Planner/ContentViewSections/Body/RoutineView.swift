@@ -794,6 +794,8 @@ struct RoutineView: View {
     @State private var showCreateRoutine = false
     @State private var editingRoutine: Routine?
     @State private var editingRoutineIndex: Int?
+    @State private var showingRoutineDetail: Routine?
+    
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMM d"
@@ -829,12 +831,7 @@ struct RoutineView: View {
                     ForEach(visibleRoutines.indices, id: \.self) { idx in
                         let routineData = visibleRoutines[idx]
                         Button(action: {
-                            selectedRoutineIndex = nil
-                            showRoutineDetail = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                selectedRoutineIndex = routineData.index
-                                showRoutineDetail = true
-                            }
+                            showingRoutineDetail = routineData.routine
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10)
@@ -877,29 +874,27 @@ struct RoutineView: View {
             }
         }
         .padding()
-        .sheet(isPresented: Binding(
-            get: { selectedRoutineIndex != nil && editingRoutine == nil },
-            set: { isPresented in
-                if !isPresented {
-                    selectedRoutineIndex = nil
-                    showRoutineDetail = false
-                }
-            }
-        )) {
-            if let index = selectedRoutineIndex, index < routines.count {
-                RoutineDetailBottomSheetView(
-                    routine: $routines[index],
-                    selectedDate: selectedDate,
-                    onEdit: {
-                        editingRoutineIndex = index
-                        editingRoutine = routines[index]
-                        selectedRoutineIndex = nil
-                        showRoutineDetail = false
+        .sheet(item: $showingRoutineDetail) { routine in
+            if let index = routines.firstIndex(where: { $0.id == routine.id }) {
+                NavigationView {
+                    RoutineDetailBottomSheetView(
+                        routine: $routines[index],
+                        selectedDate: selectedDate,
+                        onEdit: {
+                            editingRoutineIndex = index
+                            editingRoutine = routines[index]
+                            showingRoutineDetail = nil
+                        }
+                    )
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Done") {
+                                showingRoutineDetail = nil
+                            }
+                        }
                     }
-                )
-                .presentationDetents([.fraction(0.85), .large])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(28)
+                }
             }
         }
         .sheet(isPresented: $showCreateRoutine) {
