@@ -13,10 +13,12 @@ import MapKit
 struct ScheduleDetailView: View {
     @State private var item: ScheduleItem
     let selectedDate: Date
-    let onEdit: (ScheduleItem) -> Void
     let onSave: (ScheduleItem) -> Void
     @State private var showingMapOptions = false
     @StateObject private var dataManager = UnifiedDataManager.shared
+    
+    // Remove the edit sheet state as we'll use navigation instead
+    
     // Add state to track the height of the VStack (title & location)
     @State private var vStackHeight: CGFloat = 80
     
@@ -25,10 +27,9 @@ struct ScheduleDetailView: View {
         item.frequency != .never ? selectedDate : item.startTime
     }
     
-    init(item: ScheduleItem, selectedDate: Date, onEdit: @escaping (ScheduleItem) -> Void, onSave: @escaping (ScheduleItem) -> Void) {
+    init(item: ScheduleItem, selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void) {
         self._item = State(initialValue: item)
         self.selectedDate = selectedDate
-        self.onEdit = onEdit
         self.onSave = onSave
     }
     
@@ -284,8 +285,23 @@ struct ScheduleDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Edit") {
-                    onEdit(item)
+                NavigationLink(destination: EditScheduleItemView(
+                    item: item,
+                    selectedDate: selectedDate,
+                    onSave: { updatedItem in
+                        onSave(updatedItem)
+                    },
+                    onDelete: { deleteOption in
+                        // Handle delete operations
+                        switch deleteOption {
+                        case .thisEvent:
+                            dataManager.excludeDateFromRecurring(item: item, excludeDate: selectedDate)
+                        case .allEvents:
+                            dataManager.deleteItem(item)
+                        }
+                    }
+                )) {
+                    Text("Edit")
                 }
             }
         }
@@ -315,19 +331,19 @@ struct ScheduleDetailView: View {
     private func createTimeView() -> some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-        
+
                 HStack(spacing: 8) {
                     Image(systemName: "calendar")
                     Text(dateFormatter.string(from: displayDate))
                 }
- 
+
                 if item.allDay {
                     Text("All Day")
                 } else {
                     HStack(spacing: 8) {
                         Image(systemName: "clock")
                         Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")
-            
+    
                     }
                 }
             }
@@ -419,7 +435,6 @@ struct ScheduleDetailView: View {
                 endRepeatDate: Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()
             ),
             selectedDate: Date(),
-            onEdit: { _ in },
             onSave: { _ in }
         )
     }
