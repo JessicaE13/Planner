@@ -207,6 +207,7 @@ struct CreateRoutineView: View {
     @State private var editingItemIndex: Int?
     @State private var showingItemDetailSheet = false
     @State private var hasManuallySelectedIcon = false
+    @FocusState private var focusedItemID: UUID?
     private let availableColors: [String] = [
         "Color1", "Color2", "Color3", "Color4", "Color5"
     ]
@@ -377,6 +378,7 @@ struct CreateRoutineView: View {
                                     routineItems[currentIndex].name = newValue
                                 }
                             ))
+                            .focused($focusedItemID, equals: item.id)
                             Spacer()
                             if isEditing && item.frequency != .everyDay {
                                 HStack(spacing: 4) {
@@ -408,7 +410,9 @@ struct CreateRoutineView: View {
                     }
                     .onMove(perform: moveItems)
                     Button(action: {
-                        routineItems.append(RoutineItem(name: "", frequency: .everyDay))
+                        let newItem = RoutineItem(name: "", frequency: .everyDay)
+                        routineItems.append(newItem)
+                        focusedItemID = newItem.id
                     }) {
                         HStack {
                             Image(systemName: "plus.circle.fill")
@@ -460,7 +464,9 @@ struct CreateRoutineView: View {
                         routineItems.remove(at: editingIndex)
                         showingItemDetailSheet = false
                         self.editingItemIndex = nil
-                    }
+                    },
+                    routineFrequency: frequency,
+                    routineCustomFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil
                 )
             }
         }
@@ -547,15 +553,28 @@ struct RoutineItemDetailView: View {
     @State private var showingCustomFrequencyPicker = false
     @State private var customFrequencyConfig: CustomFrequencyConfig
     @State private var showingDeleteConfirmation = false
-    init(item: Binding<RoutineItem>, onDelete: @escaping () -> Void) {
+    @State private var useRoutineFrequency = false
+    
+    // Add properties to access the parent routine's frequency
+    let routineFrequency: Frequency
+    let routineCustomFrequencyConfig: CustomFrequencyConfig?
+    
+    init(item: Binding<RoutineItem>, onDelete: @escaping () -> Void, routineFrequency: Frequency = .everyDay, routineCustomFrequencyConfig: CustomFrequencyConfig? = nil) {
         self._item = item
         self.onDelete = onDelete
+        self.routineFrequency = routineFrequency
+        self.routineCustomFrequencyConfig = routineCustomFrequencyConfig
+        
         if let existingConfig = item.wrappedValue.customFrequencyConfig {
             self._customFrequencyConfig = State(initialValue: existingConfig)
         } else {
             self._customFrequencyConfig = State(initialValue: CustomFrequencyConfig())
         }
+        
+        // Check if item is currently using routine frequency
+        self._useRoutineFrequency = State(initialValue: item.wrappedValue.frequency == routineFrequency)
     }
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -566,15 +585,51 @@ struct RoutineItemDetailView: View {
                         TextField("Item Name", text: $item.name)
                     }
                     Section(header: Text("Frequency")) {
+                        // Add "Use Routine Frequency" option first
+                        Button(action: {
+                            useRoutineFrequency = true
+                            item.frequency = routineFrequency
+                            if routineFrequency == .custom {
+                                item.customFrequencyConfig = routineCustomFrequencyConfig
+                            } else {
+                                item.customFrequencyConfig = nil
+                            }
+                        }) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Use Routine Frequency")
+                                        .foregroundColor(.primary)
+                                    if routineFrequency == .custom {
+                                        Text(routineCustomFrequencyConfig?.displayDescription() ?? "Custom")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    } else {
+                                        Text(routineFrequency.displayName)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                if useRoutineFrequency && item.frequency == routineFrequency {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                        
+                        // Show other frequency options
                         ForEach(Frequency.allCases) { frequency in
                             Button(action: {
+                                useRoutineFrequency = false
                                 item.frequency = frequency
                                 if frequency == .custom {
                                     showingCustomFrequencyPicker = true
+                                } else {
+                                    item.customFrequencyConfig = nil
                                 }
                             }) {
                                 HStack {
-                                    if frequency == .custom && item.frequency == .custom {
+                                    if frequency == .custom && item.frequency == .custom && !useRoutineFrequency {
                                         Text(customFrequencyConfig.displayDescription())
                                             .foregroundColor(.primary)
                                     } else {
@@ -582,7 +637,7 @@ struct RoutineItemDetailView: View {
                                             .foregroundColor(.primary)
                                     }
                                     Spacer()
-                                    if item.frequency == frequency {
+                                    if !useRoutineFrequency && item.frequency == frequency {
                                         Image(systemName: "checkmark")
                                             .foregroundColor(.blue)
                                     }
@@ -609,9 +664,15 @@ struct RoutineItemDetailView: View {
                         }
                     }
                     Section {
-                        Text("This frequency will override the routine's overall frequency for this specific item.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if useRoutineFrequency {
+                            Text("This item will follow the routine's overall frequency.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("This frequency will override the routine's overall frequency for this specific item.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .listRowBackground(Color.clear)
                 }
@@ -625,10 +686,8 @@ struct RoutineItemDetailView: View {
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Done") {
-                            if item.frequency == .custom {
+                            if item.frequency == .custom && !useRoutineFrequency {
                                 item.customFrequencyConfig = customFrequencyConfig
-                            } else {
-                                item.customFrequencyConfig = nil
                             }
                             dismiss()
                         }
@@ -654,9 +713,11 @@ struct RoutineItemDetailView: View {
                 if newFrequency == .never {
                     item.endRepeatOption = .never
                 }
-                if newFrequency == .custom {
+                if newFrequency == .custom && !useRoutineFrequency {
                     showingCustomFrequencyPicker = true
                 }
+                // Update useRoutineFrequency state based on frequency match
+                useRoutineFrequency = (newFrequency == routineFrequency)
             }
         }
     }
