@@ -272,7 +272,7 @@ struct CreateRoutineView: View {
                             }) {
                                 Image(systemName: selectedIcon)
                                     .foregroundColor(Color(selectedColor))
-                                    .frame(width: 30)
+                                    .frame(width: 36, height: 36)
                             }
                             TextField("Routine Name", text: $routineName)
                                 .onChange(of: routineName) { _, newValue in
@@ -804,7 +804,7 @@ struct RoutineDetailBottomSheetView: View {
                                 Button(action: {
                                     withAnimation(.easeInOut(duration: 0.3)) {
                                         workingRoutine.toggleItem(item.name, for: selectedDate)
-                                        routine = workingRoutine
+                                        // Don't save to routine binding immediately
                                     }
                                 }) {
                                     HStack {
@@ -870,6 +870,8 @@ struct RoutineDetailBottomSheetView: View {
             HStack {
                 
                 Button("Done") {
+                    // Save changes to the routine binding before dismissing
+                    routine = workingRoutine
                     dismiss()
                 }
                 .font(.headline)
@@ -892,9 +894,10 @@ struct RoutineDetailBottomSheetView: View {
 //                .cornerRadius(12)
 //                .padding(.horizontal, 8)
 //                .padding(.bottom, 24)
-//                
+//
             }
             .padding(.horizontal, 36)
+            .padding(.top, 24)
             
             
         }
@@ -1000,7 +1003,7 @@ struct RoutineView: View {
                                     HStack(alignment: .bottom) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(routineData.routine.name)
-                                                .font(.headline)
+                                                .font(.title3)
                                                 .kerning(0.5)
                                                 .foregroundColor(.primary)
                                             Text("Routine")
@@ -1042,7 +1045,8 @@ struct RoutineView: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Done") {
+                            Button("Cancel") {
+                                // Don't save any changes - just dismiss
                                 showingRoutineDetail = nil
                             }
                         }
