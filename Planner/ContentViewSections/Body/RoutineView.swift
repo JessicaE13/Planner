@@ -160,7 +160,7 @@ struct Routine: Identifiable, Codable, Equatable {
         let completedVisibleItems = completed.intersection(visibleItemNames)
         return Double(completedVisibleItems.count) / Double(visibleItems.count)
     }
-
+    
     mutating func toggleItem(_ itemName: String, for date: Date) {
         let key = dateKey(for: date)
         var completedForDate = completedItemsByDate[key] ?? []
@@ -227,8 +227,8 @@ struct CreateRoutineView: View {
         self._selectedIcon = State(initialValue: editingRoutine.icon)
         self._selectedColor = State(initialValue: editingRoutine.colorName)
         let initialItems = editingRoutine.routineItems.isEmpty && !editingRoutine.items.isEmpty
-            ? editingRoutine.items.map { RoutineItem(name: $0, frequency: .everyDay) }
-            : editingRoutine.routineItems
+        ? editingRoutine.items.map { RoutineItem(name: $0, frequency: .everyDay) }
+        : editingRoutine.routineItems
         self._routineItems = State(initialValue: initialItems.isEmpty ? [RoutineItem(name: "", frequency: .everyDay)] : initialItems)
         self._frequency = State(initialValue: editingRoutine.frequency)
         self._endRepeatOption = State(initialValue: editingRoutine.endRepeatOption)
@@ -761,34 +761,40 @@ struct RoutineDetailBottomSheetView: View {
     }
     
     var body: some View {
-    
-     
-            VStack(spacing: 0) {
-                VStack(spacing: 16) {
-                    HStack(alignment: .center, spacing: 12) {
-                        Image(systemName: workingRoutine.icon)
-                            .font(.system(size: 48))
-                            .foregroundColor(workingRoutine.color)
-                            .frame(minHeight: 56, alignment: .center)
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(workingRoutine.name + " Routine")
-                                .font(.title)
-                                .fontWeight(.semibold)
-                            ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
-                                .progressViewStyle(LinearProgressViewStyle(tint: workingRoutine.color))
-                                .scaleEffect(y: 1.5)
-                                .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
-                        }
-                    }
-                    if visibleItems.count != workingRoutine.routineItems.count {
-                        Text("\(visibleItems.count) of \(workingRoutine.routineItems.count) items today")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+        
+        
+        VStack(spacing: 0) {
+            VStack(spacing: 16) {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: workingRoutine.icon)
+                        .font(.system(size: 48))
+                        .foregroundColor(workingRoutine.color)
+                        .frame(minHeight: 56, alignment: .center)
+                  
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(workingRoutine.name + " Routine")
+                            .font(.title)
+                            .fontWeight(.semibold)
+                            .padding(.bottom, 4)
+                        
+                        ProgressView(value: workingRoutine.progress(for: selectedDate), total: 1.0)
+                            .progressViewStyle(LinearProgressViewStyle(tint: workingRoutine.color))
+                            .scaleEffect(y: 1.5)
+                            .animation(.easeInOut(duration: 0.3), value: workingRoutine.progress(for: selectedDate))
+                            .padding(.trailing, 16)
                     }
                 }
-                .padding(.top, 24)
-                .padding(.bottom, 32)
-                .padding(.horizontal, 32)
+                if visibleItems.count != workingRoutine.routineItems.count {
+                    Text("\(visibleItems.count) of \(workingRoutine.routineItems.count) items today")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 32)
+            .padding(.horizontal, 32)
+            
+            ScrollView {
                 
                 if !visibleItems.isEmpty {
                     VStack(spacing: 0) {
@@ -825,7 +831,7 @@ struct RoutineDetailBottomSheetView: View {
                                             .foregroundColor(.secondary)
                                         }
                                     }
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 12)
                                     .padding(.horizontal, 16)
                                     .padding(.trailing, 16)
                                     .contentShape(Rectangle())
@@ -856,7 +862,13 @@ struct RoutineDetailBottomSheetView: View {
                     }
                     .padding(.top, 40)
                 }
+                
                 Spacer()
+            }
+            
+            
+            HStack {
+                
                 Button("Done") {
                     dismiss()
                 }
@@ -866,25 +878,42 @@ struct RoutineDetailBottomSheetView: View {
                 .background(workingRoutine.color.opacity(0.9))
                 .foregroundColor(.white)
                 .cornerRadius(12)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, 8)
                 .padding(.bottom, 24)
+                
+//                Button("Done") {
+//                    dismiss()
+//                }
+//                .font(.headline)
+//                .padding(.vertical, 12)
+//                .frame(maxWidth: .infinity)
+//                .background(workingRoutine.color.opacity(0.9))
+//                .foregroundColor(.white)
+//                .cornerRadius(12)
+//                .padding(.horizontal, 8)
+//                .padding(.bottom, 24)
+//                
             }
-            .navigationTitle("Routine")
-            .navigationBarTitleDisplayMode(.inline)
-            .background( Color("BackgroundPopup"))
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: EditRoutineNavigationView(routine: $routine)) {
-                        Text("Edit")
-                            .foregroundColor(.primary)
-                    }
+            .padding(.horizontal, 36)
+            
+            
+        }
+        .navigationTitle("Routine")
+        .navigationBarTitleDisplayMode(.inline)
+        .background( Color("BackgroundPopup"))
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(destination: EditRoutineNavigationView(routine: $routine)) {
+                    Text("Edit")
+                        .foregroundColor(.primary)
                 }
             }
+        }
         
     }
 }
 
-// Create a wrapper view for editing routines that provides proper navigation
+
 struct EditRoutineNavigationView: View {
     @Binding var routine: Routine
     @State private var routines: [Routine] = []
@@ -976,7 +1005,7 @@ struct RoutineView: View {
                                                 .foregroundColor(.primary)
                                             Text("Routine")
                                                 .font(.caption2)
-                                               // .kerning(0.5)
+                                            // .kerning(0.5)
                                                 .textCase(.uppercase)
                                                 .foregroundColor(.primary.opacity(0.75))
                                         }
