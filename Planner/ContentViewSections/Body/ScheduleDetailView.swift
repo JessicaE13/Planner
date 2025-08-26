@@ -77,16 +77,7 @@ struct ScheduleDetailView: View {
                                         .padding(.vertical, 0)
                                 }
                                 if item.itemType == .todo {
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        HStack {
-                                            Image(systemName: "checklist")
-                                                .foregroundColor(.primary)
-                                                .frame(width: 20)
-                                            Text("Task Status")
-                                                .font(.headline)
-                                            Spacer()
-                                        }
-                                        
+
                                         HStack {
                                             Button(action: {
                                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -113,12 +104,6 @@ struct ScheduleDetailView: View {
                                         .padding(.vertical, 8)
                                         .background(Color.gray.opacity(0.05))
                                         .cornerRadius(8)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                    .background(Color.gray.opacity(0.05))
-                                    .cornerRadius(12)
-                                    .padding(.horizontal)
                                 }
                             }
                         }
@@ -166,7 +151,6 @@ struct ScheduleDetailView: View {
                     
                     }
                     
-                    // URL Section
                     if !item.url.isEmpty {
                         Button(action: {
                             if let url = URL(string: item.url) {
@@ -240,12 +224,10 @@ struct ScheduleDetailView: View {
                         .padding(.horizontal)
                     }
                     
-                    
                     if item.itemType == .scheduled {
                         EmptyView()
                     }
              
-                    
                     if let category = item.category {
                         Divider()
                             .padding(.horizontal, 24)
