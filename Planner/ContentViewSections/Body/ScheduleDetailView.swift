@@ -100,10 +100,9 @@ struct ScheduleDetailView: View {
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
-                                        .padding(.horizontal, 12)
+                                        .padding(.trailing, 12)
                                         .padding(.vertical, 8)
-                                        .background(Color.gray.opacity(0.05))
-                                        .cornerRadius(8)
+
                                 }
                             }
                         }
@@ -177,51 +176,6 @@ struct ScheduleDetailView: View {
                         .buttonStyle(PlainButtonStyle())
                         .padding(.leading, 24)
                         .padding(.bottom, 8)
-                    }
-                    
-                    if item.itemType == .todo {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "checklist")
-                                    .foregroundColor(.primary)
-                                    .frame(width: 20)
-                                Text("Task Status")
-                                    .font(.headline)
-                                Spacer()
-                            }
-                            
-                            HStack {
-                                Button(action: {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        item.isCompleted.toggle()
-                                        onSave(item)
-                                    }
-                                }) {
-                                    HStack {
-                                        Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(item.isCompleted ? .primary : .gray)
-                                            .font(.title2)
-                                        
-                                        Text("Mark as Completed")
-                                            .font(.body)
-                                            .strikethrough(item.isCompleted)
-                                            .foregroundColor(item.isCompleted ? .secondary : .primary)
-                                        
-                                        Spacer()
-                                    }
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.gray.opacity(0.05))
-                            .cornerRadius(8)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.gray.opacity(0.05))
-                        .cornerRadius(12)
-                        .padding(.horizontal)
                     }
                     
                     if item.itemType == .scheduled {
