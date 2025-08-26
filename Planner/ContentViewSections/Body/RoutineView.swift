@@ -475,24 +475,21 @@ struct CreateRoutineView: View {
             },
             set: { newValue in
                 guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
+                let oldValue = routineItems[currentIndex].name
                 routineItems[currentIndex].name = newValue
+                
+                // Handle backspace when text becomes empty (works on iPhone)
+                if oldValue.count == 1 && newValue.isEmpty && routineItems.count > 1 {
+                    // This means backspace was pressed on a single character, making it empty
+                    DispatchQueue.main.async {
+                        handleBackspaceFor(item)
+                    }
+                }
             }
         ))
         .focused($focusedItemID, equals: item.id)
         .onSubmit {
             createNewItemAfter(item)
-        }
-        .onKeyPress { keyPress in
-            // Check for backspace/delete key when the field is empty
-            if keyPress.characters == "\u{8}" || keyPress.characters == "\u{7F}" {
-                guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return .ignored }
-                
-                // Only handle backspace if the current item is empty and we have more than one item
-                if routineItems[currentIndex].name.isEmpty && routineItems.count > 1 {
-                    return handleBackspaceFor(item)
-                }
-            }
-            return .ignored
         }
     }
     
@@ -597,8 +594,8 @@ struct CreateRoutineView: View {
         }
     }
     
-    private func handleBackspaceFor(_ item: RoutineItem) -> KeyPress.Result {
-        guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return .ignored }
+    private func handleBackspaceFor(_ item: RoutineItem) {
+        guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
         
         // Only delete if the current item is empty and we have more than one item
         if routineItems[currentIndex].name.isEmpty && routineItems.count > 1 {
@@ -617,11 +614,7 @@ struct CreateRoutineView: View {
                     focusedItemID = previousID
                 }
             }
-            
-            return .handled
         }
-        
-        return .ignored
     }
     
     private func updateIconBasedOnName(_ name: String) {

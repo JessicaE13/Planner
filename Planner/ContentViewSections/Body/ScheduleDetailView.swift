@@ -76,6 +76,50 @@ struct ScheduleDetailView: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 0)
                                 }
+                                if item.itemType == .todo {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        HStack {
+                                            Image(systemName: "checklist")
+                                                .foregroundColor(.primary)
+                                                .frame(width: 20)
+                                            Text("Task Status")
+                                                .font(.headline)
+                                            Spacer()
+                                        }
+                                        
+                                        HStack {
+                                            Button(action: {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    item.isCompleted.toggle()
+                                                    onSave(item)
+                                                }
+                                            }) {
+                                                HStack {
+                                                    Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                                        .foregroundColor(item.isCompleted ? .primary : .gray)
+                                                        .font(.title2)
+                                                    
+                                                    Text("Mark as Completed")
+                                                        .font(.body)
+                                                        .strikethrough(item.isCompleted)
+                                                        .foregroundColor(item.isCompleted ? .secondary : .primary)
+                                                    
+                                                    Spacer()
+                                                }
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color.gray.opacity(0.05))
+                                        .cornerRadius(8)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .background(Color.gray.opacity(0.05))
+                                    .cornerRadius(12)
+                                    .padding(.horizontal)
+                                }
                             }
                         }
                         .padding(.leading, 8)
@@ -120,6 +164,35 @@ struct ScheduleDetailView: View {
                         .padding(.leading, 24)
                         .padding(.top, 24)
                     
+                    }
+                    
+                    // URL Section
+                    if !item.url.isEmpty {
+                        Button(action: {
+                            if let url = URL(string: item.url) {
+                                UIApplication.shared.open(url)
+                            }
+                        }) {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(alignment: .top, spacing: 4) {
+                                        Image(systemName: "link")
+                                            .foregroundColor(.blue)
+                                        Text(item.url)
+                                            .multilineTextAlignment(.leading)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                Spacer()
+                            }
+                            .font(.title)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.leading, 24)
+                        .padding(.bottom, 8)
                     }
                     
                     if item.itemType == .todo {
@@ -278,34 +351,7 @@ struct ScheduleDetailView: View {
                         .padding(.vertical, 16)
                     }
                     
-                    // URL Section
-                    if !item.url.isEmpty {
-                        Button(action: {
-                            if let url = URL(string: item.url) {
-                                UIApplication.shared.open(url)
-                            }
-                        }) {
-                            HStack(alignment: .top) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack(alignment: .top, spacing: 4) {
-                                        Image(systemName: "link")
-                                            .foregroundColor(.blue)
-                                        Text(item.url)
-                                            .multilineTextAlignment(.leading)
-                                            .foregroundColor(.blue)
-                                    }
-                                    .font(.subheadline)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                Spacer()
-                            }
-                            .font(.title)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .padding(.leading, 24)
-                        .padding(.top, 24)
-                    }
+
                     
                     Spacer()
                 }
@@ -446,25 +492,29 @@ struct ScheduleDetailView: View {
 #Preview("Schedule Detail View") {
     NavigationView {
         ScheduleDetailView(
-            item: ScheduleItem.createScheduled(
-                title: "Team Meeting",
-                startTime: Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date()) ?? Date(),
-                endTime: Calendar.current.date(bySettingHour: 11, minute: 30, second: 0, of: Date()) ?? Date(),
-                icon: "calendar",
-                color: "Color1",
-                frequency: .everyWeek,
-                descriptionText: "Weekly team standup meeting to discuss project progress and upcoming deliverables.",
-                location: "Conference Room A",
-                allDay: false,
-                checklist: [
-                    ChecklistItem(text: "Prepare agenda"),
-                    ChecklistItem(text: "Review project updates", isCompleted: true),
-                    ChecklistItem(text: "Schedule follow-ups")
-                ],
-                category: .learning,
-                endRepeatOption: .never,
-                endRepeatDate: Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()
-            ),
+            item: {
+                var item = ScheduleItem.createScheduled(
+                    title: "Team Meeting",
+                    startTime: Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: Date()) ?? Date(),
+                    endTime: Calendar.current.date(bySettingHour: 11, minute: 30, second: 0, of: Date()) ?? Date(),
+                    icon: "calendar",
+                    color: "Color1",
+                    frequency: .everyWeek,
+                    descriptionText: "Weekly team standup meeting to discuss project progress and upcoming deliverables.",
+                    location: "Conference Room A",
+                    allDay: false,
+                    checklist: [
+                        ChecklistItem(text: "Prepare agenda"),
+                        ChecklistItem(text: "Review project updates", isCompleted: true),
+                        ChecklistItem(text: "Schedule follow-ups")
+                    ],
+                    category: .learning,
+                    endRepeatOption: .never,
+                    endRepeatDate: Calendar.current.date(byAdding: .month, value: 3, to: Date()) ?? Date()
+                )
+                item.url = "https://zoom.us/j/1234567890"
+                return item
+            }(),
             selectedDate: Date(),
             onSave: { _ in }
         )
