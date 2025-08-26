@@ -237,7 +237,7 @@ struct ScheduleDetailView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
                         }
-
+                        .padding(.top, 8)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 16)
                         
