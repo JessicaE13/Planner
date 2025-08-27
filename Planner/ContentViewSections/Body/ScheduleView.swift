@@ -553,8 +553,8 @@ struct NewScheduleItemView: View {
                             }
                         }
                         
-                        // Scheduling Section (only show for scheduled items)
-                        if item.itemType == .scheduled {
+                        // Scheduling Section - now available for both todos (with dates) and scheduled items
+                        if item.itemType == .scheduled || (item.itemType == .todo && item.hasDate) {
                             Section {
                                 HStack {
                                     Text("All-day")
@@ -574,19 +574,22 @@ struct NewScheduleItemView: View {
                                     }
                                 }
                                 
-                                HStack {
-                                    Text("End")
-                                    Spacer()
-                                    DatePicker("", selection: $item.endTime, displayedComponents: .date)
-                                        .labelsHidden()
-                                    
-                                    if !item.allDay {
-                                        DatePicker("", selection: $item.endTime, displayedComponents: .hourAndMinute)
+                                // For todos, show "Due" instead of "End" and only show end time for scheduled items
+                                if item.itemType == .scheduled {
+                                    HStack {
+                                        Text("End")
+                                        Spacer()
+                                        DatePicker("", selection: $item.endTime, displayedComponents: .date)
                                             .labelsHidden()
+                                        
+                                        if !item.allDay {
+                                            DatePicker("", selection: $item.endTime, displayedComponents: .hourAndMinute)
+                                                .labelsHidden()
+                                        }
                                     }
                                 }
                                 
-                                // Repeat Section
+                                // Repeat Section - now available for both types
                                 HStack {
                                     Text("Repeat")
                                     Spacer()
@@ -1061,8 +1064,8 @@ struct EditScheduleItemView: View {
                         }
                     }
                     
-                    // Scheduling Section (only show for scheduled items)
-                    if editableItem.itemType == .scheduled {
+                    // Scheduling Section - now available for both todos (with dates) and scheduled items
+                    if editableItem.itemType == .scheduled || (editableItem.itemType == .todo && editableItem.hasDate) {
                         Section {
                             HStack {
                                 Text("All-day")
@@ -1082,19 +1085,22 @@ struct EditScheduleItemView: View {
                                 }
                             }
                             
-                            HStack {
-                                Text("End")
-                                Spacer()
-                                DatePicker("", selection: $editableItem.endTime, displayedComponents: .date)
-                                    .labelsHidden()
-                                
-                                if !editableItem.allDay {
-                                    DatePicker("", selection: $editableItem.endTime, displayedComponents: .hourAndMinute)
+                            // For todos, show "Due" instead of "End" and only show end time for scheduled items
+                            if editableItem.itemType == .scheduled {
+                                HStack {
+                                    Text("End")
+                                    Spacer()
+                                    DatePicker("", selection: $editableItem.endTime, displayedComponents: .date)
                                         .labelsHidden()
+                                    
+                                    if !editableItem.allDay {
+                                        DatePicker("", selection: $editableItem.endTime, displayedComponents: .hourAndMinute)
+                                            .labelsHidden()
+                                    }
                                 }
                             }
                             
-                            // Repeat Section
+                            // Repeat Section - now available for both types
                             HStack {
                                 Text("Repeat")
                                 Spacer()

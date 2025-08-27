@@ -71,7 +71,9 @@ struct ScheduleDetailView: View {
                                     .fontWeight(.bold)
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                if item.itemType == .scheduled {
+                                
+                                // Show time info for scheduled items OR todos with dates assigned
+                                if item.itemType == .scheduled || (item.itemType == .todo && item.hasDate) {
                                     createTimeView()
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 0)
