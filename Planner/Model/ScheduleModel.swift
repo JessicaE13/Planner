@@ -85,6 +85,7 @@ struct ScheduleItem: Identifiable, Codable {
     var excludedDates: Set<Date> = []
     var hasDate: Bool = false // New property to track if todo has a date assigned
     var url: String = "" // New property to store an optional URL for each event or task
+    var showCheckbox: Bool = false // New property to allow scheduled events to show checkbox
     
     // Legacy properties for compatibility
     var type: String {
@@ -279,7 +280,8 @@ struct ScheduleItem: Identifiable, Codable {
         category: Category? = nil,
         endRepeatOption: EndRepeatOption = .never,
         endRepeatDate: Date = Date(),
-        hasDate: Bool = false
+        hasDate: Bool = false,
+        showCheckbox: Bool = false
     ) {
         self.id = UUID()
         self.title = title
@@ -301,11 +303,12 @@ struct ScheduleItem: Identifiable, Codable {
         self.endRepeatOption = endRepeatOption
         self.endRepeatDate = endRepeatDate
         self.hasDate = hasDate
+        self.showCheckbox = showCheckbox
     }
     
     // Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, title, time, icon, color, frequency, customFrequencyConfig, descriptionText, location, allDay, itemType, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates, hasDate, url
+        case id, title, time, icon, color, frequency, customFrequencyConfig, descriptionText, location, allDay, itemType, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates, hasDate, url, showCheckbox
     }
     
     init(from decoder: Decoder) throws {
@@ -341,6 +344,7 @@ struct ScheduleItem: Identifiable, Codable {
         excludedDates = try container.decodeIfPresent(Set<Date>.self, forKey: .excludedDates) ?? []
         hasDate = try container.decodeIfPresent(Bool.self, forKey: .hasDate) ?? (itemType == .scheduled) // Default based on type
         url = try container.decodeIfPresent(String.self, forKey: .url) ?? "" // Decode URL if present
+        showCheckbox = try container.decodeIfPresent(Bool.self, forKey: .showCheckbox) ?? false // Default to false for backward compatibility
     }
     
     func encode(to encoder: Encoder) throws {
@@ -368,6 +372,7 @@ struct ScheduleItem: Identifiable, Codable {
         try container.encode(excludedDates, forKey: .excludedDates)
         try container.encode(hasDate, forKey: .hasDate)
         try container.encode(url, forKey: .url) // Encode URL
+        try container.encode(showCheckbox, forKey: .showCheckbox) // Encode showCheckbox
     }
     
     // Updated shouldAppear method - now includes dated todo items

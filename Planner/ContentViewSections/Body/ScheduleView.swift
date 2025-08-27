@@ -223,8 +223,8 @@ struct ScheduleRowView: View {
             }
             .padding(.trailing, 8)
             
-            if item.itemType == .todo {
-                // For todo items, show checkbox in place of time
+            // Show checkbox if it's a todo item OR if it's a scheduled item with showCheckbox enabled
+            if item.itemType == .todo || (item.itemType == .scheduled && item.showCheckbox) {
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         var updatedItem = item
@@ -237,8 +237,10 @@ struct ScheduleRowView: View {
                         .foregroundColor(item.isCompleted ? .primary : .gray)
                 }
                 .buttonStyle(PlainButtonStyle())
-            } else if item.itemType == .scheduled {
-                // For scheduled items, show time
+            }
+            
+            // Show time for scheduled items (regardless of checkbox state)
+            if item.itemType == .scheduled {
                 Text(formatTime(item.startTime))
                     .font(.body)
                     .foregroundColor(Color.gray)
@@ -246,8 +248,8 @@ struct ScheduleRowView: View {
             
             Text(item.title)
                 .font(.body)
-                .strikethrough(item.itemType == .todo && item.isCompleted)
-                .foregroundColor(item.itemType == .todo && item.isCompleted ? .secondary : .primary)
+                .strikethrough((item.itemType == .todo || item.showCheckbox) && item.isCompleted)
+                .foregroundColor((item.itemType == .todo || item.showCheckbox) && item.isCompleted ? .secondary : .primary)
             
             if item.frequency != .never {
                 Image(systemName: "repeat")
@@ -444,33 +446,43 @@ struct NewScheduleItemView: View {
                         // Item Type Section
                         Section {
                             HStack {
-                                Text("To Do Item")
+                                Text("Show Checkbox")
                                     .font(.body)
                                 Spacer()
-                                Toggle("", isOn: Binding(
-                                    get: { item.itemType == .todo },
-                                    set: { newValue in
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            if newValue {
-                                                item.convertToToDo()
-                                            } else {
-                                                // Convert back to scheduled with default values
-                                                let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
-                                                let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
-                                                
-                                                item.convertToScheduled(
-                                                    startTime: defaultStart,
-                                                    endTime: defaultEnd,
-                                                    location: item.location,
-                                                    allDay: item.allDay,
-                                                    frequency: .never,
-                                                    endRepeatOption: .never,
-                                                    endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
-                                                )
+                                Toggle("", isOn: $item.showCheckbox)
+                            }
+                            
+                            // Only show the To Do Item toggle if showCheckbox is enabled
+                            if item.showCheckbox {
+                                HStack {
+                                    Text("Convert to Task")
+                                        .font(.body)
+                                    Spacer()
+                                    Toggle("", isOn: Binding(
+                                        get: { item.itemType == .todo },
+                                        set: { newValue in
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                if newValue {
+                                                    item.convertToToDo()
+                                                } else {
+                                                    // Convert back to scheduled with default values
+                                                    let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+                                                    let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
+                                                    
+                                                    item.convertToScheduled(
+                                                        startTime: defaultStart,
+                                                        endTime: defaultEnd,
+                                                        location: item.location,
+                                                        allDay: item.allDay,
+                                                        frequency: .never,
+                                                        endRepeatOption: .never,
+                                                        endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
-                                ))
+                                    ))
+                                }
                             }
                             
                             // Todo-specific options
@@ -942,33 +954,43 @@ struct EditScheduleItemView: View {
                     // Item Type Section
                     Section {
                         HStack {
-                            Text("To Do Item")
+                            Text("Show Checkbox")
                                 .font(.body)
                             Spacer()
-                            Toggle("", isOn: Binding(
-                                get: { editableItem.itemType == .todo },
-                                set: { newValue in
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        if newValue {
-                                            editableItem.convertToToDo()
-                                        } else {
-                                            // Convert back to scheduled with default values
-                                            let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
-                                            let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
-                                            
-                                            editableItem.convertToScheduled(
-                                                startTime: defaultStart,
-                                                endTime: defaultEnd,
-                                                location: editableItem.location,
-                                                allDay: editableItem.allDay,
-                                                frequency: .never,
-                                                endRepeatOption: .never,
-                                                endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
-                                            )
+                            Toggle("", isOn: $editableItem.showCheckbox)
+                        }
+                        
+                        // Only show the To Do Item toggle if showCheckbox is enabled
+                        if editableItem.showCheckbox {
+                            HStack {
+                                Text("Convert to Task")
+                                    .font(.body)
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { editableItem.itemType == .todo },
+                                    set: { newValue in
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            if newValue {
+                                                editableItem.convertToToDo()
+                                            } else {
+                                                // Convert back to scheduled with default values
+                                                let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+                                                let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
+                                                
+                                                editableItem.convertToScheduled(
+                                                    startTime: defaultStart,
+                                                    endTime: defaultEnd,
+                                                    location: editableItem.location,
+                                                    allDay: editableItem.allDay,
+                                                    frequency: .never,
+                                                    endRepeatOption: .never,
+                                                    endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
+                                                )
+                                            }
                                         }
                                     }
-                                }
-                            ))
+                                ))
+                            }
                         }
                         
                         // Todo-specific options
