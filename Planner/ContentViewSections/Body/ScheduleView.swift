@@ -216,10 +216,10 @@ struct ScheduleRowView: View {
         HStack {
             ZStack {
                 RoundedRectangle(cornerRadius: 18)
-                    .fill(Color(item.color))
+                    .fill(Color(iconBackgroundColor))
                     .frame(width: 50, height: 75)
                 Image(systemName: item.icon)
-                    .foregroundColor(.white)
+                    .foregroundColor(iconColor(for: iconBackgroundColor))
             }
             .padding(.trailing, 8)
             
@@ -268,6 +268,36 @@ struct ScheduleRowView: View {
         .onTapGesture {
             onTap()
         }
+    }
+    
+    // Computed property to determine the background color
+    private var iconBackgroundColor: String {
+        // Use category color if a category is assigned, otherwise use item's color
+        return item.category?.color ?? item.color
+    }
+    
+    // Helper function to determine appropriate icon color based on background
+    private func iconColor(for colorName: String) -> Color {
+        // For better contrast, we'll determine if the background is light or dark
+        // and choose the appropriate contrasting color
+        
+        // Create a UIColor from the color name to analyze its brightness
+        let uiColor = UIColor(named: colorName) ?? UIColor.systemBlue
+        
+        // Calculate the relative luminance to determine if it's a light or dark color
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        
+        uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        
+        // Calculate relative luminance using the standard formula
+        let luminance = 0.299 * red + 0.587 * green + 0.114 * blue
+        
+        // If luminance is greater than 0.5, it's a light color, so use dark icon
+        // If luminance is less than or equal to 0.5, it's a dark color, so use light icon
+        return luminance > 0.5 ? .black : .white
     }
     
     private func formatTime(_ date: Date) -> String {
