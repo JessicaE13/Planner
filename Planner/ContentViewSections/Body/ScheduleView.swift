@@ -221,8 +221,8 @@ struct ScheduleRowView: View {
                 Image(systemName: item.icon)
                     .foregroundColor(.white)
             }
+            .padding(.trailing, 8)
             
-            // Time section or checkbox - this replaces the previous separate sections
             if item.itemType == .todo {
                 // For todo items, show checkbox in place of time
                 Button(action: {
@@ -254,7 +254,6 @@ struct ScheduleRowView: View {
                     .foregroundColor(Color.gray.opacity(0.6))
             }
             
-            // Add indicator for items moved from to-do
             if item.uniqueKey.hasPrefix("todo-") && item.itemType == .scheduled {
                 Image(systemName: "arrow.right.circle.fill")
                     .foregroundColor(.blue.opacity(0.6))
@@ -487,7 +486,7 @@ struct NewScheduleItemView: View {
                                             withAnimation(.easeInOut(duration: 0.3)) {
                                                 if newValue {
                                                     // Assign current selected date
-                                                    item.setDate(selectedDate, allDay: true)
+                                                    item.setDate(selectedDate, allDay: item.allDay)
                                                 } else {
                                                     // Remove date assignment
                                                     item.setDate(nil)
@@ -497,42 +496,47 @@ struct NewScheduleItemView: View {
                                     ))
                                 }
                                 
-                                // Date picker (only show if date is assigned)
+                                // Date and time options (only show if date is assigned)
                                 if item.hasDate {
+                                    HStack {
+                                        Text("All-day")
+                                        Spacer()
+                                        Toggle("", isOn: Binding(
+                                            get: { item.allDay },
+                                            set: { newValue in
+                                                withAnimation(.easeInOut(duration: 0.3)) {
+                                                    item.setDate(item.startTime, allDay: newValue)
+                                                }
+                                            }
+                                        ))
+                                    }
+                                    
                                     HStack {
                                         Text("Due Date")
                                         Spacer()
                                         DatePicker("", selection: Binding(
                                             get: { item.startTime },
                                             set: { newDate in
-                                                item.setDate(newDate, allDay: true)
+                                                item.setDate(newDate, allDay: item.allDay)
                                             }
                                         ), displayedComponents: .date)
                                         .labelsHidden()
                                     }
-                                }
-                                
-                                // Completion toggle
-                                HStack {
-                                    Button(action: {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            item.isCompleted.toggle()
-                                        }
-                                    }) {
+                                    
+                                    // Show time picker only if not all-day
+                                    if !item.allDay {
                                         HStack {
-                                            Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                                .foregroundColor(item.isCompleted ? .primary : .gray)
-                                                .font(.title2)
-                                            
-                                            Text("Mark as Completed")
-                                                .font(.body)
-                                                .strikethrough(item.isCompleted)
-                                                .foregroundColor(item.isCompleted ? .secondary : .primary)
-                                            
+                                            Text("Due Time")
                                             Spacer()
+                                            DatePicker("", selection: Binding(
+                                                get: { item.startTime },
+                                                set: { newDate in
+                                                    item.setDate(newDate, allDay: false)
+                                                }
+                                            ), displayedComponents: .hourAndMinute)
+                                            .labelsHidden()
                                         }
                                     }
-                                    .buttonStyle(PlainButtonStyle())
                                 }
                             }
                         }
@@ -980,7 +984,7 @@ struct EditScheduleItemView: View {
                                         withAnimation(.easeInOut(duration: 0.3)) {
                                             if newValue {
                                                 // Assign current selected date
-                                                editableItem.setDate(selectedDate, allDay: true)
+                                                editableItem.setDate(selectedDate, allDay: editableItem.allDay)
                                             } else {
                                                 // Remove date assignment
                                                 editableItem.setDate(nil)
@@ -990,42 +994,47 @@ struct EditScheduleItemView: View {
                                 ))
                             }
                             
-                            // Date picker (only show if date is assigned)
+                            // Date and time options (only show if date is assigned)
                             if editableItem.hasDate {
+                                HStack {
+                                    Text("All-day")
+                                    Spacer()
+                                    Toggle("", isOn: Binding(
+                                        get: { editableItem.allDay },
+                                        set: { newValue in
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                editableItem.setDate(editableItem.startTime, allDay: newValue)
+                                            }
+                                        }
+                                    ))
+                                }
+                                
                                 HStack {
                                     Text("Due Date")
                                     Spacer()
                                     DatePicker("", selection: Binding(
                                         get: { editableItem.startTime },
                                         set: { newDate in
-                                            editableItem.setDate(newDate, allDay: true)
+                                            editableItem.setDate(newDate, allDay: editableItem.allDay)
                                         }
                                     ), displayedComponents: .date)
                                     .labelsHidden()
                                 }
-                            }
-                            
-                            // Completion toggle
-                            HStack {
-                                Button(action: {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        editableItem.isCompleted.toggle()
-                                    }
-                                }) {
+                                
+                                // Show time picker only if not all-day
+                                if !editableItem.allDay {
                                     HStack {
-                                        Image(systemName: editableItem.isCompleted ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(editableItem.isCompleted ? .primary : .gray)
-                                            .font(.title2)
-                                        
-                                        Text("Mark as Completed")
-                                            .font(.body)
-                                            .strikethrough(editableItem.isCompleted)
-                                            .foregroundColor(editableItem.isCompleted ? .secondary : .primary)
-                                        
+                                        Text("Due Time")
                                         Spacer()
+                                        DatePicker("", selection: Binding(
+                                            get: { editableItem.startTime },
+                                            set: { newDate in
+                                                editableItem.setDate(newDate, allDay: false)
+                                            }
+                                        ), displayedComponents: .hourAndMinute)
+                                        .labelsHidden()
                                     }
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                     }
