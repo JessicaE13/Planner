@@ -76,33 +76,33 @@ struct ScheduleDetailView: View {
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 0)
                                 }
-                                if item.itemType == .todo {
-
-                                        HStack {
-                                            Button(action: {
-                                                withAnimation(.easeInOut(duration: 0.2)) {
-                                                    item.isCompleted.toggle()
-                                                    onSave(item)
-                                                }
-                                            }) {
-                                                HStack {
-                                                    Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                                        .foregroundColor(item.isCompleted ? .primary : .gray)
-                                                        .font(.title2)
-                                                    
-                                                    Text("Mark as Completed")
-                                                        .font(.body)
-                                                        .strikethrough(item.isCompleted)
-                                                        .foregroundColor(item.isCompleted ? .secondary : .primary)
-                                                    
-                                                    Spacer()
-                                                }
+                                
+                                // Show checkbox for todo items OR scheduled items with showCheckbox enabled
+                                if item.itemType == .todo || (item.itemType == .scheduled && item.showCheckbox) {
+                                    HStack {
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                item.isCompleted.toggle()
+                                                onSave(item)
                                             }
-                                            .buttonStyle(PlainButtonStyle())
+                                        }) {
+                                            HStack {
+                                                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                                    .foregroundColor(item.isCompleted ? .primary : .gray)
+                                                    .font(.title2)
+                                                
+                                                Text("Mark as Completed")
+                                                    .font(.body)
+                                                    .strikethrough(item.isCompleted)
+                                                    .foregroundColor(item.isCompleted ? .secondary : .primary)
+                                                
+                                                Spacer()
+                                            }
                                         }
-                                        .padding(.trailing, 12)
-                                        .padding(.vertical, 8)
-
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
+                                    .padding(.trailing, 12)
+                                    .padding(.vertical, 8)
                                 }
                             }
                         }
