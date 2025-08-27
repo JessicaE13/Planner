@@ -511,19 +511,6 @@ struct NewScheduleItemView: View {
                                 // Date and time options (only show if date is assigned)
                                 if item.hasDate {
                                     HStack {
-                                        Text("All-day")
-                                        Spacer()
-                                        Toggle("", isOn: Binding(
-                                            get: { item.allDay },
-                                            set: { newValue in
-                                                withAnimation(.easeInOut(duration: 0.3)) {
-                                                    item.setDate(item.startTime, allDay: newValue)
-                                                }
-                                            }
-                                        ))
-                                    }
-                                    
-                                    HStack {
                                         Text("Due Date")
                                         Spacer()
                                         DatePicker("", selection: Binding(
@@ -1022,19 +1009,6 @@ struct EditScheduleItemView: View {
                             // Date and time options (only show if date is assigned)
                             if editableItem.hasDate {
                                 HStack {
-                                    Text("All-day")
-                                    Spacer()
-                                    Toggle("", isOn: Binding(
-                                        get: { editableItem.allDay },
-                                        set: { newValue in
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                editableItem.setDate(editableItem.startTime, allDay: newValue)
-                                            }
-                                        }
-                                    ))
-                                }
-                                
-                                HStack {
                                     Text("Due Date")
                                     Spacer()
                                     DatePicker("", selection: Binding(
@@ -1078,7 +1052,7 @@ struct EditScheduleItemView: View {
                                 Spacer()
                                 DatePicker("", selection: $editableItem.startTime, displayedComponents: .date)
                                     .labelsHidden()
-                                
+                                    
                                 if !editableItem.allDay {
                                     DatePicker("", selection: $editableItem.startTime, displayedComponents: .hourAndMinute)
                                         .labelsHidden()
