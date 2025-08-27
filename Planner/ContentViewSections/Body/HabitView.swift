@@ -247,6 +247,7 @@ struct HabitView: View {
                             }) {
                                 HStack {
                                     Image(systemName: habitManager.habits[index].isCompleted(for: selectedDate) ? "checkmark.circle.fill" : "circle")
+                                        .font(.title2)
                                         .foregroundColor(habitManager.habits[index].isCompleted(for: selectedDate) ? .primary : .gray)
                                     Text(habitManager.habits[index].name)
                                         .strikethrough(habitManager.habits[index].isCompleted(for: selectedDate))
