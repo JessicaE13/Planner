@@ -206,6 +206,13 @@ struct ScheduleDetailView: View {
                     }
 
                     if item.frequency != .never {
+                        // Add divider above repeat section if there's no category
+                        if item.category == nil {
+                            Divider()
+                                .padding(.horizontal, 24)
+                                .padding(.top, 16)
+                        }
+                        
                         HStack {
                             Text("Repeat")
                                 .foregroundColor(.primary)
