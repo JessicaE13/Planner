@@ -53,9 +53,7 @@ struct ScheduleDetailView: View {
             ScrollView {
                 VStack(spacing:8) {
 
-                    // Add top padding to move icon/title section down
                     HStack(alignment: .top, spacing: 16) {
-                        // Use the measured height for the ZStack
                         ZStack {
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(Color(item.category?.color ?? item.color))
@@ -73,14 +71,12 @@ struct ScheduleDetailView: View {
                                     .multilineTextAlignment(.leading)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 
-                                // Show time info for scheduled items OR todos with dates assigned
                                 if item.itemType == .scheduled || (item.itemType == .todo && item.hasDate) {
                                     createTimeView()
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 0)
                                 }
                                 
-                                // Show checkbox for todo items OR scheduled items with showCheckbox enabled
                                 if item.itemType == .todo || (item.itemType == .scheduled && item.showCheckbox) {
                                     HStack {
                                         Button(action: {
