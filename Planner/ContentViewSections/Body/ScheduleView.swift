@@ -336,6 +336,9 @@ struct NewScheduleItemView: View {
     @State private var selectedCategory: Category?
     @State private var showingManageCategories = false
     
+    // Icon selection
+    @State private var showingIconPicker = false
+    
     init(selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void) {
         self.selectedDate = selectedDate
         self.onSave = onSave
@@ -398,9 +401,15 @@ struct NewScheduleItemView: View {
                     Form {
                         Section {
                             HStack {
-                                Image(systemName: item.icon)
-                                    .foregroundColor(.primary)
-                                    .padding(.trailing, 8)
+                                Button(action: {
+                                    showingIconPicker = true
+                                }) {
+                                    Image(systemName: item.icon)
+                                        .foregroundColor(.primary)
+                                        .padding(.trailing, 8)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
                                 TextField("Title", text: $item.title)
                                     .multilineTextAlignment(.leading)
                             }
@@ -799,6 +808,9 @@ struct NewScheduleItemView: View {
                 endRepeatDate: $item.endRepeatDate
             )
         }
+        .sheet(isPresented: $showingIconPicker) {
+            IconPickerView(selectedIcon: $item.icon)
+        }
     }
     
     // MARK: - Checklist Helper Methods
@@ -849,6 +861,9 @@ struct EditScheduleItemView: View {
     @State private var selectedCategory: Category?
     @State private var showingManageCategories = false
     
+    // Icon selection
+    @State private var showingIconPicker = false
+    
     // Delete confirmation states
     @State private var showingDeleteConfirmation = false
     @State private var showingRecurringDeleteOptions = false
@@ -896,9 +911,15 @@ struct EditScheduleItemView: View {
                 Form {
                     Section {
                         HStack {
-                            Image(systemName: editableItem.icon)
-                                .foregroundColor(.primary)
-                                .padding(.trailing, 8)
+                            Button(action: {
+                                showingIconPicker = true
+                            }) {
+                                Image(systemName: editableItem.icon)
+                                    .foregroundColor(.primary)
+                                    .padding(.trailing, 8)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
                             TextField("Title", text: $editableItem.title)
                                 .multilineTextAlignment(.leading)
                         }
@@ -1303,6 +1324,9 @@ struct EditScheduleItemView: View {
                 endRepeatOption: $editableItem.endRepeatOption,
                 endRepeatDate: $editableItem.endRepeatDate
             )
+        }
+        .sheet(isPresented: $showingIconPicker) {
+            IconPickerView(selectedIcon: $editableItem.icon)
         }
         // Simple delete confirmation for single events
         .alert("Delete Event", isPresented: $showingDeleteConfirmation) {

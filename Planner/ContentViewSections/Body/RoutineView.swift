@@ -621,12 +621,14 @@ struct CreateRoutineView: View {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return
         }
-        let matchedIcon = iconDataSource.getFirstMatchingIconByWords(
-            searchText: name,
-            defaultIcon: selectedIcon
-        )
-        if matchedIcon != selectedIcon {
-            selectedIcon = matchedIcon
+        
+        // Use the existing filtering functionality to find a matching icon
+        let filteredCategories = iconDataSource.getFilteredCategories(searchText: name)
+        
+        // Get the first matching icon from the filtered results
+        if let firstCategory = filteredCategories.first,
+           let firstIcon = firstCategory.icons.first {
+            selectedIcon = firstIcon.name
         }
     }
     

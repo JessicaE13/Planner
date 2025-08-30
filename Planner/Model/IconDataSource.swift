@@ -236,111 +236,25 @@ class IconDataSource {
     ]
     
     // MARK: - Filtering Methods
+    
     func getFilteredCategories(searchText: String) -> [IconCategory] {
-        if searchText.isEmpty {
+        guard !searchText.isEmpty else {
             return iconCategories
-        } else {
-            return iconCategories.compactMap { category in
-                let filteredIcons = category.icons.filter { icon in
-                    icon.displayName.lowercased().contains(searchText.lowercased()) ||
-                    icon.name.lowercased().contains(searchText.lowercased())
-                }
-                return filteredIcons.isEmpty ? nil : IconCategory(name: category.name, icons: filteredIcons)
-            }
-        }
-    }
-    
-    func getFilteredIcons(searchText: String) -> [IconItem] {
-        return getFilteredCategories(searchText: searchText).flatMap { $0.icons }
-    }
-    
-    func getFirstFilteredIcon(searchText: String, defaultIcon: String = "sunrise.fill") -> String {
-        let filteredIcons = getFilteredIcons(searchText: searchText)
-        return filteredIcons.first?.name ?? defaultIcon
-    }
-    
-    // MARK: - Enhanced Word-by-Word Matching Methods
-    
-    /// Get the first matching icon by searching each word individually
-    func getFirstMatchingIconByWords(searchText: String, defaultIcon: String = "calendar") -> String {
-        let words = searchText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .compactMap { word in
-                let cleaned = word.trimmingCharacters(in: .punctuationCharacters)
-                return cleaned.isEmpty ? nil : cleaned
-            }
-        
-        guard !words.isEmpty else { return defaultIcon }
-        
-        for word in words {
-            let iconsForWord = getFilteredIcons(searchText: word)
-            if !iconsForWord.isEmpty {
-                return iconsForWord.first?.name ?? defaultIcon
-            }
         }
         
-        return defaultIcon
-    }
-    
-    /// Get all matching icons by searching each word individually
-    func getMatchingIconsByWords(searchText: String) -> [IconItem] {
-        let words = searchText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .compactMap { word in
-                let cleaned = word.trimmingCharacters(in: .punctuationCharacters)
-                return cleaned.isEmpty ? nil : cleaned
+        let filtered = iconCategories.compactMap { category in
+            let filteredIcons = category.icons.filter { icon in
+                icon.displayName.localizedCaseInsensitiveContains(searchText) ||
+                icon.name.localizedCaseInsensitiveContains(searchText)
             }
-        
-        guard !words.isEmpty else { return [] }
-        
-        for word in words {
-            let iconsForWord = getFilteredIcons(searchText: word)
-            if !iconsForWord.isEmpty {
-                return iconsForWord
-            }
+            
+            return filteredIcons.isEmpty ? nil : IconCategory(name: category.name, icons: filteredIcons)
         }
         
-        return []
+        return filtered
     }
     
-    /// Get information about which word matched and how many icons were found
-    func getWordMatchInfo(searchText: String) -> (matchedWord: String?, iconCount: Int) {
-        let words = searchText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .compactMap { word in
-                let cleaned = word.trimmingCharacters(in: .punctuationCharacters)
-                return cleaned.isEmpty ? nil : cleaned
-            }
-        
-        guard !words.isEmpty else { return (nil, 0) }
-        
-        for word in words {
-            let iconsForWord = getFilteredIcons(searchText: word)
-            if !iconsForWord.isEmpty {
-                return (word, iconsForWord.count)
-            }
-        }
-        
-        return (nil, 0)
-    }
-    
-    // MARK: - Convenience Methods
     func getAllIcons() -> [IconItem] {
-        return iconCategories.flatMap { $0.icons }
-    }
-    
-    func findIcon(byName name: String) -> IconItem? {
-        return getAllIcons().first { $0.name == name }
-    }
-    
-    func getRandomIcon() -> IconItem {
-        let allIcons = getAllIcons()
-        return allIcons.randomElement() ?? IconItem(name: "sunrise.fill", displayName: "Sunrise")
+        return getFilteredCategories(searchText: "").flatMap { $0.icons }
     }
 }
