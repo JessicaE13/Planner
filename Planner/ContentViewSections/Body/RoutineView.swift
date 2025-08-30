@@ -1126,7 +1126,7 @@ struct RoutineView: View {
                             showingRoutineDetail = routineData.routine
                         }) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 10)
+                                RoundedRectangle(cornerRadius: 16)
                                     .fill(Color("Background"))
                                     .frame(width: 176, height: 100)
                                 VStack {

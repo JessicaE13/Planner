@@ -16,6 +16,7 @@ struct ScheduleDetailView: View {
     let onSave: (ScheduleItem) -> Void
     @State private var showingMapOptions = false
     @StateObject private var dataManager = UnifiedDataManager.shared
+    @Environment(\.dismiss) private var dismiss
     
     // Remove the edit sheet state as we'll use navigation instead
     
@@ -318,8 +319,10 @@ struct ScheduleDetailView: View {
                         switch deleteOption {
                         case .thisEvent:
                             dataManager.excludeDateFromRecurring(item: item, excludeDate: selectedDate)
+                            dismiss() // Dismiss the view after excluding this occurrence
                         case .allEvents:
                             dataManager.deleteItem(item)
+                            dismiss() // Dismiss the view after delete
                         }
                     }
                 )) {
