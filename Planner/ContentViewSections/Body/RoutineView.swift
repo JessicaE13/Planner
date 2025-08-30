@@ -905,11 +905,7 @@ struct RoutineDetailBottomSheetView: View {
                             .padding(.trailing, 16)
                     }
                 }
-                if visibleItems.count != workingRoutine.routineItems.count {
-                    Text("\(visibleItems.count) of \(workingRoutine.routineItems.count) items today")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                // Removed the "X out of Y items today" text
             }
             .padding(.top, 24)
             .padding(.bottom, 32)
