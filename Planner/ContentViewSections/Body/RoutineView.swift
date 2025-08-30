@@ -825,7 +825,7 @@ struct RoutineItemDetailView: View {
                         }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
+                        Button("Save") {
                             if item.frequency == .custom && !useRoutineFrequency {
                                 item.customFrequencyConfig = customFrequencyConfig
                             }
@@ -986,7 +986,7 @@ struct RoutineDetailBottomSheetView: View {
             
             HStack {
                 
-                Button("Done") {
+                Button("Save") {
                     // Save changes to the routine binding before dismissing
                     routine = workingRoutine
                     dismiss()
@@ -994,9 +994,9 @@ struct RoutineDetailBottomSheetView: View {
                 .font(.headline)
                 .padding(.vertical, 12)
                 .frame(maxWidth: .infinity)
-                .background(workingRoutine.color.opacity(0.9))
-                .foregroundColor(.white)
-                .cornerRadius(12)
+                .background(Color("Background"))
+                .foregroundColor(.primary)
+                .cornerRadius(20)
                 .padding(.horizontal, 8)
                 .padding(.bottom, 24)
                 
@@ -1018,7 +1018,7 @@ struct RoutineDetailBottomSheetView: View {
             
             
         }
-        .navigationTitle("Routine")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .background( Color("BackgroundPopup"))
         .toolbar {
