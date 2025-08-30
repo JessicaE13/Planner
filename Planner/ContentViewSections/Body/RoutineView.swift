@@ -818,6 +818,8 @@ struct RoutineItemDetailView: View {
                     }
                     .listRowBackground(Color.clear)
                 }
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
                 .navigationTitle("Edit Item")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
