@@ -463,8 +463,15 @@ struct NewScheduleItemView: View {
                                         selectedCategory = nil
                                     }
                                     ForEach(CategoryDataManager.shared.categories) { category in
-                                        Button(category.name) {
+                                        Button(action: {
                                             selectedCategory = category
+                                        }) {
+                                            HStack {
+                                                Circle()
+                                                    .fill(Color(category.color))
+                                                    .frame(width: 16, height: 16)
+                                                Text(category.name)
+                                            }
                                         }
                                     }
                                     Button("Manage Categories") {
@@ -472,8 +479,16 @@ struct NewScheduleItemView: View {
                                     }
                                 } label: {
                                     HStack {
-                                        Text(selectedCategory?.name ?? "None")
-                                            .foregroundColor(.primary)
+                                        if let selectedCategory = selectedCategory {
+                                            Circle()
+                                                .fill(Color(selectedCategory.color))
+                                                .frame(width: 16, height: 16)
+                                            Text(selectedCategory.name)
+                                                .foregroundColor(.primary)
+                                        } else {
+                                            Text("None")
+                                                .foregroundColor(.primary)
+                                        }
                                         Image(systemName: "chevron.up.chevron.down")
                                             .foregroundColor(.secondary)
                                             .font(.caption2)
@@ -973,8 +988,15 @@ struct EditScheduleItemView: View {
                                     selectedCategory = nil
                                 }
                                 ForEach(CategoryDataManager.shared.categories) { category in
-                                    Button(category.name) {
+                                    Button(action: {
                                         selectedCategory = category
+                                    }) {
+                                        HStack {
+                                            Circle()
+                                                .fill(Color(category.color))
+                                                .frame(width: 16, height: 16)
+                                            Text(category.name)
+                                        }
                                     }
                                 }
                                 Button("Manage Categories") {
@@ -982,8 +1004,16 @@ struct EditScheduleItemView: View {
                                 }
                             } label: {
                                 HStack {
-                                    Text(selectedCategory?.name ?? "None")
-                                        .foregroundColor(.primary)
+                                    if let selectedCategory = selectedCategory {
+                                        Circle()
+                                            .fill(Color(selectedCategory.color))
+                                            .frame(width: 16, height: 16)
+                                        Text(selectedCategory.name)
+                                            .foregroundColor(.primary)
+                                    } else {
+                                        Text("None")
+                                            .foregroundColor(.primary)
+                                    }
                                     Image(systemName: "chevron.up.chevron.down")
                                         .foregroundColor(.secondary)
                                         .font(.caption2)
