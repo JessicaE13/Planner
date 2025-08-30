@@ -852,7 +852,7 @@ struct MoveToScheduleView: View {
             }
         }
         .sheet(isPresented: $showingIconPicker) {
-            IconPickerView(selectedIcon: $selectedIcon, initialSearchText: scheduleItem.title)
+            IconPickerView(selectedIcon: $selectedIcon)
         }
         .sheet(isPresented: $showingCustomFrequencyPicker) {
             CustomFrequencyPickerView(

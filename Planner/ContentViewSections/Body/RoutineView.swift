@@ -272,7 +272,7 @@ struct CreateRoutineView: View {
             toolbarContent
         }
         .sheet(isPresented: $showingIconPicker) {
-            IconPickerView(selectedIcon: $selectedIcon, initialSearchText: routineName)
+            IconPickerView(selectedIcon: $selectedIcon)
                 .onDisappear {
                     hasManuallySelectedIcon = true
                 }
