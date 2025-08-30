@@ -58,7 +58,7 @@ struct ScheduleDetailView: View {
                         // Use the measured height for the ZStack
                         ZStack {
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(Color(item.color))
+                                .fill(Color(item.category?.color ?? item.color))
                                 .frame(width: 56, height: max(vStackHeight, 75))
                             Image(systemName: item.icon)
                                 .font(.title)

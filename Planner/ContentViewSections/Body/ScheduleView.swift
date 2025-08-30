@@ -468,8 +468,11 @@ struct NewScheduleItemView: View {
                                         }) {
                                             HStack {
                                                 Circle()
-                                                    .fill(Color(category.color))
+                                                  //  .fill(Color(category.color))
+                                                    .fill(Color.red)
                                                     .frame(width: 16, height: 16)
+                                                Image(systemName: "chevron.up.chevron.down")
+                                                    .foregroundColor(.secondary)
                                                 Text(category.name)
                                             }
                                         }
