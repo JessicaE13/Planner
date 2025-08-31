@@ -18,8 +18,11 @@ struct Habit: Identifiable, Codable {
     var endRepeatOption: EndRepeatOption = .never
     var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     
+    // Add custom frequency configuration
+    var customFrequencyConfig: CustomFrequencyConfig?
+    
     // Custom initializer for creating new habits
-    init(name: String, frequency: Frequency = .everyDay, completion: [String: Bool] = [:], startDate: Date = Date(), endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()) {
+    init(name: String, frequency: Frequency = .everyDay, completion: [String: Bool] = [:], startDate: Date = Date(), endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(), customFrequencyConfig: CustomFrequencyConfig? = nil) {
         self.id = UUID()
         self.name = name
         self.frequency = frequency
@@ -27,11 +30,12 @@ struct Habit: Identifiable, Codable {
         self.startDate = startDate
         self.endRepeatOption = endRepeatOption
         self.endRepeatDate = endRepeatDate
+        self.customFrequencyConfig = customFrequencyConfig
     }
     
     // Custom Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, name, frequency, completion, startDate, endRepeatOption, endRepeatDate
+        case id, name, frequency, completion, startDate, endRepeatOption, endRepeatDate, customFrequencyConfig
     }
     
     init(from decoder: Decoder) throws {
@@ -43,6 +47,7 @@ struct Habit: Identifiable, Codable {
         startDate = try container.decodeIfPresent(Date.self, forKey: .startDate) ?? Date()
         endRepeatOption = try container.decodeIfPresent(EndRepeatOption.self, forKey: .endRepeatOption) ?? .never
         endRepeatDate = try container.decodeIfPresent(Date.self, forKey: .endRepeatDate) ?? Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+        customFrequencyConfig = try container.decodeIfPresent(CustomFrequencyConfig.self, forKey: .customFrequencyConfig)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -54,6 +59,7 @@ struct Habit: Identifiable, Codable {
         try container.encode(startDate, forKey: .startDate)
         try container.encode(endRepeatOption, forKey: .endRepeatOption)
         try container.encode(endRepeatDate, forKey: .endRepeatDate)
+        try container.encodeIfPresent(customFrequencyConfig, forKey: .customFrequencyConfig)
     }
     
     func isCompleted(for date: Date) -> Bool {
@@ -79,7 +85,7 @@ struct Habit: Identifiable, Codable {
         }
         
         // Check if the habit should trigger based on frequency from start date
-        let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate)
+        let shouldTrigger = frequency.shouldTrigger(on: date, from: startDate, customConfig: customFrequencyConfig)
         
         // If it shouldn't trigger based on frequency, don't show
         if !shouldTrigger {

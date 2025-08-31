@@ -13,6 +13,7 @@ struct HabitDetailView: View {
     var onDelete: (() -> Void)?
     @Environment(\.dismiss) var dismiss
     @State private var showingSavedConfirmation = false
+    @State private var showingCustomFrequencyPicker = false
     
     var body: some View {
         ZStack {
@@ -42,8 +43,43 @@ struct HabitDetailView: View {
                         }
                     }
                     .onChange(of: habit.frequency) { _, newFrequency in
+                        if newFrequency == .custom {
+                            // Initialize custom config if it doesn't exist
+                            if habit.customFrequencyConfig == nil {
+                                habit.customFrequencyConfig = CustomFrequencyConfig()
+                            }
+                            showingCustomFrequencyPicker = true
+                        } else {
+                            // Clear custom config for non-custom frequencies
+                            habit.customFrequencyConfig = nil
+                        }
                         habitManager.updateHabit(habit)
                         showSavedConfirmation()
+                    }
+                    
+                    // Show custom frequency configuration button
+                    if habit.frequency == .custom {
+                        Button(action: {
+                            if habit.customFrequencyConfig == nil {
+                                habit.customFrequencyConfig = CustomFrequencyConfig()
+                            }
+                            showingCustomFrequencyPicker = true
+                        }) {
+                            HStack {
+                                Text("Configure Custom Frequency")
+                                Spacer()
+                                if let config = habit.customFrequencyConfig {
+                                    Text(config.displayDescription())
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                            }
+                        }
+                        .foregroundColor(.primary)
                     }
                     
                     // Show frequency explanation
@@ -130,6 +166,22 @@ struct HabitDetailView: View {
                 habitManager.updateHabit(habit)
             }
         }
+        .sheet(isPresented: $showingCustomFrequencyPicker) {
+            if habit.customFrequencyConfig != nil {
+                CustomFrequencyPickerView(
+                    customConfig: Binding(
+                        get: { habit.customFrequencyConfig ?? CustomFrequencyConfig() },
+                        set: { newConfig in
+                            habit.customFrequencyConfig = newConfig
+                            habitManager.updateHabit(habit)
+                            showSavedConfirmation()
+                        }
+                    ),
+                    endRepeatOption: $habit.endRepeatOption,
+                    endRepeatDate: $habit.endRepeatDate
+                )
+            }
+        }
     }
     
     private func showSavedConfirmation() {
@@ -162,7 +214,10 @@ struct HabitDetailView: View {
             let monthDay = DateFormatter.localizedString(from: habit.startDate, dateStyle: .long, timeStyle: .none)
             return "Every year on \(monthDay)"
         case .custom:
-            return "Custom frequency pattern"
+            if let config = habit.customFrequencyConfig {
+                return config.displayDescription()
+            }
+            return "Custom frequency - tap to configure"
         }
     }
     

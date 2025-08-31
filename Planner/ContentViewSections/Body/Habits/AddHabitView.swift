@@ -14,6 +14,8 @@ struct AddHabitView: View {
     @State private var frequency: Frequency = .everyDay
     @State private var endRepeatOption: EndRepeatOption = .never
     @State private var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+    @State private var customFrequencyConfig: CustomFrequencyConfig?
+    @State private var showingCustomFrequencyPicker = false
     
     let onAdd: (Habit) -> Void
     
@@ -59,6 +61,31 @@ struct AddHabitView: View {
                                     }
                                 }
                                 .pickerStyle(MenuPickerStyle())
+                            }
+                            
+                            // Show custom frequency configuration button
+                            if frequency == .custom {
+                                Button(action: {
+                                    if customFrequencyConfig == nil {
+                                        customFrequencyConfig = CustomFrequencyConfig()
+                                    }
+                                    showingCustomFrequencyPicker = true
+                                }) {
+                                    HStack {
+                                        Text("Configure Custom Frequency")
+                                        Spacer()
+                                        if let config = customFrequencyConfig {
+                                            Text(config.displayDescription())
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                        Image(systemName: "chevron.right")
+                                            .foregroundColor(.secondary)
+                                            .font(.caption)
+                                    }
+                                }
+                                .foregroundColor(.primary)
                             }
                             
                             // Show end repeat options when frequency is not "Never"
@@ -118,6 +145,28 @@ struct AddHabitView: View {
             if newFrequency == .never {
                 endRepeatOption = .never
             }
+            // Initialize or clear custom config based on frequency
+            if newFrequency == .custom {
+                if customFrequencyConfig == nil {
+                    customFrequencyConfig = CustomFrequencyConfig()
+                }
+            } else {
+                customFrequencyConfig = nil
+            }
+        }
+        .sheet(isPresented: $showingCustomFrequencyPicker) {
+            if customFrequencyConfig != nil {
+                CustomFrequencyPickerView(
+                    customConfig: Binding(
+                        get: { customFrequencyConfig ?? CustomFrequencyConfig() },
+                        set: { newConfig in
+                            customFrequencyConfig = newConfig
+                        }
+                    ),
+                    endRepeatOption: $endRepeatOption,
+                    endRepeatDate: $endRepeatDate
+                )
+            }
         }
     }
     
@@ -130,7 +179,8 @@ struct AddHabitView: View {
                 completion: [:],
                 startDate: startDate,
                 endRepeatOption: endRepeatOption,
-                endRepeatDate: endRepeatDate
+                endRepeatDate: endRepeatDate,
+                customFrequencyConfig: customFrequencyConfig
             )
             onAdd(newHabit)
         }

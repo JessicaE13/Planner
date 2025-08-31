@@ -15,9 +15,11 @@ struct ManageHabitsView: View {
     @State private var newHabitFrequency: Frequency = .everyDay
     @State private var newHabitEndRepeatOption: EndRepeatOption = .never
     @State private var newHabitEndRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+    @State private var newHabitCustomFrequencyConfig: CustomFrequencyConfig?
     @State private var showingAddHabit = false
     @State private var selectedHabitIndex: Int?
     @State private var showingHabitDetail = false
+    @State private var editingHabit: Habit?
     
     var body: some View {
         ZStack {
@@ -73,6 +75,7 @@ struct ManageHabitsView: View {
                             ForEach(habitManager.habits.indices, id: \.self) { index in
                                 Button(action: {
                                     selectedHabitIndex = index
+                                    editingHabit = habitManager.habits[index]
                                     showingHabitDetail = true
                                 }) {
                                     HStack {
@@ -137,15 +140,24 @@ struct ManageHabitsView: View {
             }
         }
         .sheet(isPresented: $showingHabitDetail) {
-            if let index = selectedHabitIndex, 
-               index >= 0 && index < habitManager.habits.count {
+            if let index = selectedHabitIndex,
+               index >= 0 && index < habitManager.habits.count,
+               editingHabit != nil {
                 HabitDetailView(
-                    habit: .constant(habitManager.habits[index]),
+                    habit: Binding(
+                        get: { editingHabit! },
+                        set: { newValue in
+                            editingHabit = newValue
+                            habitManager.habits[index] = newValue
+                            habitManager.updateHabit(newValue)
+                        }
+                    ),
                     habitManager: habitManager,
                     onDelete: {
                         habitManager.deleteHabit(at: index)
                         showingHabitDetail = false
                         selectedHabitIndex = nil
+                        editingHabit = nil
                     }
                 )
             }
