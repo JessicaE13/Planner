@@ -120,7 +120,7 @@ struct ManageHabitsView: View {
                         Image(systemName: "plus")
                             .font(.title2)
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(Color("BackgroundPopup"))
                             .frame(width: 56, height: 56)
                             .background(Color.primary)
                             .clipShape(Circle())
