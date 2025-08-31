@@ -691,6 +691,20 @@ struct MoveToScheduleView: View {
     @State private var selectedIcon: String
     @State private var showingIconPicker = false
     
+    // Helper function to get the next upcoming hour
+    private static func nextUpcomingHour(from date: Date) -> Date {
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: date)
+        let currentMinute = calendar.component(.minute, from: date)
+        
+        // If we're at the top of the hour (0 minutes), use current hour
+        // Otherwise, move to the next hour
+        let targetHour = currentMinute == 0 ? currentHour : currentHour + 1
+        
+        // Set to the target hour with 0 minutes and 0 seconds
+        return calendar.date(bySettingHour: targetHour, minute: 0, second: 0, of: date) ?? date
+    }
+    
     init(scheduleItem: ScheduleItem, onSave: @escaping (ScheduledInfo) -> Void) {
         self.scheduleItem = scheduleItem
         self.onSave = onSave
@@ -701,9 +715,10 @@ struct MoveToScheduleView: View {
         // Initialize icon state
         self._selectedIcon = State(initialValue: scheduleItem.icon)
         
-        // Initialize start and end times
+        // Initialize start and end times using smart defaults
         let calendar = Calendar.current
-        let defaultStart = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
+        let now = Date()
+        let defaultStart = Self.nextUpcomingHour(from: now)
         let defaultEnd = calendar.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
         
         self._startTime = State(initialValue: defaultStart)
@@ -770,6 +785,11 @@ struct MoveToScheduleView: View {
                             Spacer()
                             DatePicker("", selection: $startTime, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
+                                .onChange(of: startTime) { _, newStartTime in
+                                    // Automatically update end time to be one hour after start time
+                                    let calendar = Calendar.current
+                                    endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
+                                }
                         }
                         
                         HStack {
