@@ -339,13 +339,32 @@ struct NewScheduleItemView: View {
     // Icon selection
     @State private var showingIconPicker = false
     
+    // Helper function to get the next upcoming hour
+    private static func nextUpcomingHour(from date: Date) -> Date {
+        let calendar = Calendar.current
+        let currentHour = calendar.component(.hour, from: date)
+        let currentMinute = calendar.component(.minute, from: date)
+        
+        // If we're at the top of the hour (0 minutes), use current hour
+        // Otherwise, move to the next hour
+        let targetHour = currentMinute == 0 ? currentHour : currentHour + 1
+        
+        // Set to the target hour with 0 minutes and 0 seconds
+        return calendar.date(bySettingHour: targetHour, minute: 0, second: 0, of: date) ?? date
+    }
+    
     init(selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void) {
         self.selectedDate = selectedDate
         self.onSave = onSave
         
-        // Create a new schedule item with default values
+        // Create a new schedule item with default values using next upcoming hour
         let calendar = Calendar.current
-        let defaultStartTime = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+        let now = Date()
+        
+        // Determine the reference time - use current time if selected date is today, otherwise use selected date
+        let referenceTime = calendar.isDate(selectedDate, inSameDayAs: now) ? now : selectedDate
+        
+        let defaultStartTime = Self.nextUpcomingHour(from: referenceTime)
         let defaultEndTime = calendar.date(byAdding: .hour, value: 1, to: defaultStartTime) ?? defaultStartTime
         
         self._item = State(initialValue: ScheduleItem.createScheduled(
@@ -615,6 +634,11 @@ struct NewScheduleItemView: View {
                                     if !item.allDay {
                                         DatePicker("", selection: $item.startTime, displayedComponents: .hourAndMinute)
                                             .labelsHidden()
+                                            .onChange(of: item.startTime) { _, newStartTime in
+                                                // Automatically update end time to be one hour after start time
+                                                let calendar = Calendar.current
+                                                item.endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
+                                            }
                                     }
                                 }
                                 
@@ -1140,6 +1164,11 @@ struct EditScheduleItemView: View {
                                 if !editableItem.allDay {
                                     DatePicker("", selection: $editableItem.startTime, displayedComponents: .hourAndMinute)
                                         .labelsHidden()
+                                        .onChange(of: editableItem.startTime) { _, newStartTime in
+                                            // Automatically update end time to be one hour after start time
+                                            let calendar = Calendar.current
+                                            editableItem.endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
+                                        }
                                 }
                             }
                             
