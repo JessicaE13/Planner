@@ -15,132 +15,141 @@ struct ManageHabitsView: View {
     @State private var newHabitFrequency: Frequency = .everyDay
     @State private var newHabitEndRepeatOption: EndRepeatOption = .never
     @State private var newHabitEndRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
+    @State private var showingAddHabit = false
+    @State private var selectedHabitIndex: Int?
+    @State private var showingHabitDetail = false
     
     var body: some View {
-        NavigationView {
+        ZStack {
+            Color("BackgroundPopup")
+                .ignoresSafeArea()
+            
             VStack(spacing: 0) {
-                if !habitManager.habits.isEmpty {
-                    VStack(spacing: 0) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                            
-                            VStack(spacing: 0) {
-                                ForEach(habitManager.habits.indices, id: \.self) { index in
-                                    NavigationLink(destination: HabitDetailView(
-                                        habit: .constant(habitManager.habits[index]),
-                                        habitManager: habitManager,
-                                        onDelete: {
-                                            habitManager.deleteHabit(at: index)
-                                        }
-                                    )) {
-                                        HStack {
+                // Header
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("Manage Habits")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                        Text("Build and track your daily routines")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Button("Done") { 
+                        dismiss() 
+                    }
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                }
+                .padding()
+                
+                // Habits list or empty state
+                if habitManager.habits.isEmpty {
+                    // Empty state - centered
+                    Spacer()
+                    VStack(spacing: 16) {
+                        Image(systemName: "repeat.circle")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray.opacity(0.5))
+                        
+                        Text("No habits yet")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        
+                        Text("Start building better habits by adding your first one using the + button below!")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                    Spacer()
+                } else {
+                    // Habits list
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(habitManager.habits.indices, id: \.self) { index in
+                                Button(action: {
+                                    selectedHabitIndex = index
+                                    showingHabitDetail = true
+                                }) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
                                             Text(habitManager.habits[index].name)
-                                            Spacer()
-                                            Image(systemName: "chevron.right")
-                                                .foregroundColor(.secondary)
+                                                .font(.body)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.primary)
+                                            
+                                            Text(habitManager.habits[index].frequency.displayName)
                                                 .font(.caption)
+                                                .foregroundColor(.secondary)
                                         }
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal, 16)
-                                        .contentShape(Rectangle())
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "chevron.right")
+                                            .foregroundColor(.secondary)
+                                            .font(.caption)
                                     }
-                                    .buttonStyle(PlainButtonStyle())
-                                    
-                                    if index < habitManager.habits.count - 1 {
-                                        Divider()
-                                            .padding(.leading, 16)
-                                    }
+                                    .padding(.vertical, 16)
+                                    .padding(.horizontal, 20)
+                                    .background(Color.primary.colorInvert())
+                                    .cornerRadius(12)
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
+                        .padding(.horizontal)
+                        .padding(.bottom, 100) // Extra padding for floating action button
                     }
                 }
                 
                 Spacer()
-                
-                // Enhanced Add New Habit Form
-                VStack(spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(Color.white)
-                            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                        
-                        VStack(spacing: 12) {
-                            TextField("New Habit", text: $newHabitName)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                            
-                            HStack {
-                                Text("Start Date")
-                                Spacer()
-                                DatePicker("", selection: $newHabitStartDate, displayedComponents: .date)
-                                    .labelsHidden()
-                            }
-                            
-                            HStack {
-                                Text("Frequency")
-                                Spacer()
-                                Picker("", selection: $newHabitFrequency) {
-                                    ForEach(Frequency.allCases) { frequency in
-                                        Text(frequency.displayName).tag(frequency)
-                                    }
-                                }
-                                .pickerStyle(MenuPickerStyle())
-                            }
-                            
-                            // Show end repeat options when frequency is not "Never"
-                            if newHabitFrequency != .never {
-                                HStack {
-                                    Text("End Repeat")
-                                    Spacer()
-                                    Picker("", selection: $newHabitEndRepeatOption) {
-                                        ForEach(EndRepeatOption.allCases) { option in
-                                            Text(option.displayName).tag(option)
-                                        }
-                                    }
-                                    .pickerStyle(MenuPickerStyle())
-                                }
-                                
-                                // Show date picker when "On Date" is selected
-                                if newHabitEndRepeatOption == .onDate {
-                                    HStack {
-                                        Text("End Date")
-                                        Spacer()
-                                        DatePicker("", selection: $newHabitEndRepeatDate, displayedComponents: .date)
-                                            .labelsHidden()
-                                    }
-                                }
-                            }
-                            
-                            Button("Add Habit") {
-                                addNewHabit()
-                            }
-                            .disabled(newHabitName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(newHabitName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray.opacity(0.3) : Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                        }
-                        .padding()
-                    }
-                }
-                .padding(.all, 16)
             }
-            .background(Color("Background"))
-            .navigationTitle("Manage Habits")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+            
+            // Floating Action Button
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        showingAddHabit = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.primary)
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 34) // Account for tab bar
                 }
             }
         }
-        .background(Color("Background"))
+        .sheet(isPresented: $showingAddHabit) {
+            AddHabitView { newHabit in
+                habitManager.addHabit(newHabit)
+                showingAddHabit = false
+            }
+        }
+        .sheet(isPresented: $showingHabitDetail) {
+            if let index = selectedHabitIndex, 
+               index >= 0 && index < habitManager.habits.count {
+                HabitDetailView(
+                    habit: .constant(habitManager.habits[index]),
+                    habitManager: habitManager,
+                    onDelete: {
+                        habitManager.deleteHabit(at: index)
+                        showingHabitDetail = false
+                        selectedHabitIndex = nil
+                    }
+                )
+            }
+        }
         .onChange(of: newHabitFrequency) { _, newFrequency in
             // Reset end repeat options when frequency changes to "Never"
             if newFrequency == .never {
@@ -148,26 +157,15 @@ struct ManageHabitsView: View {
             }
         }
     }
-    
-    private func addNewHabit() {
-        let trimmedName = newHabitName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedName.isEmpty {
-            let newHabit = Habit(
-                name: trimmedName,
-                frequency: newHabitFrequency,
-                completion: [:],
-                startDate: newHabitStartDate,
-                endRepeatOption: newHabitEndRepeatOption,
-                endRepeatDate: newHabitEndRepeatDate
-            )
-            habitManager.addHabit(newHabit)
-            
-            // Reset form
-            newHabitName = ""
-            newHabitStartDate = Date()
-            newHabitFrequency = .everyDay
-            newHabitEndRepeatOption = .never
-            newHabitEndRepeatDate = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
-        }
-    }
+}
+
+// Helper struct to make the habit identifiable for the sheet
+struct HabitWrapper: Identifiable {
+    let id = UUID()
+    let habit: Habit
+    let index: Int
+}
+
+#Preview {
+    ManageHabitsView(habitManager: HabitDataManager.shared)
 }
