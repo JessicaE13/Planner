@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @State private var showingAccountView = false
+    
     // Function to open URLs
     private func openURL(_ urlString: String) {
         if let url = URL(string: urlString) {
@@ -40,7 +42,7 @@ struct SettingsView: View {
                             icon: "person.circle.fill",
                             title: "Account",
                             action: {
-                                // Account action
+                                showingAccountView = true
                             }
                         )
                         SettingsRow(
@@ -81,6 +83,9 @@ struct SettingsView: View {
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
             }
+        }
+        .sheet(isPresented: $showingAccountView) {
+            AccountView()
         }
     }
 }
