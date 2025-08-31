@@ -34,7 +34,7 @@ struct HeaderView: View {
     var body: some View {
         VStack(spacing: 20) {
             HStack {
-                Image(systemName: "person.circle.fill")
+   
                  
                 Text("Hello, Jessica")
                    
