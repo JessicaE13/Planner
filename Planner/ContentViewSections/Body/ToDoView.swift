@@ -86,7 +86,7 @@ struct ToDoView: View {
                     // Empty state - centered
                     Spacer()
                     VStack(spacing: 16) {
-                        Image(systemName: "brain.head.profile")
+                        Image(systemName: "checklist.unchecked")
                             .font(.system(size: 60))
                             .foregroundColor(.gray.opacity(0.5))
                         
@@ -152,7 +152,7 @@ struct ToDoView: View {
                         Image(systemName: "plus")
                             .font(.title2)
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(Color("BackgroundPopup"))
                             .frame(width: 56, height: 56)
                             .background(Color.primary)
                             .clipShape(Circle())
