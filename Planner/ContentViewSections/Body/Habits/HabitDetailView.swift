@@ -12,6 +12,7 @@ struct HabitDetailView: View {
     var habitManager: HabitDataManager
     var onDelete: (() -> Void)?
     @Environment(\.dismiss) var dismiss
+    @State private var showingSavedConfirmation = false
     
     var body: some View {
         ZStack {
@@ -21,6 +22,7 @@ struct HabitDetailView: View {
                     TextField("Habit Name", text: $habit.name)
                         .onChange(of: habit.name) { _, _ in
                             habitManager.updateHabit(habit)
+                            showSavedConfirmation()
                         }
                     
                     HStack {
@@ -31,6 +33,7 @@ struct HabitDetailView: View {
                     }
                     .onChange(of: habit.startDate) { _, _ in
                         habitManager.updateHabit(habit)
+                        showSavedConfirmation()
                     }
                     
                     Picker("Frequency", selection: $habit.frequency) {
@@ -38,8 +41,22 @@ struct HabitDetailView: View {
                             Text(frequency.displayName).tag(frequency)
                         }
                     }
-                    .onChange(of: habit.frequency) { _, _ in
+                    .onChange(of: habit.frequency) { _, newFrequency in
                         habitManager.updateHabit(habit)
+                        showSavedConfirmation()
+                    }
+                    
+                    // Show frequency explanation
+                    if habit.frequency != .never {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("This habit will appear on:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(getFrequencyExplanation())
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                        .padding(.vertical, 4)
                     }
                     
                     // Show end repeat options when frequency is not "Never"
@@ -56,6 +73,7 @@ struct HabitDetailView: View {
                         }
                         .onChange(of: habit.endRepeatOption) { _, _ in
                             habitManager.updateHabit(habit)
+                            showSavedConfirmation()
                         }
                         
                         // Show date picker when "On Date" is selected
@@ -68,6 +86,7 @@ struct HabitDetailView: View {
                             }
                             .onChange(of: habit.endRepeatDate) { _, _ in
                                 habitManager.updateHabit(habit)
+                                showSavedConfirmation()
                             }
                         }
                     }
@@ -80,6 +99,27 @@ struct HabitDetailView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            
+            // Saved confirmation overlay
+            if showingSavedConfirmation {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Changes saved")
+                            .font(.caption)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.secondary.colorInvert())
+                    .cornerRadius(20)
+                    .shadow(radius: 2)
+                    .padding(.bottom, 100)
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .animation(.easeInOut(duration: 0.3), value: showingSavedConfirmation)
+            }
         }
         .navigationTitle(habit.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -89,6 +129,49 @@ struct HabitDetailView: View {
                 habit.endRepeatOption = .never
                 habitManager.updateHabit(habit)
             }
+        }
+    }
+    
+    private func showSavedConfirmation() {
+        showingSavedConfirmation = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            showingSavedConfirmation = false
+        }
+    }
+    
+    private func getFrequencyExplanation() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE" // Day name
+        
+        switch habit.frequency {
+        case .never:
+            return "Only on \(DateFormatter.localizedString(from: habit.startDate, dateStyle: .medium, timeStyle: .none))"
+        case .everyDay:
+            return "Every day starting from \(DateFormatter.localizedString(from: habit.startDate, dateStyle: .medium, timeStyle: .none))"
+        case .everyWeek:
+            let dayName = formatter.string(from: habit.startDate)
+            return "Every \(dayName) starting from \(DateFormatter.localizedString(from: habit.startDate, dateStyle: .medium, timeStyle: .none))"
+        case .everyTwoWeeks:
+            let dayName = formatter.string(from: habit.startDate)
+            return "Every other \(dayName) starting from \(DateFormatter.localizedString(from: habit.startDate, dateStyle: .medium, timeStyle: .none))"
+        case .everyMonth:
+            let day = Calendar.current.component(.day, from: habit.startDate)
+            let suffix = getDaySuffix(day)
+            return "On the \(day)\(suffix) of each month starting from \(DateFormatter.localizedString(from: habit.startDate, dateStyle: .medium, timeStyle: .none))"
+        case .everyYear:
+            let monthDay = DateFormatter.localizedString(from: habit.startDate, dateStyle: .long, timeStyle: .none)
+            return "Every year on \(monthDay)"
+        case .custom:
+            return "Custom frequency pattern"
+        }
+    }
+    
+    private func getDaySuffix(_ day: Int) -> String {
+        switch day {
+        case 1, 21, 31: return "st"
+        case 2, 22: return "nd"
+        case 3, 23: return "rd"
+        default: return "th"
         }
     }
 }
