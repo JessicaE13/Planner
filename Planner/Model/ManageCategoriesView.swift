@@ -21,59 +21,65 @@ struct ManageCategoriesView: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Existing Categories")) {
-                    ForEach(categoryManager.categories.indices, id: \.self) { index in
+            ZStack {
+                Color("BackgroundPopup")
+                    .edgesIgnoringSafeArea(.all)
+                
+                Form {
+                    Section(header: Text("Existing Categories")) {
+                        ForEach(categoryManager.categories.indices, id: \.self) { index in
+                            HStack {
+                                Circle()
+                                    .fill(Color(categoryManager.categories[index].color))
+                                    .frame(width: 20, height: 20)
+                                
+                                Text(categoryManager.categories[index].name)
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    editingCategory = categoryManager.categories[index]
+                                    showingEditSheet = true
+                                }) {
+                                    Image(systemName: "pencil")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Section(header: Text("Add New Category")) {
+                        TextField("Category Name", text: $newCategoryName)
+                        
                         HStack {
-                            Circle()
-                                .fill(Color(categoryManager.categories[index].color))
-                                .frame(width: 20, height: 20)
-                            
-                            Text(categoryManager.categories[index].name)
-                            
+                            Text("Color")
                             Spacer()
                             
-                            Button(action: {
-                                editingCategory = categoryManager.categories[index]
-                                showingEditSheet = true
-                            }) {
-                                Image(systemName: "pencil")
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                    }
-                }
-                
-                Section(header: Text("Add New Category")) {
-                    TextField("Category Name", text: $newCategoryName)
-                    
-                    HStack {
-                        Text("Color")
-                        Spacer()
-                        
-                        HStack(spacing: 8) {
-                            ForEach(availableColors, id: \.self) { color in
-                                Button(action: {
-                                    newCategoryColor = color
-                                }) {
-                                    Circle()
-                                        .fill(Color(color))
-                                        .frame(width: 30, height: 30)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(newCategoryColor == color ? Color.primary : Color.clear, lineWidth: 2)
-                                        )
+                            HStack(spacing: 8) {
+                                ForEach(availableColors, id: \.self) { color in
+                                    Button(action: {
+                                        newCategoryColor = color
+                                    }) {
+                                        Circle()
+                                            .fill(Color(color))
+                                            .frame(width: 30, height: 30)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(newCategoryColor == color ? Color.primary : Color.clear, lineWidth: 2)
+                                            )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
                         }
+                        
+                        Button("Add Category") {
+                            addNewCategory()
+                        }
+                        .disabled(newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    
-                    Button("Add Category") {
-                        addNewCategory()
-                    }
-                    .disabled(newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Manage Categories")
             .navigationBarTitleDisplayMode(.inline)
@@ -136,38 +142,44 @@ struct EditCategoryView: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Category Details")) {
-                    TextField("Category Name", text: $categoryName)
-                    
-                    HStack {
-                        Text("Color")
-                        Spacer()
+            ZStack {
+                Color("BackgroundPopup")
+                    .edgesIgnoringSafeArea(.all)
+                
+                Form {
+                    Section(header: Text("Category Details")) {
+                        TextField("Category Name", text: $categoryName)
                         
-                        HStack(spacing: 8) {
-                            ForEach(availableColors, id: \.self) { color in
-                                Button(action: {
-                                    categoryColor = color
-                                }) {
-                                    Circle()
-                                        .fill(Color(color))
-                                        .frame(width: 30, height: 30)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(categoryColor == color ? Color.primary : Color.clear, lineWidth: 2)
-                                        )
+                        HStack {
+                            Text("Color")
+                            Spacer()
+                            
+                            HStack(spacing: 8) {
+                                ForEach(availableColors, id: \.self) { color in
+                                    Button(action: {
+                                        categoryColor = color
+                                    }) {
+                                        Circle()
+                                            .fill(Color(color))
+                                            .frame(width: 30, height: 30)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(categoryColor == color ? Color.primary : Color.clear, lineWidth: 2)
+                                            )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                     }
-                }
-                
-                Section {
-                    Button("Delete Category", role: .destructive) {
-                        onDelete()
+                    
+                    Section {
+                        Button("Delete Category", role: .destructive) {
+                            onDelete()
+                        }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Edit Category")
             .navigationBarTitleDisplayMode(.inline)
