@@ -33,15 +33,12 @@ struct ManageHabitsView: View {
                         Text("Manage Habits")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                        Text("Build and track your daily routines")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
                     }
                     
                     Spacer()
                     
-                    Button("Done") { 
-                        dismiss() 
+                    Button("Done") {
+                        dismiss()
                     }
                     .font(.headline)
                     .foregroundColor(.primary)
