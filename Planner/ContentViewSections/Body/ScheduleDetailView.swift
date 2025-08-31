@@ -358,8 +358,13 @@ struct ScheduleDetailView: View {
                     Text(dateFormatter.string(from: displayDate))
                 }
 
-                // Only show time line if it's NOT an all-day event
-                if !item.allDay {
+                // Show "All-day" text for all-day events, otherwise show time range
+                if item.allDay {
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock")
+                        Text("All-day")
+                    }
+                } else {
                     HStack(spacing: 8) {
                         Image(systemName: "clock")
                         Text("from \(timeFormatter.string(from: displayDateForTimeRangeStart())) to \(timeFormatter.string(from: displayDateForTimeRangeEnd()))")

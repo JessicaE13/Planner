@@ -239,9 +239,9 @@ struct ScheduleRowView: View {
                 .buttonStyle(PlainButtonStyle())
             }
             
-            // Show time for scheduled items (regardless of checkbox state)
+            // Show time for scheduled items or "All-day" for all-day events
             if item.itemType == .scheduled {
-                Text(formatTime(item.startTime))
+                Text(item.allDay ? "All-day" : formatTime(item.startTime))
                     .font(.body)
                     .foregroundColor(Color.gray)
             }
