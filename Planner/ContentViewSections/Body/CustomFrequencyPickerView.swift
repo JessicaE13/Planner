@@ -91,8 +91,9 @@ struct CustomFrequencyPickerView: View {
                     Text("Repeats \(customConfig.displayDescription().lowercased())")
                         .foregroundColor(.secondary)
                 }
-                .listRowBackground(Color.clear)
             }
+            .background(Color("BackgroundPopup"))
+            .scrollContentBackground(.hidden)
             .navigationTitle("Custom Frequency")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -108,6 +109,7 @@ struct CustomFrequencyPickerView: View {
                 }
             }
         }
+        .navigationViewStyle(StackNavigationViewStyle())
         .onChange(of: customConfig.type) { _, newType in
             // Reset selections when type changes and set defaults
             customConfig.selectedWeekdays = []

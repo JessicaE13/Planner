@@ -890,7 +890,7 @@ struct RoutineDetailBottomSheetView: View {
         
         VStack(spacing: 0) {
             VStack(spacing: 16) {
-                HStack(alignment: .center, spacing: 12) {
+                HStack(alignment: .center, spacing: 16) {
                     Image(systemName: workingRoutine.icon)
                         .font(.system(size: 48))
                         .foregroundColor(workingRoutine.color)
@@ -1121,7 +1121,7 @@ struct RoutineView: View {
             .padding(.bottom, 16)
             
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack (spacing: 16) {
+                HStack (spacing: 24) {
                     ForEach(visibleRoutines.indices, id: \.self) { idx in
                         let routineData = visibleRoutines[idx]
                         Button(action: {
