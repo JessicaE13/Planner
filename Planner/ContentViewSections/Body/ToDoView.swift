@@ -220,116 +220,145 @@ struct AddToDoView: View {
                 Color("BackgroundPopup")
                     .ignoresSafeArea()
                 
-                Form {
-                    Section(header: Text("Task Details")) {
-                        TextField("Task title", text: $title)
-                            .font(.body)
-                        
-                        // Category Selection
-                        HStack {
-                            Text("Category")
-                            Spacer()
-                            Menu {
-                                Button("None") {
-                                    selectedCategory = nil
-                                }
-                                ForEach(CategoryDataManager.shared.categories) { category in
-                                    Button(category.name) {
-                                        selectedCategory = category
-                                    }
-                                }
-                                Button("Manage Categories") {
-                                    showingManageCategories = true
-                                }
-                            } label: {
-                                HStack {
-                                    if let category = selectedCategory {
-                                        Circle()
-                                            .fill(Color(category.color))
-                                            .frame(width: 12, height: 12)
-                                        Text(category.name)
-                                            .foregroundColor(.primary)
-                                    } else {
-                                        Text("None")
-                                            .foregroundColor(.primary)
-                                    }
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.secondary)
-                                        .font(.caption2)
-                                }
-                            }
-                        }
-                    }
-                    
-                    Section(header: Text("Notes")) {
-                        ZStack(alignment: .topLeading) {
-                            TextEditor(text: $notes)
-                                .frame(minHeight: 100)
-                                .focused($notesIsFocused)
-                                .onTapGesture {
-                                    notesIsFocused = true
-                                }
-                                .scrollContentBackground(.hidden)
-                                .background(Color.clear)
-
-                            if notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                Text("Add notes...")
-                                    .foregroundColor(.secondary.opacity(0.5))
-                                    .padding(.top, 8)
-                                    .padding(.leading, 6)
-                                    .allowsHitTesting(false)
-                                    .transition(.opacity)
-                                    .animation(.easeInOut(duration: 0.2), value: notes)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    
-                    Section(header: Text("Subtasks")) {
-                        ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
+                VStack(spacing: 0) {
+                    Form {
+                        Section(header: Text("Task Details")) {
+                            TextField("Task title", text: $title)
+                                .font(.body)
+                            
+                            // Category Selection
                             HStack {
-                                Button(action: {
-                                    checklistItems[index].isCompleted.toggle()
-                                }) {
-                                    Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
-                                        .font(.title2)
+                                Text("Category")
+                                Spacer()
+                                Menu {
+                                    Button("None") {
+                                        selectedCategory = nil
+                                    }
+                                    ForEach(CategoryDataManager.shared.categories) { category in
+                                        Button(category.name) {
+                                            selectedCategory = category
+                                        }
+                                    }
+                                    Button("Manage Categories") {
+                                        showingManageCategories = true
+                                    }
+                                } label: {
+                                    HStack {
+                                        if let category = selectedCategory {
+                                            Circle()
+                                                .fill(Color(category.color))
+                                                .frame(width: 12, height: 12)
+                                            Text(category.name)
+                                                .foregroundColor(.primary)
+                                        } else {
+                                            Text("None")
+                                                .foregroundColor(.primary)
+                                        }
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .foregroundColor(.secondary)
+                                            .font(.caption2)
+                                    }
                                 }
-                                .buttonStyle(PlainButtonStyle())
-                                
-                                TextField("Subtask", text: Binding(
-                                    get: { checklistItems[index].text },
-                                    set: { checklistItems[index].text = $0 }
-                                ))
-                                .strikethrough(checklistItem.isCompleted)
-                                .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
                             }
-                            .padding(.vertical, 2)
                         }
-                        .onDelete(perform: deleteChecklistItems)
                         
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.primary)
-                                .font(.title2)
-                            
-                            TextField("Add subtask", text: $newChecklistItem)
-                                .focused($checklistInputFocused)
-                                .onSubmit {
-                                    addChecklistItem()
+                        Section(header: Text("Notes")) {
+                            ZStack(alignment: .topLeading) {
+                                TextEditor(text: $notes)
+                                    .frame(minHeight: 100)
+                                    .focused($notesIsFocused)
+                                    .onTapGesture {
+                                        notesIsFocused = true
+                                    }
+                                    .scrollContentBackground(.hidden)
+                                    .background(Color.clear)
+
+                                if notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    Text("Add notes...")
+                                        .foregroundColor(.secondary.opacity(0.5))
+                                        .padding(.top, 8)
+                                        .padding(.leading, 6)
+                                        .allowsHitTesting(false)
+                                        .transition(.opacity)
+                                        .animation(.easeInOut(duration: 0.2), value: notes)
                                 }
-                            
-                            if !newChecklistItem.isEmpty {
-                                Button("Add") {
-                                    addChecklistItem()
-                                }
-                                .foregroundColor(.primary)
                             }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
+                        
+                        Section(header: Text("Subtasks")) {
+                            ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
+                                HStack {
+                                    Button(action: {
+                                        checklistItems[index].isCompleted.toggle()
+                                    }) {
+                                        Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
+                                            .font(.title2)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    TextField("Subtask", text: Binding(
+                                        get: { checklistItems[index].text },
+                                        set: { checklistItems[index].text = $0 }
+                                    ))
+                                    .strikethrough(checklistItem.isCompleted)
+                                    .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                                }
+                                .padding(.vertical, 2)
+                            }
+                            .onDelete(perform: deleteChecklistItems)
+                            
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.primary)
+                                    .font(.title2)
+                                
+                                TextField("Add subtask", text: $newChecklistItem)
+                                    .focused($checklistInputFocused)
+                                    .onSubmit {
+                                        addChecklistItem()
+                                    }
+                                
+                                if !newChecklistItem.isEmpty {
+                                    Button("Add") {
+                                        addChecklistItem()
+                                    }
+                                    .foregroundColor(.primary)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
                     }
+                    .scrollContentBackground(.hidden)
+                    
+                    // Bottom Save Button
+                    VStack {
+                        Divider()
+                        
+                        Button(action: {
+                            saveTask()
+                        }) {
+                            HStack {
+                                Spacer()
+                                Text("Save Task")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                Spacer()
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?
+                                          Color.gray.opacity(0.5) : Color.blue)
+                            )
+                        }
+                        .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .padding(.horizontal)
+                        .padding(.bottom)
+                    }
+                    .background(Color("BackgroundPopup"))
                 }
-                .scrollContentBackground(.hidden)
             }
             .navigationTitle("New Task")
             .navigationBarTitleDisplayMode(.inline)
