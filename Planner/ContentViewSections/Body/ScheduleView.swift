@@ -72,8 +72,8 @@ struct ScheduleView: View {
     
     var body: some View {
         ZStack {
-            Color("BackgroundPopup")
-                .ignoresSafeArea()
+//            Color("BackgroundPopup")
+//                .ignoresSafeArea()
             VStack {
                 HStack {
                     Text("Schedule")

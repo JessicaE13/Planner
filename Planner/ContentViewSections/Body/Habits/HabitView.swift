@@ -35,8 +35,7 @@ struct HabitView: View {
     
     var body: some View {
         ZStack {
-            Color("BackgroundPopup")
-                .ignoresSafeArea()
+     
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .center) {
                     Text("Habits")
