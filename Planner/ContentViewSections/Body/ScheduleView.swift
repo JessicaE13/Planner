@@ -72,8 +72,6 @@ struct ScheduleView: View {
     
     var body: some View {
         ZStack {
-//            Color("BackgroundPopup")
-//                .ignoresSafeArea()
             VStack {
                 HStack {
                     Text("Schedule")
@@ -216,7 +214,7 @@ struct ScheduleRowView: View {
         HStack {
             ZStack {
                 RoundedRectangle(cornerRadius: 18)
-                    .fill(Color.white)
+                    .fill(Color(.secondarySystemGroupedBackground))
                     .frame(width: 50, height: 75)
                 Image(systemName: item.icon)
                     .foregroundColor(Color(iconColor))

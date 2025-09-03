@@ -1129,7 +1129,7 @@ struct RoutineView: View {
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color(.systemBackground))
+                                    .fill(Color(.secondarySystemGroupedBackground))
                                     .frame(width: 176, height: 100)
                                 VStack {
                                     HStack(alignment: .bottom) {
