@@ -81,7 +81,6 @@ struct ToDoView: View {
                 }
                 .padding()
                 
-                // Items list or empty state
                 if filteredItems.isEmpty {
                     // Empty state - centered
                     Spacer()
@@ -102,11 +101,11 @@ struct ToDoView: View {
                     }
                     Spacer()
                 } else {
-                    // Items list
+                    
                     ScrollView {
                         LazyVStack(spacing: 8) {
                             ForEach(filteredItems.indices, id: \.self) { filteredIndex in
-                                // Find the actual index in the main array
+                          
                                 if let actualIndex = dataManager.items.firstIndex(where: { $0.id == filteredItems[filteredIndex].id }) {
                                     ToDoItemRow(
                                         item: dataManager.items[actualIndex],
@@ -134,7 +133,7 @@ struct ToDoView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 100) // Extra padding for floating action button
+                        .padding(.bottom, 100)
                     }
                 }
                 
@@ -428,24 +427,22 @@ struct ToDoItemRow: View {
     }()
     
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            // Completion toggle
+        HStack(alignment: .center, spacing: 12) {
+   
             Button(action: onToggle) {
                 Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
                     .foregroundColor(item.isCompleted ? .primary : .gray)
             }
             .buttonStyle(PlainButtonStyle())
-            
-            // Content
+  
             VStack(alignment: .leading, spacing: 6) {
-                // Title
+
                 Text(item.title)
                     .font(.body)
                     .strikethrough(item.isCompleted)
                     .foregroundColor(item.isCompleted ? .secondary : .primary)
                 
-                // Category indicator (if present)
                 if let category = item.category {
                     HStack(spacing: 4) {
                         Circle()
@@ -508,7 +505,8 @@ struct ToDoItemRow: View {
                     .padding(8)
             }
         }
-        .padding()
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
