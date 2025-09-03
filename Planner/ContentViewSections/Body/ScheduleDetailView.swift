@@ -56,11 +56,11 @@ struct ScheduleDetailView: View {
                     HStack(alignment: .top, spacing: 16) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(Color(item.category?.color ?? item.color))
+                                .fill(Color.white)
                                 .frame(width: 56, height: max(vStackHeight, 75))
                             Image(systemName: item.icon)
                                 .font(.title)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color(item.category?.color ?? item.color))
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
