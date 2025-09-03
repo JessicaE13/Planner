@@ -222,7 +222,6 @@ struct ScheduleRowView: View {
             }
             .padding(.trailing, 8)
             
-            // Show checkbox if it's a todo item OR if it's a scheduled item with showCheckbox enabled
             if item.itemType == .todo || (item.itemType == .scheduled && item.showCheckbox) {
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -238,7 +237,6 @@ struct ScheduleRowView: View {
                 .buttonStyle(PlainButtonStyle())
             }
             
-            // Show time for scheduled items or "All-day" for all-day events
             if item.itemType == .scheduled {
                 Text(item.allDay ? "All-day" : formatTime(item.startTime))
                     .font(.body)
