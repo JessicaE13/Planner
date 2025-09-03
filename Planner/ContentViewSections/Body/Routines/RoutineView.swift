@@ -85,6 +85,7 @@ struct RoutineView: View {
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
                         .padding(.leading, idx == 0 ? 36 : 0)
                         .padding(.trailing, idx == visibleRoutines.count - 1 ? 16 : 0)
                     }

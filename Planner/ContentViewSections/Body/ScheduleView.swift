@@ -215,6 +215,7 @@ struct ScheduleRowView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 18)
                     .fill(Color(.secondarySystemGroupedBackground))
+                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
                     .frame(width: 50, height: 75)
                 Image(systemName: item.icon)
                     .foregroundColor(Color(iconColor))
