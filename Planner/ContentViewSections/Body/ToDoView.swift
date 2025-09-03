@@ -508,7 +508,7 @@ struct ToDoItemRow: View {
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
         .background(Color(.systemBackground))
-        .cornerRadius(12)
+        .cornerRadius(14)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
         .sheet(isPresented: $showingEditSheet) {
             EditToDoView(item: item) { updatedItem in
@@ -917,7 +917,6 @@ struct MoveToScheduleView: View {
             }
         }
         .onChange(of: selectedDate) { _, newDate in
-            // Update start and end times to use the selected date
             let calendar = Calendar.current
             let timeComponents = calendar.dateComponents([.hour, .minute], from: startTime)
             if let newStartTime = calendar.date(bySettingHour: timeComponents.hour ?? 9,
@@ -933,7 +932,6 @@ struct MoveToScheduleView: View {
     private func saveToSchedule() {
         let calendar = Calendar.current
         
-        // Create final start and end times using selected date
         let finalStartTime: Date
         let finalEndTime: Date
         
@@ -955,7 +953,6 @@ struct MoveToScheduleView: View {
                                        of: selectedDate) ?? finalStartTime
         }
         
-        // Create the ScheduledInfo struct
         let scheduledInfo = ScheduledInfo(
             startTime: finalStartTime,
             endTime: finalEndTime,

@@ -78,7 +78,6 @@ class AppReviewManager: ObservableObject {
         }
     }
     
-    // For testing purposes - reset the review prompt
     func resetReviewPrompt() {
         UserDefaults.standard.removeObject(forKey: launchCountKey)
         UserDefaults.standard.removeObject(forKey: hasShownReviewPromptKey)
@@ -86,7 +85,6 @@ class AppReviewManager: ObservableObject {
         showingFeedbackSheet = false
     }
     
-    // Get current launch count for debugging
     func getCurrentLaunchCount() -> Int {
         return UserDefaults.standard.integer(forKey: launchCountKey)
     }
@@ -99,7 +97,6 @@ struct ReviewPromptView: View {
     
     var body: some View {
         VStack(spacing: 24) {
-            // App Icon (you can replace with your actual app icon)
             Image(systemName: "heart.fill")
                 .font(.system(size: 60))
                 .foregroundColor(.red)
@@ -118,7 +115,6 @@ struct ReviewPromptView: View {
             }
             
             VStack(spacing: 12) {
-                // Love it button
                 Button(action: {
                     reviewManager.handleLoveResponse()
                     dismiss()
@@ -135,7 +131,6 @@ struct ReviewPromptView: View {
                     .cornerRadius(12)
                 }
                 
-                // Not quite button
                 Button(action: {
                     reviewManager.handleDislikeResponse()
                     dismiss()
@@ -152,7 +147,6 @@ struct ReviewPromptView: View {
                     .cornerRadius(12)
                 }
                 
-                // Maybe later button
                 Button(action: {
                     reviewManager.dismissReviewPrompt()
                     dismiss()
@@ -264,7 +258,6 @@ struct FeedbackView: View {
             body += "User Email: \(userEmail)\n\n"
         }
         
-        // Add device info for debugging
         body += "---\n"
         body += "App Version: \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")\n"
         body += "iOS Version: \(UIDevice.current.systemVersion)\n"
