@@ -62,7 +62,7 @@ struct IconPickerView: View {
                                                 VStack(spacing: 8) {
                                                     ZStack {
                                                         RoundedRectangle(cornerRadius: 12)
-                                                            .fill(selectedIcon == iconItem.name ? Color.blue : Color.clear)
+                                                            .fill(selectedIcon == iconItem.name ? Color("Color2") : Color.clear)
                                                             .frame(width: 60, height: 60)
                                                         
                                                         Image(systemName: iconItem.name)

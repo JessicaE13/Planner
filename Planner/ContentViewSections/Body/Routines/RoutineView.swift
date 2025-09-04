@@ -152,7 +152,7 @@ struct RoutineView: View {
     
     private func migrateRoutines() {
         var needsUpdate = false
-        let defaultColors = ["Color1", "Color2", "Color3", "Color4", "Color5"]
+        let defaultColors = ["Color1", "Color2", "Color3", "Color4", "Color5", "Color6", "Color7"]
         for index in routines.indices {
             if routines[index].routineItems.isEmpty && !routines[index].items.isEmpty {
                 routines[index].routineItems = routines[index].items.map {

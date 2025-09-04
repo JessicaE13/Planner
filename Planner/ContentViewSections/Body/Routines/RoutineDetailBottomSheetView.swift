@@ -127,7 +127,7 @@ struct RoutineDetailBottomSheetView: View {
                 .padding(.vertical, 12)
                 .frame(maxWidth: .infinity)
                 .background(Color("AccentColor"))
-                .foregroundColor(Color("BackgroundPpopup"))
+                .foregroundColor(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(20)
                 .padding(.horizontal, 8)
                 .padding(.bottom, 24)

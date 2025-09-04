@@ -22,7 +22,7 @@ struct CreateRoutineView: View {
     @State private var hasManuallySelectedIcon = false
     @FocusState private var focusedItemID: UUID?
     private let availableColors: [String] = [
-        "Color1", "Color2", "Color3", "Color4", "Color5"
+        "Color1", "Color2", "Color3", "Color4", "Color5", "Color6", "Color7"
     ]
     private let iconDataSource = IconDataSource.shared
     
