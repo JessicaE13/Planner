@@ -157,7 +157,7 @@ struct CreateRoutineView: View {
     
     private var colorSelectionView: some View {
         HStack {
-            Text("Choose Color")
+            Text("Color")
             Spacer()
             HStack(spacing: 12) {
                 ForEach(Array(availableColors.enumerated()), id: \.offset) { index, colorName in
@@ -166,7 +166,7 @@ struct CreateRoutineView: View {
                     }) {
                         Circle()
                             .fill(Color(colorName))
-                            .frame(width: 30, height: 30)
+                            .frame(width: 25, height: 25)
                             .overlay(
                                 Circle()
                                     .stroke(selectedColor == colorName ? Color.primary : Color.clear, lineWidth: 2)

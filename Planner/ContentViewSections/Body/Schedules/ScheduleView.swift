@@ -169,13 +169,10 @@ struct ScheduleView: View {
     private func getActualTimeForDate(_ item: ScheduleItem, on date: Date) -> Date {
         let calendar = Calendar.current
         
-        // For non-recurring items or todo items, use the original time
         if item.frequency == .never || item.itemType == .todo {
             return item.startTime
         }
         
-        // For recurring items, we need to get the time components from the original startTime
-        // and apply them to the current date
         let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: item.startTime)
         let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
         
@@ -225,7 +222,6 @@ struct ScheduleRowView: View {
             }
             .padding(.trailing, 8)
             
-            // Show checkbox if it's a todo item OR if it's a scheduled item with showCheckbox enabled
             if item.itemType == .todo || (item.itemType == .scheduled && item.showCheckbox) {
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -241,7 +237,6 @@ struct ScheduleRowView: View {
                 .buttonStyle(PlainButtonStyle())
             }
             
-            // Show time for scheduled items or "All-day" for all-day events
             if item.itemType == .scheduled {
                 Text(item.allDay ? "All-day" : formatTime(item.startTime))
                     .font(.body)
@@ -428,6 +423,7 @@ struct NewScheduleItemView: View {
                                     showingIconPicker = true
                                 }) {
                                     Image(systemName: item.icon)
+                                        .font(.title3)
                                         .foregroundColor(.primary)
                                         .padding(.trailing, 8)
                                 }
@@ -523,7 +519,6 @@ struct NewScheduleItemView: View {
                             }
                         }
                         
-                        // Item Type Section
                         Section {
                             HStack {
                                 Text("Show Checkbox")
@@ -532,7 +527,6 @@ struct NewScheduleItemView: View {
                                 Toggle("", isOn: $item.showCheckbox)
                             }
                             
-                            // Only show the To Do Item toggle if showCheckbox is enabled
                             if item.showCheckbox {
                                 HStack {
                                     Text("Convert to Task")
@@ -545,7 +539,6 @@ struct NewScheduleItemView: View {
                                                 if newValue {
                                                     item.convertToToDo()
                                                 } else {
-                                                    // Convert back to scheduled with default values
                                                     let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
                                                     let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
                                                     
@@ -561,13 +554,13 @@ struct NewScheduleItemView: View {
                                                 }
                                             }
                                         }
-                                    ))
+                                    )
+                                    )
                                 }
                             }
                             
-                            // Todo-specific options
                             if item.itemType == .todo {
-                                // Date assignment toggle
+                             
                                 HStack {
                                     Text("Assign Date")
                                         .font(.body)
@@ -577,10 +570,9 @@ struct NewScheduleItemView: View {
                                         set: { newValue in
                                             withAnimation(.easeInOut(duration: 0.3)) {
                                                 if newValue {
-                                                    // Assign current selected date
+                                               
                                                     item.setDate(selectedDate, allDay: item.allDay)
                                                 } else {
-                                                    // Remove date assignment
                                                     item.setDate(nil)
                                                 }
                                             }
@@ -588,7 +580,6 @@ struct NewScheduleItemView: View {
                                     ))
                                 }
                                 
-                                // Date and time options (only show if date is assigned)
                                 if item.hasDate {
                                     HStack {
                                         Text("Due Date")
@@ -961,6 +952,7 @@ struct EditScheduleItemView: View {
                                 showingIconPicker = true
                             }) {
                                 Image(systemName: editableItem.icon)
+                                    .font(.title3)
                                     .foregroundColor(.primary)
                                     .padding(.trailing, 8)
                             }

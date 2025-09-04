@@ -15,9 +15,8 @@ struct ManageCategoriesView: View {
     @State private var newCategoryName = ""
     @State private var newCategoryColor = "Color1"
     @State private var editingCategory: Category?
-    @State private var showingEditSheet = false
     
-    private let availableColors = ["Color1", "Color2", "Color3", "Color4", "Color5"]
+    private let availableColors = ["Color1", "Color2", "Color3", "Color4", "Color5", "Color6", "Color7"]
     
     var body: some View {
         NavigationView {
@@ -39,10 +38,9 @@ struct ManageCategoriesView: View {
                                 
                                 Button(action: {
                                     editingCategory = categoryManager.categories[index]
-                                    showingEditSheet = true
                                 }) {
                                     Image(systemName: "pencil")
-                                        .foregroundColor(.blue)
+                                        //.foregroundColor(.blue)
                                 }
                             }
                         }
@@ -62,7 +60,7 @@ struct ManageCategoriesView: View {
                                     }) {
                                         Circle()
                                             .fill(Color(color))
-                                            .frame(width: 30, height: 30)
+                                            .frame(width: 25, height: 25)
                                             .overlay(
                                                 Circle()
                                                     .stroke(newCategoryColor == color ? Color.primary : Color.clear, lineWidth: 2)
@@ -89,24 +87,20 @@ struct ManageCategoriesView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingEditSheet) {
-            if let category = editingCategory {
-                EditCategoryView(
-                    category: category,
-                    onSave: { updatedCategory in
-                        categoryManager.updateCategory(updatedCategory)
-                        showingEditSheet = false
-                        editingCategory = nil
-                    },
-                    onDelete: {
-                        if let index = categoryManager.categories.firstIndex(where: { $0.id == category.id }) {
-                            categoryManager.deleteCategory(at: index)
-                        }
-                        showingEditSheet = false
-                        editingCategory = nil
+        .sheet(item: $editingCategory) { category in
+            EditCategoryView(
+                category: category,
+                onSave: { updatedCategory in
+                    categoryManager.updateCategory(updatedCategory)
+                    editingCategory = nil
+                },
+                onDelete: {
+                    if let index = categoryManager.categories.firstIndex(where: { $0.id == category.id }) {
+                        categoryManager.deleteCategory(at: index)
                     }
-                )
-            }
+                    editingCategory = nil
+                }
+            )
         }
     }
     
@@ -129,7 +123,7 @@ struct EditCategoryView: View {
     let onDelete: () -> Void
     @Environment(\.dismiss) private var dismiss
     
-    private let availableColors = ["Color1", "Color2", "Color3", "Color4", "Color5"]
+    private let availableColors = ["Color1", "Color2", "Color3", "Color4", "Color5", "Color6", "Color7"]
     private let originalCategory: Category
     
     init(category: Category, onSave: @escaping (Category) -> Void, onDelete: @escaping () -> Void) {
@@ -161,7 +155,7 @@ struct EditCategoryView: View {
                                     }) {
                                         Circle()
                                             .fill(Color(color))
-                                            .frame(width: 30, height: 30)
+                                            .frame(width: 25, height: 25)
                                             .overlay(
                                                 Circle()
                                                     .stroke(categoryColor == color ? Color.primary : Color.clear, lineWidth: 2)
