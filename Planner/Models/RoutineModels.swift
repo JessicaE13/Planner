@@ -76,6 +76,7 @@ struct Routine: Identifiable, Codable, Equatable {
     var endRepeatOption: EndRepeatOption = .never
     var endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
     var startDate: Date = Date()
+    var createdDate: Date = Date()
     
     init(name: String, icon: String, routineItems: [RoutineItem] = [], items: [String] = [], colorName: String = "Color1", frequency: Frequency = .everyDay, customFrequencyConfig: CustomFrequencyConfig? = nil, endRepeatOption: EndRepeatOption = .never, endRepeatDate: Date = Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(), startDate: Date = Date()) {
         self.name = name
@@ -88,6 +89,7 @@ struct Routine: Identifiable, Codable, Equatable {
         self.endRepeatOption = endRepeatOption
         self.endRepeatDate = endRepeatDate
         self.startDate = startDate
+        self.createdDate = Date()
         
         if routineItems.isEmpty && !items.isEmpty {
             self.routineItems = items.map { RoutineItem(name: $0, frequency: .everyDay) }
@@ -95,7 +97,7 @@ struct Routine: Identifiable, Codable, Equatable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, name, icon, routineItems, items, completedItemsByDate, frequency, customFrequencyConfig, endRepeatOption, endRepeatDate, startDate, colorName
+        case id, name, icon, routineItems, items, completedItemsByDate, frequency, customFrequencyConfig, endRepeatOption, endRepeatDate, startDate, colorName, createdDate
     }
     
     init(from decoder: Decoder) throws {
@@ -112,6 +114,7 @@ struct Routine: Identifiable, Codable, Equatable {
         endRepeatDate = try container.decodeIfPresent(Date.self, forKey: .endRepeatDate) ?? Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date()
         startDate = try container.decodeIfPresent(Date.self, forKey: .startDate) ?? Date()
         colorName = try container.decodeIfPresent(String.self, forKey: .colorName) ?? "Color1"
+        createdDate = try container.decodeIfPresent(Date.self, forKey: .createdDate) ?? Date()
         if routineItems.isEmpty && !items.isEmpty {
             routineItems = items.map { RoutineItem(name: $0, frequency: .everyDay) }
         }
@@ -131,6 +134,7 @@ struct Routine: Identifiable, Codable, Equatable {
         try container.encode(endRepeatDate, forKey: .endRepeatDate)
         try container.encode(startDate, forKey: .startDate)
         try container.encode(colorName, forKey: .colorName)
+        try container.encode(createdDate, forKey: .createdDate)
     }
     
     private func dateKey(for date: Date) -> String {

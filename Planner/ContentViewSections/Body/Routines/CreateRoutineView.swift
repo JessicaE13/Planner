@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CreateRoutineView: View {
-    @Binding var routines: [Routine]
+    @StateObject private var dataManager = PlannerDataManager.shared
     @Environment(\.dismiss) private var dismiss
     let isEditing: Bool
     let editingIndex: Int?
@@ -26,14 +26,12 @@ struct CreateRoutineView: View {
     ]
     private let iconDataSource = IconDataSource.shared
     
-    init(routines: Binding<[Routine]>) {
-        self._routines = routines
+    init() {
         self.isEditing = false
         self.editingIndex = nil
     }
     
-    init(routines: Binding<[Routine]>, editingRoutine: Routine, editingIndex: Int) {
-        self._routines = routines
+    init(editingRoutine: Routine, editingIndex: Int) {
         self.isEditing = true
         self.editingIndex = editingIndex
         self._routineName = State(initialValue: editingRoutine.name)
@@ -463,8 +461,9 @@ struct CreateRoutineView: View {
             )
         }
         guard !trimmedName.isEmpty, !filteredItems.isEmpty else { return }
+        
         if isEditing, let index = editingIndex {
-            var updatedRoutine = routines[index]
+            var updatedRoutine = dataManager.routines[index]
             updatedRoutine.name = trimmedName
             updatedRoutine.icon = selectedIcon
             updatedRoutine.colorName = selectedColor
@@ -475,7 +474,7 @@ struct CreateRoutineView: View {
             updatedRoutine.endRepeatOption = endRepeatOption
             updatedRoutine.endRepeatDate = endRepeatDate
             updatedRoutine.startDate = startDate
-            routines[index] = updatedRoutine
+            dataManager.updateRoutine(updatedRoutine)
         } else {
             let newRoutine = Routine(
                 name: trimmedName,
@@ -489,14 +488,15 @@ struct CreateRoutineView: View {
                 endRepeatDate: endRepeatDate,
                 startDate: startDate
             )
-            routines.append(newRoutine)
+            dataManager.addRoutine(newRoutine)
         }
         dismiss()
     }
     
     private func deleteRoutine() {
         if let index = editingIndex {
-            routines.remove(at: index)
+            let routineId = dataManager.routines[index].id
+            dataManager.deleteRoutine(withId: routineId)
             dismiss()
         }
     }

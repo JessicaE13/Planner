@@ -59,23 +59,25 @@ struct Habit: Identifiable, Codable {
         try container.encode(startDate, forKey: .startDate)
         try container.encode(endRepeatOption, forKey: .endRepeatOption)
         try container.encode(endRepeatDate, forKey: .endRepeatDate)
-        try container.encodeIfPresent(customFrequencyConfig, forKey: .customFrequencyConfig)
+        try container.encode(customFrequencyConfig, forKey: .customFrequencyConfig)
+    }
+    
+    // MARK: - Habit Methods
+    
+    mutating func toggle(for date: Date) {
+        let dateKey = dateFormatter.string(from: date)
+        completion[dateKey] = !(completion[dateKey] ?? false)
     }
     
     func isCompleted(for date: Date) -> Bool {
-        let key = Habit.dateKey(for: date)
-        return completion[key] ?? false
+        let dateKey = dateFormatter.string(from: date)
+        return completion[dateKey] ?? false
     }
     
-    mutating func toggle(for date: Date) {
-        let key = Habit.dateKey(for: date)
-        completion[key] = !(completion[key] ?? false)
-    }
-    
-    static func dateKey(for date: Date) -> String {
+    private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
+        return formatter
     }
     
     func shouldAppear(on date: Date) -> Bool {

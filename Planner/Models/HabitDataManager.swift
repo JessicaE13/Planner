@@ -52,53 +52,37 @@ class HabitDataManager: ObservableObject {
     }
     
     private func loadHabits() {
-        guard let data = UserDefaults.standard.data(forKey: "SavedHabits") else {
-            // Load default habits if no saved data exists
-            loadDefaultHabits()
-            return
-        }
-        
         do {
-            let decoder = JSONDecoder()
-            habits = try decoder.decode([Habit].self, from: data)
-            
-            // Migrate existing habits that might have today's date as start date
-            migrateExistingHabits()
+            if let data = UserDefaults.standard.data(forKey: "SavedHabits") {
+                let decoder = JSONDecoder()
+                habits = try decoder.decode([Habit].self, from: data)
+            }
         } catch {
             print("Failed to load habits: \(error)")
-            loadDefaultHabits()
         }
     }
     
-    private func migrateExistingHabits() {
-        let today = Date()
-        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: today) ?? today
-        var needsUpdate = false
-        
-        for index in habits.indices {
-            // If the habit's start date is today (indicating it's an old habit), update it
-            if Calendar.current.isDate(habits[index].startDate, inSameDayAs: today) {
-                habits[index].startDate = weekAgo
-                needsUpdate = true
+    // MARK: - CloudKit Integration Methods
+    
+    func mergeHabits(_ cloudHabits: [Habit]) async {
+        // This method is called by CloudKitManager to merge cloud data
+        // Merge logic: prefer cloud version if it exists, otherwise keep local
+        await MainActor.run {
+            var mergedHabits: [Habit] = []
+            let cloudHabitIDs = Set(cloudHabits.map(\.id))
+            
+            // Add all cloud habits
+            mergedHabits.append(contentsOf: cloudHabits)
+            
+            // Add local habits that don't exist in cloud
+            for localHabit in habits {
+                if !cloudHabitIDs.contains(localHabit.id) {
+                    mergedHabits.append(localHabit)
+                }
             }
-        }
-        
-        if needsUpdate {
+            
+            habits = mergedHabits
             saveHabits()
         }
-    }
-    
-    private func loadDefaultHabits() {
-        // Set start date to a week ago so habits show up in past days
-        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        
-        habits = [
-            Habit(name: "Drink Water", frequency: .everyDay, startDate: weekAgo),
-            Habit(name: "Exercise", frequency: .everyDay, startDate: weekAgo),
-            Habit(name: "Read", frequency: .everyDay, startDate: weekAgo),
-            Habit(name: "Meditate", frequency: .everyDay, startDate: weekAgo),
-            Habit(name: "Journal", frequency: .everyDay, startDate: weekAgo)
-        ]
-        saveHabits()
     }
 }
