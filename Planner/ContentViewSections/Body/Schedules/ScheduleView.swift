@@ -167,7 +167,6 @@ struct ScheduleView: View {
     private func getActualTimeForDate(_ item: ScheduleItem, on date: Date) -> Date {
         let calendar = Calendar.current
         
-        // For non-recurring items or todo items, use the original time
         if item.frequency == .never || item.itemType == .todo {
             return item.startTime
         }
@@ -211,7 +210,8 @@ struct ScheduleRowView: View {
     @StateObject private var dataManager = UnifiedDataManager.shared
     
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
+            // Icon section - fixed width
             ZStack {
                 RoundedRectangle(cornerRadius: 18)
                     .fill(Color(.secondarySystemGroupedBackground))
@@ -220,8 +220,8 @@ struct ScheduleRowView: View {
                 Image(systemName: item.icon)
                     .foregroundColor(Color(iconColor))
             }
-            .padding(.trailing, 8)
             
+            // Checkbox section - fixed width when present
             if item.itemType == .todo || (item.itemType == .scheduled && item.showCheckbox) {
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -235,31 +235,48 @@ struct ScheduleRowView: View {
                         .foregroundColor(item.isCompleted ? .primary : .gray)
                 }
                 .buttonStyle(PlainButtonStyle())
+                .frame(width: 30) // Fixed width for consistency
             }
             
-            if item.itemType == .scheduled {
-                Text(item.allDay ? "All-day" : formatTime(item.startTime))
+            // Main content section - flexible width
+            HStack(alignment: .center, spacing: 6) {
+                // Time text - compact and fixed when present
+                if item.itemType == .scheduled {
+                    Text(item.allDay ? "All-day" : formatTime(item.startTime))
+                        .font(.caption)
+                        .foregroundColor(Color.gray)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false) // Prevent compression
+                }
+                
+                // Title text - flexible, uses remaining space with better wrapping
+                Text(item.title)
                     .font(.body)
-                    .foregroundColor(Color.gray)
+                    .lineLimit(2) // Allow up to 2 lines
+                    .multilineTextAlignment(.leading)
+                    .lineSpacing(2) // Add slight line spacing for better readability
+                    .minimumScaleFactor(0.95) // Allow slight scaling to fit more text
+                    .strikethrough((item.itemType == .todo || item.showCheckbox) && item.isCompleted)
+                    .foregroundColor((item.itemType == .todo || item.showCheckbox) && item.isCompleted ? .secondary : .primary)
+                    .frame(maxWidth: .infinity, alignment: .leading) // Use maximum available width
+                    .fixedSize(horizontal: false, vertical: true) // Allow vertical expansion but enforce horizontal constraints
+                
+                // Trailing icons - compact and fixed
+                HStack(spacing: 4) {
+                    if item.frequency != .never {
+                        Image(systemName: "repeat")
+                            .foregroundColor(Color.gray.opacity(0.6))
+                            .font(.caption)
+                    }
+                    
+                    if item.uniqueKey.hasPrefix("todo-") && item.itemType == .scheduled {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .foregroundColor(.blue.opacity(0.6))
+                            .font(.caption)
+                    }
+                }
+                .fixedSize(horizontal: true, vertical: false) // Prevent compression
             }
-            
-            Text(item.title)
-                .font(.body)
-                .strikethrough((item.itemType == .todo || item.showCheckbox) && item.isCompleted)
-                .foregroundColor((item.itemType == .todo || item.showCheckbox) && item.isCompleted ? .secondary : .primary)
-            
-            if item.frequency != .never {
-                Image(systemName: "repeat")
-                    .foregroundColor(Color.gray.opacity(0.6))
-            }
-            
-            if item.uniqueKey.hasPrefix("todo-") && item.itemType == .scheduled {
-                Image(systemName: "arrow.right.circle.fill")
-                    .foregroundColor(.blue.opacity(0.6))
-                    .font(.caption)
-            }
-            
-            Spacer()
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -267,9 +284,7 @@ struct ScheduleRowView: View {
         }
     }
     
-    // Computed property to determine the icon color (category color or item color)
     private var iconColor: String {
-        // Use category color if a category is assigned, otherwise use item's color
         return item.category?.color ?? item.color
     }
     
@@ -293,26 +308,20 @@ struct NewScheduleItemView: View {
     @State private var locationSearchTask: Task<Void, Never>? = nil
     @FocusState private var descriptionIsFocused: Bool
     
-    // Custom frequency states
     @State private var showingCustomFrequencyPicker = false
     @State private var customFrequencyConfig = CustomFrequencyConfig()
     
-    // String representation of the description for editing
     @State private var descriptionText: String = ""
     
-    // Checklist management
     @State private var checklistItems: [ChecklistItem] = []
     @State private var newChecklistItem: String = ""
     @FocusState private var checklistInputFocused: Bool
     
-    // Category management
     @State private var selectedCategory: Category?
     @State private var showingManageCategories = false
     
-    // Icon selection
     @State private var showingIconPicker = false
     
-    // Helper function to get the next upcoming hour
     private static func nextUpcomingHour(from date: Date) -> Date {
         let calendar = Calendar.current
         let currentHour = calendar.component(.hour, from: date)

@@ -57,6 +57,7 @@ struct ScheduleDetailView: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: 20)
                                 .fill(Color(.secondarySystemGroupedBackground))
+                                .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
                                 .frame(width: 56, height: max(vStackHeight, 75))
                             Image(systemName: item.icon)
                                 .font(.title)
