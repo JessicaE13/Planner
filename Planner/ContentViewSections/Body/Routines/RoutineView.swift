@@ -100,19 +100,19 @@ struct RoutineView: View {
                         selectedDate: selectedDate
                     )
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
+                    .toolbar(content: {
                         ToolbarItem(placement: .navigationBarLeading) {
                             Button("Cancel") {
                                 // Don't save any changes - just dismiss
                                 showingRoutineDetail = nil
                             }
                         }
-                    }
+                    })
                 }
             }
         }
         .sheet(isPresented: $showCreateRoutine) {
-            CreateRoutineView(routines: $routines)
+            CreateRoutineView()
         }
         .sheet(isPresented: Binding(
             get: { editingRoutine != nil },
@@ -125,7 +125,6 @@ struct RoutineView: View {
         )) {
             if let routine = editingRoutine, let editIndex = editingRoutineIndex {
                 CreateRoutineView(
-                    routines: $routines,
                     editingRoutine: routine,
                     editingIndex: editIndex
                 )

@@ -137,10 +137,15 @@ struct Routine: Identifiable, Codable, Equatable {
         try container.encode(createdDate, forKey: .createdDate)
     }
     
-    private func dateKey(for date: Date) -> String {
+    // Thread-safe DateFormatter using static lazy initialization
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
+        return formatter
+    }()
+    
+    private func dateKey(for date: Date) -> String {
+        return Self.dateFormatter.string(from: date)
     }
     
     func completedItems(for date: Date) -> Set<String> {

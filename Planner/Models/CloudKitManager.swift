@@ -10,7 +10,10 @@ class CloudKitManager: ObservableObject {
     private let privateDatabase: CKDatabase
     
     @Published var isSignedInToiCloud = false
+    @Published var iCloudAccountEmail: String?
     @Published var syncStatus: SyncStatus = .idle
+    @Published var isSyncing = false
+    @Published var syncError: String?
     
     enum SyncStatus {
         case idle
@@ -65,10 +68,20 @@ class CloudKitManager: ObservableObject {
             await MainActor.run {
                 isSignedInToiCloud = status == .available
             }
+            
+            // Get user record if signed in
+            if status == .available {
+                await fetchUserRecord()
+            } else {
+                await MainActor.run {
+                    iCloudAccountEmail = nil
+                }
+            }
         } catch {
             print("Failed to check iCloud status: \(error)")
             await MainActor.run {
                 isSignedInToiCloud = false
+                iCloudAccountEmail = nil
             }
         }
     }
@@ -77,6 +90,75 @@ class CloudKitManager: ObservableObject {
         // Note: requestApplicationPermission(.userDiscoverability) was deprecated in iOS 17.0
         // and is no longer supported. CloudKit sharing now uses different mechanisms.
         print("CloudKit permissions no longer require explicit user discoverability requests in iOS 17+")
+    }
+    
+    private func fetchUserRecord() async {
+        do {
+            let userRecord = try await container.userRecordID()
+            await MainActor.run {
+                // The recordName usually contains the user identifier
+                // For privacy, we'll show a masked version
+                let recordName = userRecord.recordName
+                if recordName.contains("_") {
+                    let components = recordName.components(separatedBy: "_")
+                    if components.count > 1 {
+                        let userID = components[1]
+                        let maskedID = String(userID.prefix(4)) + "****"
+                        iCloudAccountEmail = "iCloud User: \(maskedID)"
+                    } else {
+                        iCloudAccountEmail = "iCloud User: ****"
+                    }
+                } else {
+                    iCloudAccountEmail = "iCloud User: Connected"
+                }
+            }
+        } catch {
+            print("Failed to fetch user record: \(error)")
+            await MainActor.run {
+                iCloudAccountEmail = "iCloud User: Connected"
+            }
+        }
+    }
+    
+    func openSystemiCloudSettings() {
+        #if targetEnvironment(macCatalyst)
+        // Running as Mac Catalyst app (iPad app on Mac)
+        // Try modern System Settings first (macOS 13+)
+        if let url = URL(string: "x-apple.systemsettings:com.apple.preferences.AppleIDSettings") {
+            NSWorkspace.shared.open(url)
+        } else if let url = URL(string: "x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane") {
+            // Fallback to old System Preferences for older macOS versions
+            NSWorkspace.shared.open(url)
+        } else {
+            // Final fallback - open System Settings/Preferences app directly
+            if #available(macOS 13.0, *) {
+                NSWorkspace.shared.launchApplication("System Settings")
+            } else {
+                NSWorkspace.shared.launchApplication("System Preferences")
+            }
+        }
+        #elseif os(iOS)
+        // Check if we're running in iOS Simulator on Mac
+        #if targetEnvironment(simulator)
+        // In iOS Simulator, the iOS URL schemes don't work, so we need an alternative
+        print("iCloud settings cannot be opened in iOS Simulator. Please configure iCloud in System Preferences on your Mac.")
+        // We could potentially show an alert here instead
+        #else
+        // Real iOS device
+        if let settingsUrl = URL(string: "App-prefs:root=CASTLE") {
+            UIApplication.shared.open(settingsUrl)
+        } else if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(settingsUrl)
+        }
+        #endif
+        #elseif os(macOS)
+        // Native macOS app
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane") {
+            NSWorkspace.shared.open(url)
+        } else {
+            NSWorkspace.shared.launchApplication("System Preferences")
+        }
+        #endif
     }
     
     // MARK: - Routine Operations
@@ -120,6 +202,13 @@ class CloudKitManager: ObservableObject {
             }
             
             return routines
+        } catch let ckError as CKError {
+            // Handle the case where no records exist yet (common on first sync)
+            if ckError.code == .unknownItem || ckError.code == .invalidArguments {
+                print("No routines found in CloudKit, returning empty array")
+                return []
+            }
+            throw mapCloudKitError(ckError)
         } catch {
             throw mapCloudKitError(error)
         }
@@ -180,6 +269,13 @@ class CloudKitManager: ObservableObject {
             }
             
             return habits
+        } catch let ckError as CKError {
+            // Handle the case where no records exist yet (common on first sync)
+            if ckError.code == .unknownItem || ckError.code == .invalidArguments {
+                print("No habits found in CloudKit, returning empty array")
+                return []
+            }
+            throw mapCloudKitError(ckError)
         } catch {
             throw mapCloudKitError(error)
         }
@@ -240,6 +336,13 @@ class CloudKitManager: ObservableObject {
             }
             
             return scheduleItems
+        } catch let ckError as CKError {
+            // Handle the case where no records exist yet (common on first sync)
+            if ckError.code == .unknownItem || ckError.code == .invalidArguments {
+                print("No schedule items found in CloudKit, returning empty array")
+                return []
+            }
+            throw mapCloudKitError(ckError)
         } catch {
             throw mapCloudKitError(error)
         }

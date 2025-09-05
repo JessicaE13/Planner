@@ -14,20 +14,6 @@ enum ItemType: String, CaseIterable, Codable {
     }
 }
 
-// MARK: - End Repeat Options
-enum EndRepeatOption: String, CaseIterable, Identifiable, Codable {
-    case never = "Never"
-    case onDate = "On Date"
-    
-    var id: String { self.rawValue }
-    
-    var displayName: String {
-        return self.rawValue
-    }
-}
-
-
-
 // MARK: - Checklist Item
 struct ChecklistItem: Identifiable, Hashable, Codable {
     let id: UUID

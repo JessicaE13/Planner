@@ -57,27 +57,45 @@ class PlannerDataManager: ObservableObject {
         // Observe CloudKit sync status changes
         Task {
             for await _ in NotificationCenter.default.notifications(named: .CKAccountChanged) {
-                await performInitialSync()
+                do {
+                    try await performInitialSync()
+                } catch {
+                    print("CloudKit sync failed during account change: \(error)")
+                }
             }
         }
     }
     
-    func performInitialSync() async {
-        do {
-            let cloudData = try await cloudKitManager.fetchAllData()
-            
-            // Merge cloud data with local data
-            await mergeData(cloudRoutines: cloudData.routines, cloudHabits: cloudData.habits)
-            
-            // Save merged data locally
-            saveLocalData()
-            
-            // Sync any local-only data to cloud
-            await syncLocalDataToCloud()
-            
-        } catch {
-            print("Initial sync failed: \(error)")
+    func syncNow() async {
+        await MainActor.run {
+            cloudKitManager.isSyncing = true
+            cloudKitManager.syncError = nil
         }
+        
+        do {
+            try await performInitialSync()
+            await MainActor.run {
+                cloudKitManager.isSyncing = false
+            }
+        } catch {
+            await MainActor.run {
+                cloudKitManager.isSyncing = false
+                cloudKitManager.syncError = error.localizedDescription
+            }
+        }
+    }
+    
+    func performInitialSync() async throws {
+        let cloudData = try await cloudKitManager.fetchAllData()
+        
+        // Merge cloud data with local data
+        await mergeData(cloudRoutines: cloudData.routines, cloudHabits: cloudData.habits)
+        
+        // Save merged data locally
+        saveLocalData()
+        
+        // Sync any local-only data to cloud
+        try await syncLocalDataToCloud()
     }
     
     private func mergeData(cloudRoutines: [Routine], cloudHabits: [Habit]) async {
@@ -113,23 +131,19 @@ class PlannerDataManager: ObservableObject {
         habits = mergedHabits
     }
     
-    private func syncLocalDataToCloud() async {
-        do {
-            // Sync all local routines to cloud
-            for routine in routines {
-                try await cloudKitManager.saveRoutine(routine)
-            }
-            
-            // Sync all local habits to cloud
-            for habit in habits {
-                try await cloudKitManager.saveHabit(habit)
-            }
-            
-            // Update last sync date
-            userDefaults.set(Date(), forKey: lastSyncKey)
-        } catch {
-            print("Failed to sync local data to cloud: \(error)")
+    private func syncLocalDataToCloud() async throws {
+        // Sync all local routines to cloud
+        for routine in routines {
+            try await cloudKitManager.saveRoutine(routine)
         }
+        
+        // Sync all local habits to cloud
+        for habit in habits {
+            try await cloudKitManager.saveHabit(habit)
+        }
+        
+        // Update last sync date
+        userDefaults.set(Date(), forKey: lastSyncKey)
     }
     
     // MARK: - Routine Management

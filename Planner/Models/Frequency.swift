@@ -74,6 +74,18 @@ struct CustomFrequencyConfig: Codable, Equatable {
     }
 }
 
+// MARK: - End Repeat Options
+enum EndRepeatOption: String, CaseIterable, Identifiable, Codable {
+    case never = "Never"
+    case onDate = "On Date"
+    
+    var id: String { self.rawValue }
+    
+    var displayName: String {
+        return self.rawValue
+    }
+}
+
 enum Frequency: String, CaseIterable, Identifiable, Codable {
     case never = "Never"
     case everyDay = "Every Day"

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @State private var showingAccountView = false
+    @State private var showingCloudKitSync = false
     
     // Function to open URLs
     private func openURL(_ urlString: String) {
@@ -43,6 +44,13 @@ struct SettingsView: View {
                             title: "Account",
                             action: {
                                 showingAccountView = true
+                            }
+                        )
+                        SettingsRow(
+                            icon: "icloud.fill",
+                            title: "iCloud Sync",
+                            action: {
+                                showingCloudKitSync = true
                             }
                         )
                         SettingsRow(
@@ -86,6 +94,11 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingAccountView) {
             AccountView()
+        }
+        .sheet(isPresented: $showingCloudKitSync) {
+            NavigationView {
+                CloudKitSyncView()
+            }
         }
     }
 }

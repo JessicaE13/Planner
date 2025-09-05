@@ -9,23 +9,49 @@ struct CloudKitSyncView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            // iCloud Status
+            // iCloud Account Information
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: cloudKitManager.isSignedInToiCloud ? "icloud.fill" : "icloud.slash")
                         .foregroundColor(cloudKitManager.isSignedInToiCloud ? .green : .red)
-                    Text("iCloud Status")
+                    Text("iCloud Account")
                         .font(.headline)
                     Spacer()
                 }
                 
-                Text(cloudKitManager.isSignedInToiCloud ? "Signed in to iCloud" : "Not signed in to iCloud")
-                    .foregroundColor(.secondary)
-                
-                if !cloudKitManager.isSignedInToiCloud {
+                if cloudKitManager.isSignedInToiCloud {
+                    if let accountInfo = cloudKitManager.iCloudAccountEmail {
+                        Text(accountInfo)
+                            .foregroundColor(.secondary)
+                            .font(.subheadline)
+                    }
+                    
+                    Text("Signed in to iCloud")
+                        .foregroundColor(.green)
+                        .font(.caption)
+                } else {
+                    Text("Not signed in to iCloud")
+                        .foregroundColor(.red)
+                        .font(.subheadline)
+                    
                     Text("Sign in to iCloud in Settings to enable sync")
                         .font(.caption)
                         .foregroundColor(.orange)
+                }
+                
+                // iCloud Settings Button
+                Button(action: {
+                    cloudKitManager.openSystemiCloudSettings()
+                }) {
+                    HStack {
+                        Image(systemName: "gear")
+                        Text(cloudKitManager.isSignedInToiCloud ? "Manage iCloud Account" : "Open iCloud Settings")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
                 }
             }
             .padding()
