@@ -1,4 +1,4 @@
-import SwiftUI
+ import SwiftUI
 import CloudKit
 
 struct CloudKitSyncView: View {
@@ -41,6 +41,7 @@ struct CloudKitSyncView: View {
                 
                 // iCloud Settings Button
                 Button(action: {
+                    print("🔘 Button pressed - calling openSystemiCloudSettings")
                     cloudKitManager.openSystemiCloudSettings()
                 }) {
                     HStack {

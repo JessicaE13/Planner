@@ -121,37 +121,35 @@ class CloudKitManager: ObservableObject {
     }
     
     func openSystemiCloudSettings() {
+        print("🔧 openSystemiCloudSettings called")
+        
         #if targetEnvironment(macCatalyst)
+        print("🖥️ Running on Mac Catalyst")
         // Running as Mac Catalyst app (iPad app on Mac)
-        // Try modern System Settings first (macOS 13+)
-        if let url = URL(string: "x-apple.systemsettings:com.apple.preferences.AppleIDSettings") {
-            NSWorkspace.shared.open(url)
-        } else if let url = URL(string: "x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane") {
-            // Fallback to old System Preferences for older macOS versions
-            NSWorkspace.shared.open(url)
-        } else {
-            // Final fallback - open System Settings/Preferences app directly
-            if #available(macOS 13.0, *) {
-                NSWorkspace.shared.launchApplication("System Settings")
-            } else {
-                NSWorkspace.shared.launchApplication("System Preferences")
-            }
-        }
+        openMacCatalystSettings()
         #elseif os(iOS)
-        // Check if we're running in iOS Simulator on Mac
-        #if targetEnvironment(simulator)
-        // In iOS Simulator, the iOS URL schemes don't work, so we need an alternative
-        print("iCloud settings cannot be opened in iOS Simulator. Please configure iCloud in System Preferences on your Mac.")
-        // We could potentially show an alert here instead
-        #else
-        // Real iOS device
-        if let settingsUrl = URL(string: "App-prefs:root=CASTLE") {
-            UIApplication.shared.open(settingsUrl)
-        } else if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(settingsUrl)
+        print("📱 Running on iOS")
+        // Check if we're actually running on Mac via Mac Catalyst
+        if ProcessInfo.processInfo.isMacCatalystApp {
+            print("🖥️ Detected Mac Catalyst environment via ProcessInfo")
+            openMacCatalystSettings()
+        } else {
+            // Check if we're running in iOS Simulator on Mac
+            #if targetEnvironment(simulator)
+            // In iOS Simulator, the iOS URL schemes don't work, so we need an alternative
+            print("iCloud settings cannot be opened in iOS Simulator. Please configure iCloud in System Preferences on your Mac.")
+            // We could potentially show an alert here instead
+            #else
+            // Real iOS device
+            if let settingsUrl = URL(string: "App-prefs:root=CASTLE") {
+                UIApplication.shared.open(settingsUrl)
+            } else if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(settingsUrl)
+            }
+            #endif
         }
-        #endif
         #elseif os(macOS)
+        print("💻 Running on native macOS")
         // Native macOS app
         if let url = URL(string: "x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane") {
             NSWorkspace.shared.open(url)
@@ -159,6 +157,32 @@ class CloudKitManager: ObservableObject {
             NSWorkspace.shared.launchApplication("System Preferences")
         }
         #endif
+    }
+    
+    private func openMacCatalystSettings() {
+        // Use UIApplication for Mac Catalyst - try modern System Settings first
+        if let url = URL(string: "x-apple.systemsettings:com.apple.preferences.AppleIDSettings") {
+            print("📱 Trying to open System Settings with URL: \(url)")
+            UIApplication.shared.open(url) { success in
+                print("✅ System Settings URL result: \(success)")
+                if !success {
+                    // Try fallback
+                    if let fallbackUrl = URL(string: "x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane") {
+                        print("📱 Trying fallback System Preferences URL: \(fallbackUrl)")
+                        UIApplication.shared.open(fallbackUrl) { fallbackSuccess in
+                            print("✅ Fallback URL result: \(fallbackSuccess)")
+                            if !fallbackSuccess {
+                                // Final fallback - open app settings
+                                print("📱 Trying final fallback: app settings")
+                                UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            print("❌ Failed to create System Settings URL")
+        }
     }
     
     // MARK: - Routine Operations
