@@ -135,12 +135,17 @@ struct CreateRoutineView: View {
                         .foregroundColor(Color(selectedColor))
                         .frame(width: 36, height: 36)
                 }
-                TextField("Routine Name", text: $routineName)
-                    .onChange(of: routineName) { _, newValue in
-                        if !hasManuallySelectedIcon && !isEditing {
-                            updateIconBasedOnName(newValue)
+                HStack(spacing: 4) {
+                    TextField("Morning", text: $routineName)
+                        .onChange(of: routineName) { _, newValue in
+                            if !hasManuallySelectedIcon && !isEditing {
+                                updateIconBasedOnName(newValue)
+                            }
                         }
-                    }
+                    Text("Routine")
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
             }
             HStack {
                 Text("Start Date")

@@ -10,6 +10,7 @@ import SwiftUI
 struct SettingsView: View {
     @State private var showingAccountView = false
     @State private var showingCloudKitSync = false
+    @State private var showingOnboarding = false
     
     // Function to open URLs
     private func openURL(_ urlString: String) {
@@ -87,6 +88,17 @@ struct SettingsView: View {
                             action: nil
                         )
                     }
+#if DEBUG
+                    Section(header: Text("Developer Tools")) {
+                        Button(action: { showingOnboarding = true }) {
+                            HStack {
+                                Image(systemName: "play.circle.fill")
+                                    .foregroundColor(.accentColor)
+                                Text("Show Onboarding")
+                            }
+                        }
+                    }
+#endif
                 }
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
@@ -99,6 +111,10 @@ struct SettingsView: View {
             NavigationView {
                 CloudKitSyncView()
             }
+        }
+        .sheet(isPresented: $showingOnboarding) {
+            Splash_Screen()
+                .interactiveDismissDisabled(true)
         }
     }
 }
