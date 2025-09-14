@@ -16,7 +16,7 @@ struct ValueScreen1: View {
             Text("Add events and tasks to your schedule")
                 .font(.title2)
                 .multilineTextAlignment(.center)
-                .padding()
+                .padding(.horizontal, 50)
             Spacer()
             OnboardingProgressView(totalSteps: totalSteps, currentStep: currentStep)
             HStack {

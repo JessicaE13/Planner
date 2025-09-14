@@ -30,9 +30,7 @@ struct ValueScreen5: View {
                         .cornerRadius(16)
                 }
                 Spacer()
-                Button(action: {
-                    dismiss()
-                }) {
+                NavigationLink(destination: ContentView()) {
                     Text("Finish")
                         .font(.headline)
                         .padding()
@@ -40,6 +38,7 @@ struct ValueScreen5: View {
                         .foregroundColor(.primary)
                         .cornerRadius(16)
                 }
+            
             }
             .padding(.horizontal)
             .padding(.bottom, 32)

@@ -16,9 +16,12 @@ struct ValueScreen3: View {
             Text("Add morning and evening routin")
                 .font(.title2)
                 .multilineTextAlignment(.center)
-                .padding()
+                .padding(.horizontal, 50)
+            
             Spacer()
+            
             OnboardingProgressView(totalSteps: totalSteps, currentStep: currentStep)
+            
             HStack {
                 NavigationLink(destination: ValueScreen2(currentStep: currentStep - 1)) {
                     Text("Back")

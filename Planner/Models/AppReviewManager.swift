@@ -28,8 +28,7 @@ class AppReviewManager: ObservableObject {
         UserDefaults.standard.set(newCount, forKey: launchCountKey)
         
         print("App launch count: \(newCount)")
-        
-        // Check if we should show the review prompt
+
         checkForReviewPrompt(launchCount: newCount)
     }
     

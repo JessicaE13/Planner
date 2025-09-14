@@ -428,21 +428,19 @@ struct ToDoItemRow: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-   
             Button(action: onToggle) {
                 Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
                     .foregroundColor(item.isCompleted ? .primary : .gray)
             }
             .buttonStyle(PlainButtonStyle())
-  
-            VStack(alignment: .leading, spacing: 6) {
 
+            // Make the main content tappable to open the edit sheet
+            VStack(alignment: .leading, spacing: 6) {
                 Text(item.title)
                     .font(.body)
                     .strikethrough(item.isCompleted)
                     .foregroundColor(item.isCompleted ? .secondary : .primary)
-                
                 if let category = item.category {
                     HStack(spacing: 4) {
                         Circle()
@@ -457,20 +455,15 @@ struct ToDoItemRow: View {
                     .background(Color(category.color).opacity(0.1))
                     .cornerRadius(8)
                 }
-                
-                // Notes preview (if present)
                 if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(item.descriptionText)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
                 }
-                
-                // Checklist progress (if present)
                 if !item.checklist.isEmpty {
                     let completedCount = item.checklist.filter { $0.isCompleted }.count
                     let totalCount = item.checklist.count
-                    
                     HStack(spacing: 4) {
                         Image(systemName: "checklist")
                             .font(.caption2)
@@ -481,21 +474,22 @@ struct ToDoItemRow: View {
                     }
                 }
             }
-            
+            .contentShape(Rectangle())
+            .onTapGesture {
+                showingEditSheet = true
+            }
+
             Spacer()
-            
-            // Actions menu
+
             Menu {
                 Button("Edit") {
                     showingEditSheet = true
                 }
-                
                 Button(action: {
                     showingMoveToSchedule = true
                 }) {
                     Label("Move to Schedule", systemImage: "calendar.badge.plus")
                 }
-                
                 Button("Delete", role: .destructive) {
                     onDelete()
                 }

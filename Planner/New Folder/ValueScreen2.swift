@@ -16,9 +16,12 @@ struct ValueScreen2: View {
             Text("Customize events and tasks to for clairty.")
                 .font(.title2)
                 .multilineTextAlignment(.center)
-                .padding()
+                .padding(.horizontal, 50)
+            
             Spacer()
+            
             OnboardingProgressView(totalSteps: totalSteps, currentStep: currentStep)
+            
             HStack {
                 NavigationLink(destination: ValueScreen1(currentStep: currentStep - 1)) {
                     Text("Back")

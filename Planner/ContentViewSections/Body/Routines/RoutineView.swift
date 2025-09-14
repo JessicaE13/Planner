@@ -53,7 +53,7 @@ struct RoutineView: View {
                             showingRoutineDetail = routineData.routine
                         }) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 16)
+                                RoundedRectangle(cornerRadius: 24)
                                     .fill(Color(.secondarySystemGroupedBackground))
                                     .frame(width: 176, height: 100)
                                 VStack {
@@ -75,6 +75,7 @@ struct RoutineView: View {
                                             .foregroundColor(Color(routineData.routine.color).opacity(0.75))
                                     }
                                     .padding(.horizontal, 8)
+                                   
                                     ProgressView(value: routineData.routine.progress(for: selectedDate), total: 1.0)
                                         .progressViewStyle(LinearProgressViewStyle(tint: Color(routineData.routine.color)))
                                         .scaleEffect(y: 1.5)
@@ -85,7 +86,7 @@ struct RoutineView: View {
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                       // .shadow(color: Color.black.opacity(0.5), radius: 4, x: 0, y: 2)
                         .padding(.leading, idx == 0 ? 36 : 0)
                         .padding(.trailing, idx == visibleRoutines.count - 1 ? 16 : 0)
                     }

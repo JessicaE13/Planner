@@ -16,9 +16,12 @@ struct ValueScreen4: View {
             Text("Schedule different items for different days")
                 .font(.title2)
                 .multilineTextAlignment(.center)
-                .padding()
+                .padding(.horizontal, 50)
+            
             Spacer()
+            
             OnboardingProgressView(totalSteps: totalSteps, currentStep: currentStep)
+            
             HStack {
                 NavigationLink(destination: ValueScreen3(currentStep: currentStep - 1)) {
                     Text("Back")
