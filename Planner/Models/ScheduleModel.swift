@@ -215,17 +215,14 @@ struct ScheduleItem: Identifiable, Codable {
     // Method to convert a scheduled item back to a to-do item
     mutating func convertToToDo() {
         self.itemType = .todo
-        self.frequency = .never
-        self.customFrequencyConfig = nil
-        self.location = ""
-        self.allDay = true // Todo items are typically all-day
-        self.endRepeatOption = .never
+        // Keep all time-related fields and settings
+        // Just update the uniqueKey and default icon
         self.uniqueKey = "todo-\(self.id.uuidString)"
-        self.icon = "checklist"
-        // Keep hasDate as true if it was scheduled, false if it was never dated
-        
-        // Keep the date information for todos - they might want to keep the date
-        // self.hasDate remains as is
+        if self.icon == "calendar" {
+            self.icon = "checklist"
+        }
+        // Set hasDate to true since we're preserving the date information
+        self.hasDate = true
     }
     
     // Method to add/remove date from todo item

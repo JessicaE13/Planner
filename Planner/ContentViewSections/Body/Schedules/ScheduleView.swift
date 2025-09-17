@@ -311,9 +311,11 @@ struct ScheduleRowView: View {
 struct NewScheduleItemView: View {
     let selectedDate: Date
     let onSave: (ScheduleItem) -> Void
+    let defaultType: ItemType // New parameter
     @Environment(\.dismiss) private var dismiss
     
     @State private var item: ScheduleItem
+    @State private var itemType: ItemType // This will be initialized with defaultType
     @State private var locationSearchResults: [IdentifiableMapItem] = []
     @State private var isSearchingLocation = false
     @State private var locationSearchTask: Task<Void, Never>? = nil
@@ -352,9 +354,10 @@ struct NewScheduleItemView: View {
         return calendar.date(bySettingHour: targetHour, minute: 0, second: 0, of: date) ?? date
     }
     
-    init(selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void) {
+    init(selectedDate: Date, defaultType: ItemType = .scheduled, onSave: @escaping (ScheduleItem) -> Void) {
         self.selectedDate = selectedDate
         self.onSave = onSave
+        self.defaultType = defaultType
         
         // Create a new schedule item with default values using next upcoming hour
         let calendar = Calendar.current
@@ -366,21 +369,33 @@ struct NewScheduleItemView: View {
         let defaultStartTime = Self.nextUpcomingHour(from: referenceTime)
         let defaultEndTime = calendar.date(byAdding: .hour, value: 1, to: defaultStartTime) ?? defaultStartTime
         
-        self._item = State(initialValue: ScheduleItem.createScheduled(
-            title: "",
-            startTime: defaultStartTime,
-            endTime: defaultEndTime,
-            icon: "calendar",
-            color: "Color1",
-            frequency: .never,
-            descriptionText: "",
-            location: "",
-            allDay: false,
-            checklist: [],
-            category: nil,
-            endRepeatOption: .never,
-            endRepeatDate: calendar.date(byAdding: .month, value: 1, to: defaultStartTime) ?? defaultStartTime
-        ))
+        // Initialize the item based on the default type
+        if defaultType == .todo {
+            self._item = State(initialValue: ScheduleItem.createToDo(
+                title: "",
+                descriptionText: "",
+                category: nil,
+                checklist: []
+            ))
+            self._itemType = State(initialValue: .todo)
+        } else {
+            self._item = State(initialValue: ScheduleItem.createScheduled(
+                title: "",
+                startTime: defaultStartTime,
+                endTime: defaultEndTime,
+                icon: "calendar",
+                color: "Color1",
+                frequency: .never,
+                descriptionText: "",
+                location: "",
+                allDay: false,
+                checklist: [],
+                category: nil,
+                endRepeatOption: .never,
+                endRepeatDate: calendar.date(byAdding: .month, value: 1, to: defaultStartTime) ?? defaultStartTime
+            ))
+            self._itemType = State(initialValue: .scheduled)
+        }
     }
     
     private func performLocationSearch() {
@@ -416,6 +431,33 @@ struct NewScheduleItemView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
+                    // Add the segmented picker at the top
+                    Picker("Item Type", selection: $itemType) {
+                        Text("Event").tag(ItemType.scheduled)
+                        Text("To Do").tag(ItemType.todo)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding()
+                    .onChange(of: itemType) { _, newValue in
+                        // Convert the item type when the picker changes
+                        if newValue == .todo {
+                            item.convertToToDo()
+                        } else {
+                            let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+                            let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
+                            
+                            item.convertToScheduled(
+                                startTime: defaultStart,
+                                endTime: defaultEnd,
+                                location: item.location,
+                                allDay: item.allDay,
+                                frequency: .never,
+                                endRepeatOption: .never,
+                                endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
+                            )
+                        }
+                    }
+                    
                     Form {
                         Section {
                             HStack {
@@ -1067,18 +1109,16 @@ struct EditScheduleItemView: View {
                                             if newValue {
                                                 editableItem.convertToToDo()
                                             } else {
-                                                // Convert back to scheduled with default values
-                                                let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
-                                                let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
-                                                
+                                                // Convert back to scheduled while preserving existing values
                                                 editableItem.convertToScheduled(
-                                                    startTime: defaultStart,
-                                                    endTime: defaultEnd,
+                                                    startTime: editableItem.startTime,
+                                                    endTime: editableItem.endTime,
                                                     location: editableItem.location,
                                                     allDay: editableItem.allDay,
-                                                    frequency: .never,
-                                                    endRepeatOption: .never,
-                                                    endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
+                                                    frequency: editableItem.frequency,
+                                                    customFrequencyConfig: editableItem.customFrequencyConfig,
+                                                    endRepeatOption: editableItem.endRepeatOption,
+                                                    endRepeatDate: editableItem.endRepeatDate
                                                 )
                                             }
                                         }

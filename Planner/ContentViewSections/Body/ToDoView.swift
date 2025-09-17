@@ -168,12 +168,16 @@ struct ToDoView: View {
             )
         }
         .sheet(isPresented: $showingAddToDo) {
-            AddToDoView { newItem in
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    dataManager.addItem(newItem)
+            NewScheduleItemView(
+                selectedDate: Date(),
+                defaultType: .todo,
+                onSave: { newItem in
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        dataManager.addItem(newItem)
+                    }
+                    showingAddToDo = false
                 }
-                showingAddToDo = false
-            }
+            )
         }
     }
     

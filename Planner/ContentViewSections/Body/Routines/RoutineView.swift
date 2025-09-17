@@ -53,7 +53,7 @@ struct RoutineView: View {
                             showingRoutineDetail = routineData.routine
                         }) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 24)
+                                RoundedRectangle(cornerRadius: 22)
                                     .fill(Color(.secondarySystemGroupedBackground))
                                     .frame(width: 176, height: 100)
                                 VStack {

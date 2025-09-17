@@ -11,6 +11,8 @@ struct ValueScreen5: View {
     @State var currentStep: Int
     private let totalSteps = 5
     @Environment(\.dismiss) private var dismiss
+    @State private var navigateToMain = false
+    
     var body: some View {
         VStack {
             Spacer()
@@ -30,7 +32,10 @@ struct ValueScreen5: View {
                         .cornerRadius(16)
                 }
                 Spacer()
-                NavigationLink(destination: ContentView()) {
+                Button(action: {
+                  
+                    navigateToMain = true
+                }) {
                     Text("Finish")
                         .font(.headline)
                         .padding()
@@ -38,12 +43,14 @@ struct ValueScreen5: View {
                         .foregroundColor(.primary)
                         .cornerRadius(16)
                 }
-            
             }
             .padding(.horizontal)
             .padding(.bottom, 32)
         }
         .navigationBarBackButtonHidden(true)
+        .fullScreenCover(isPresented: $navigateToMain) {
+            MainTabView()
+        }
     }
 }
 
