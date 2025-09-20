@@ -23,7 +23,7 @@ struct MainTabView: View {
             // To Do View
             ToDoView()
                 .tabItem {
-                    Image(systemName: "checklist.unchecked")
+                    Image(systemName: "checkmark.circle")
                     Text("To Do")
                 }
                 .tag(1)

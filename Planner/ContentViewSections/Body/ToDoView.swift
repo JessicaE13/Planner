@@ -85,7 +85,7 @@ struct ToDoView: View {
                     // Empty state - centered
                     Spacer()
                     VStack(spacing: 16) {
-                        Image(systemName: "checklist.unchecked")
+                        Image(systemName: "checkmark.circle")
                             .font(.system(size: 60))
                             .foregroundColor(.gray.opacity(0.5))
                         
@@ -372,8 +372,10 @@ struct AddToDoView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button(action: {
                         saveTask()
+                    }) {
+                        Image(systemName: "checkmark")
                     }
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
