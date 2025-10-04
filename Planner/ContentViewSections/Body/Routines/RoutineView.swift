@@ -59,11 +59,16 @@ struct RoutineView: View {
                                 VStack {
                                     HStack(alignment: .bottom) {
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text(routineData.routine.name)
+                                            
+                                            Text(routineData.routine.name.components(separatedBy: " ").dropLast().joined(separator: " "))
                                                 .font(.title3)
                                                 .kerning(0.5)
                                                 .foregroundColor(.primary)
-                                            Text("Routine")
+                                            
+                                            Text({
+                                                let words = routineData.routine.name.components(separatedBy: " ")
+                                                return words.count > 1 ? words.last ?? "" : ""
+                                            }())
                                                 .font(.caption2)
                                                 .textCase(.uppercase)
                                                 .foregroundColor(.primary.opacity(0.75))
@@ -179,12 +184,12 @@ struct RoutineView: View {
         RoutineView(
             selectedDate: Date(),
             routines: .constant([
-                Routine(name: "Morning", icon: "sunrise.fill", routineItems: [
+                Routine(name: "Morning Routine", icon: "sunrise.fill", routineItems: [
                     RoutineItem(name: "Wake up", frequency: .everyDay),
                     RoutineItem(name: "Brush teeth", frequency: .everyDay),
                     RoutineItem(name: "Exercise", frequency: .everyTwoWeeks)
                 ]),
-                Routine(name: "Evening", icon: "moon.stars.fill", routineItems: [
+                Routine(name: "Evening Routine", icon: "moon.stars.fill", routineItems: [
                     RoutineItem(name: "Read", frequency: .everyDay),
                     RoutineItem(name: "Meditate", frequency: .everyWeek),
                     RoutineItem(name: "Sleep", frequency: .everyDay)
