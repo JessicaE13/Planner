@@ -28,7 +28,7 @@ struct RoutineDetailBottomSheetView: View {
                         .frame(minHeight: 56, alignment: .center)
                   
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(workingRoutine.name + " Routine")
+                        Text(workingRoutine.name)
                             .font(.title)
                             .fontWeight(.semibold)
                             .padding(.bottom, 4)
@@ -40,7 +40,6 @@ struct RoutineDetailBottomSheetView: View {
                             .padding(.trailing, 16)
                     }
                 }
-                // Removed the "X out of Y items today" text
             }
             .padding(.top, 24)
             .padding(.bottom, 32)

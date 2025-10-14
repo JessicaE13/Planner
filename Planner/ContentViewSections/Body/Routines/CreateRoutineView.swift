@@ -142,8 +142,6 @@ struct CreateRoutineView: View {
                                 updateIconBasedOnName(newValue)
                             }
                         }
-                    Text("Routine")
-                        .foregroundColor(.secondary)
                 }
                 Spacer()
             }

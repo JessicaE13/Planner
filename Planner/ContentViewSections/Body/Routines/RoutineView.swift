@@ -56,6 +56,7 @@ struct RoutineView: View {
                                 RoundedRectangle(cornerRadius: 22)
                                     .fill(Color(.secondarySystemGroupedBackground))
                                     .frame(width: 176, height: 100)
+                                    .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
                                 VStack {
                                     HStack(alignment: .bottom) {
                                         VStack(alignment: .leading, spacing: 4) {
@@ -80,6 +81,7 @@ struct RoutineView: View {
                                             .foregroundColor(Color(routineData.routine.color).opacity(0.75))
                                     }
                                     .padding(.horizontal, 8)
+                          
                                    
                                     ProgressView(value: routineData.routine.progress(for: selectedDate), total: 1.0)
                                         .progressViewStyle(LinearProgressViewStyle(tint: Color(routineData.routine.color)))
@@ -94,6 +96,7 @@ struct RoutineView: View {
                        // .shadow(color: Color.black.opacity(0.5), radius: 4, x: 0, y: 2)
                         .padding(.leading, idx == 0 ? 36 : 0)
                         .padding(.trailing, idx == visibleRoutines.count - 1 ? 16 : 0)
+                        .padding(.vertical, 16)
                     }
                 }
             }
