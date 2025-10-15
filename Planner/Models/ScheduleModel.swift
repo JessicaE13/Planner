@@ -72,6 +72,7 @@ struct ScheduleItem: Identifiable, Codable {
     var hasDate: Bool = false // New property to track if todo has a date assigned
     var url: String = "" // New property to store an optional URL for each event or task
     var showCheckbox: Bool = false // New property to allow scheduled events to show checkbox
+    var completedDates: Set<Date> = [] // New property to track completion for specific dates
     
     // Legacy properties for compatibility
     var type: String {
@@ -291,7 +292,7 @@ struct ScheduleItem: Identifiable, Codable {
     
     // Codable implementation
     enum CodingKeys: String, CodingKey {
-        case id, title, time, icon, color, frequency, customFrequencyConfig, descriptionText, location, allDay, itemType, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates, hasDate, url, showCheckbox
+        case id, title, time, icon, color, frequency, customFrequencyConfig, descriptionText, location, allDay, itemType, type, isCompleted, startTime, endTime, checklist, uniqueKey, category, endRepeatOption, endRepeatDate, excludedDates, hasDate, url, showCheckbox, completedDates
     }
     
     init(from decoder: Decoder) throws {
@@ -328,6 +329,7 @@ struct ScheduleItem: Identifiable, Codable {
         hasDate = try container.decodeIfPresent(Bool.self, forKey: .hasDate) ?? (itemType == .scheduled) // Default based on type
         url = try container.decodeIfPresent(String.self, forKey: .url) ?? "" // Decode URL if present
         showCheckbox = try container.decodeIfPresent(Bool.self, forKey: .showCheckbox) ?? false // Default to false for backward compatibility
+        completedDates = try container.decodeIfPresent(Set<Date>.self, forKey: .completedDates) ?? [] // Decode completedDates if present
     }
     
     func encode(to encoder: Encoder) throws {
@@ -356,6 +358,7 @@ struct ScheduleItem: Identifiable, Codable {
         try container.encode(hasDate, forKey: .hasDate)
         try container.encode(url, forKey: .url) // Encode URL
         try container.encode(showCheckbox, forKey: .showCheckbox) // Encode showCheckbox
+        try container.encode(completedDates, forKey: .completedDates) // Encode completedDates
     }
     
     // Updated shouldAppear method - now includes dated todo items
@@ -398,6 +401,39 @@ struct ScheduleItem: Identifiable, Codable {
         }
         
         return false
+    }
+    
+    // Method to check if item is completed on a specific date
+    func isCompleted(on date: Date) -> Bool {
+        let calendar = Calendar.current
+        let dateKey = calendar.startOfDay(for: date)
+        
+        // For non-recurring items (frequency == .never), use the regular isCompleted property
+        if frequency == .never {
+            return isCompleted
+        }
+        
+        // For recurring items, check if this specific date is in completedDates
+        return completedDates.contains(dateKey)
+    }
+    
+    // Method to set completion status for a specific date
+    mutating func setCompleted(_ completed: Bool, on date: Date) {
+        let calendar = Calendar.current
+        let dateKey = calendar.startOfDay(for: date)
+        
+        // For non-recurring items (frequency == .never), use the regular isCompleted property
+        if frequency == .never {
+            isCompleted = completed
+            return
+        }
+        
+        // For recurring items, update the completedDates set
+        if completed {
+            completedDates.insert(dateKey)
+        } else {
+            completedDates.remove(dateKey)
+        }
     }
 }
 
@@ -623,6 +659,22 @@ class UnifiedDataManager: ObservableObject {
     // Legacy method for backward compatibility
     func addOrUpdateItem(_ item: ScheduleItem) {
         updateItem(item)
+    }
+    
+    // MARK: - Completion Operations
+    
+    // New method to toggle completion for a specific date
+    func toggleItemCompletion(item: ScheduleItem, on date: Date) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        
+        let currentlyCompleted = items[index].isCompleted(on: date)
+        items[index].setCompleted(!currentlyCompleted, on: date)
+        saveData()
+    }
+    
+    // Method to check if an item is completed on a specific date
+    func isItemCompleted(item: ScheduleItem, on date: Date) -> Bool {
+        return item.isCompleted(on: date)
     }
     
     // MARK: - Recurring Event Operations

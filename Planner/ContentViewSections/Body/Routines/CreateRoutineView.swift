@@ -5,6 +5,7 @@ struct CreateRoutineView: View {
     @Environment(\.dismiss) private var dismiss
     let isEditing: Bool
     let editingIndex: Int?
+    let originalRoutineId: UUID? // Add this to track the original routine ID
     @State private var routineName = ""
     @State private var selectedIcon = "sunrise"
     @State private var selectedColor = "Color1"
@@ -29,11 +30,13 @@ struct CreateRoutineView: View {
     init() {
         self.isEditing = false
         self.editingIndex = nil
+        self.originalRoutineId = nil
     }
     
     init(editingRoutine: Routine, editingIndex: Int) {
         self.isEditing = true
         self.editingIndex = editingIndex
+        self.originalRoutineId = editingRoutine.id // Store the original routine ID
         self._routineName = State(initialValue: editingRoutine.name)
         self._selectedIcon = State(initialValue: editingRoutine.icon)
         self._selectedColor = State(initialValue: editingRoutine.colorName)
@@ -135,14 +138,14 @@ struct CreateRoutineView: View {
                         .foregroundColor(Color(selectedColor))
                         .frame(width: 36, height: 36)
                 }
-                HStack(spacing: 4) {
-                    TextField("Morning", text: $routineName)
-                        .onChange(of: routineName) { _, newValue in
-                            if !hasManuallySelectedIcon && !isEditing {
-                                updateIconBasedOnName(newValue)
-                            }
+                
+                TextField("Routine Name", text: $routineName)
+                    .onChange(of: routineName) { _, newValue in
+                        if !hasManuallySelectedIcon && !isEditing {
+                            updateIconBasedOnName(newValue)
                         }
-                }
+                    }
+                
                 Spacer()
             }
             HStack {
@@ -465,20 +468,36 @@ struct CreateRoutineView: View {
         }
         guard !trimmedName.isEmpty, !filteredItems.isEmpty else { return }
         
-        if isEditing, let index = editingIndex {
-            var updatedRoutine = dataManager.routines[index]
-            updatedRoutine.name = trimmedName
-            updatedRoutine.icon = selectedIcon
-            updatedRoutine.colorName = selectedColor
-            updatedRoutine.routineItems = filteredItems
-            updatedRoutine.items = []
-            updatedRoutine.frequency = frequency
-            updatedRoutine.customFrequencyConfig = frequency == .custom ? customFrequencyConfig : nil
-            updatedRoutine.endRepeatOption = endRepeatOption
-            updatedRoutine.endRepeatDate = endRepeatDate
-            updatedRoutine.startDate = startDate
-            dataManager.updateRoutine(updatedRoutine)
+        if isEditing, let _ = editingIndex, let routineId = originalRoutineId {
+            // Find the routine by ID to ensure we're editing the correct one
+            guard let currentRoutineIndex = dataManager.routines.firstIndex(where: { $0.id == routineId }) else {
+                print("Error: Could not find routine with ID \(routineId) to update")
+                return
+            }
+            
+            // Create a completely new routine object with the same ID to avoid reference issues
+            let updatedRoutine = Routine(
+                name: trimmedName,
+                icon: selectedIcon,
+                routineItems: filteredItems,
+                items: [],
+                colorName: selectedColor,
+                frequency: frequency,
+                customFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil,
+                endRepeatOption: endRepeatOption,
+                endRepeatDate: endRepeatDate,
+                startDate: startDate
+            )
+            
+            // Preserve the original ID and other important data
+            var finalRoutine = updatedRoutine
+            finalRoutine.id = routineId
+            finalRoutine.createdDate = dataManager.routines[currentRoutineIndex].createdDate
+            finalRoutine.completedItemsByDate = dataManager.routines[currentRoutineIndex].completedItemsByDate
+            
+            dataManager.updateRoutine(finalRoutine)
         } else {
+            // Creating a new routine - ensure it has a unique ID
             let newRoutine = Routine(
                 name: trimmedName,
                 icon: selectedIcon,
@@ -497,8 +516,7 @@ struct CreateRoutineView: View {
     }
     
     private func deleteRoutine() {
-        if let index = editingIndex {
-            let routineId = dataManager.routines[index].id
+        if let routineId = originalRoutineId {
             dataManager.deleteRoutine(withId: routineId)
             dismiss()
         }

@@ -29,6 +29,7 @@ struct ContentView: View {
                         HabitView(selectedDate: selectedDate)
                     }
                 }
+                
             }
         }
         .onAppear {

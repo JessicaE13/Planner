@@ -62,7 +62,8 @@ struct RoutineView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             
                                             Text(routineData.routine.name.components(separatedBy: " ").dropLast().joined(separator: " "))
-                                                .font(.title3)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .lineLimit(1)
                                                 .kerning(0.5)
                                                 .foregroundColor(.primary)
                                             

@@ -121,6 +121,7 @@ struct HeaderView: View {
             )
         }
         .padding()
+        .background(colorScheme == .dark ? Color.black : Color.white)
         .sheet(isPresented: $showingDatePicker) {
             NavigationView {
                 VStack {
