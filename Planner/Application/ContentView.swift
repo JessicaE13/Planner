@@ -9,6 +9,9 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
+            Color("BackgroundPopup")
+                .ignoresSafeArea()
+            
             VStack (spacing: 0) {
                 HeaderView(selectedDate: $selectedDate)
                 ScrollView {
