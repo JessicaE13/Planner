@@ -53,16 +53,23 @@ struct RoutineView: View {
                             showingRoutineDetail = routineData.routine
                         }) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 22)
+                                RoundedRectangle(cornerRadius: 24)
                                     .fill(Color(.secondarySystemGroupedBackground))
-                                    .frame(width: 176, height: 100)
+                                    .frame(width: 220, height: 110)
                               
                                 VStack {
                                     HStack(alignment: .bottom) {
+                                        Image(systemName: routineData.routine.icon)
+                                            .frame(width: 36, height: 36)
+                                            .font(.title)
+                                            .foregroundColor(Color(routineData.routine.color).opacity(0.75))
+                                            .padding(.trailing, 8)
+                                        Spacer()
+                                       
                                         VStack(alignment: .leading, spacing: 4) {
                                             
                                             Text(routineData.routine.name.components(separatedBy: " ").dropLast().joined(separator: " "))
-                                                .font(.system(size: 16, weight: .medium))
+                                                .font(.title3.bold())
                                                 .lineLimit(1)
                                                 .kerning(0.5)
                                                 .foregroundColor(.primary)
@@ -71,17 +78,14 @@ struct RoutineView: View {
                                                 let words = routineData.routine.name.components(separatedBy: " ")
                                                 return words.count > 1 ? words.last ?? "" : ""
                                             }())
-                                                .font(.caption2)
+                                                .font(.caption)
                                                 .textCase(.uppercase)
                                                 .foregroundColor(.primary.opacity(0.75))
                                         }
-                                        Spacer()
-                                        Image(systemName: routineData.routine.icon)
-                                            .frame(width: 36, height: 36)
-                                            .font(.largeTitle)
-                                            .foregroundColor(Color(routineData.routine.color).opacity(0.75))
+                                 
+                          
                                     }
-                                    .padding(.horizontal, 8)
+                                    .padding(.horizontal, 4)
                           
                                    
                                     ProgressView(value: routineData.routine.progress(for: selectedDate), total: 1.0)

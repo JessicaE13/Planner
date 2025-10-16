@@ -100,7 +100,27 @@ struct CreateRoutineView: View {
             )
         }
         .sheet(isPresented: $showingItemDetailSheet) {
-            itemDetailSheet
+            if let editingIndex = editingItemIndex,
+               editingIndex < routineItems.count {
+                RoutineItemDetailView(
+                    item: $routineItems[editingIndex],
+                    onDelete: {
+                        routineItems.remove(at: editingItemIndex!)
+                        showingItemDetailSheet = false
+                        self.editingItemIndex = nil
+                    },
+                    routineFrequency: frequency,
+                    routineCustomFrequencyConfig: frequency == .custom ? customFrequencyConfig : nil
+                )
+            } else {
+                // Fallback view if binding is not ready
+                Text("Loading...")
+                    .onAppear {
+                        // Reset state if something went wrong
+                        showingItemDetailSheet = false
+                        editingItemIndex = nil
+                    }
+            }
         }
         .alert("Delete Routine", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -329,7 +349,10 @@ struct CreateRoutineView: View {
         Button(action: {
             guard let currentIndex = routineItems.firstIndex(where: { $0.id == item.id }) else { return }
             editingItemIndex = currentIndex
-            showingItemDetailSheet = true
+            // Delay the sheet presentation slightly to ensure the editingItemIndex is properly set
+            DispatchQueue.main.async {
+                showingItemDetailSheet = true
+            }
         }) {
             Image(systemName: "ellipsis")
                 .foregroundColor(.secondary)

@@ -128,6 +128,7 @@ struct RoutineDetailBottomSheetView: View {
                 .background(Color("AccentColor"))
                 .foregroundColor(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(20)
+                .contentShape(Rectangle())
                 .padding(.horizontal, 8)
                 .padding(.bottom, 24)
             }

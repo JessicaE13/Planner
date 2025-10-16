@@ -310,6 +310,7 @@ struct NewScheduleItemView: View {
     @State private var isSearchingLocation = false
     @State private var locationSearchTask: Task<Void, Never>? = nil
     @FocusState private var descriptionIsFocused: Bool
+    @FocusState private var titleIsFocused: Bool
     
     // Custom frequency states
     @State private var showingCustomFrequencyPicker = false
@@ -423,6 +424,7 @@ struct NewScheduleItemView: View {
                                 
                                 TextField("Title", text: $item.title)
                                     .multilineTextAlignment(.leading)
+                                    .focused($titleIsFocused)
                             }
                             
                             TextField("Location", text: $item.location, onEditingChanged: { editing in
@@ -812,6 +814,7 @@ struct NewScheduleItemView: View {
             if let existingConfig = item.customFrequencyConfig {
                 customFrequencyConfig = existingConfig
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { titleIsFocused = true }
         }
         .onDisappear {
             locationSearchTask?.cancel()
