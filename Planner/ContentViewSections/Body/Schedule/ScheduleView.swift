@@ -215,20 +215,6 @@ struct ScheduleRowView: View {
             }
             .padding(.trailing, 8)
             
-            if item.itemType == .todo || (item.itemType == .scheduled && item.showCheckbox) {
-                Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        // Use date-specific completion for proper handling of recurring items
-                        dataManager.toggleItemCompletion(item: item, on: selectedDate)
-                    }
-                }) {
-                    Image(systemName: item.isCompleted(on: selectedDate) ? "checkmark.circle.fill" : "circle")
-                        .font(.title2)
-                        .foregroundColor(item.isCompleted(on: selectedDate) ? .primary : .gray)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            
             if item.itemType == .scheduled {
                 Text(item.allDay ? "All-day" : formatTime(item.startTime))
                     .font(.body)
@@ -239,8 +225,6 @@ struct ScheduleRowView: View {
                 .font(.body)
                 .strikethrough((item.itemType == .todo || item.showCheckbox) && item.isCompleted(on: selectedDate))
                 .foregroundColor((item.itemType == .todo || item.showCheckbox) && item.isCompleted(on: selectedDate) ? .secondary : .primary)
-            
-            
             
             if item.frequency != .never {
                 Image(systemName: "repeat")
@@ -254,6 +238,17 @@ struct ScheduleRowView: View {
             }
             
             Spacer()
+
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    dataManager.toggleItemCompletion(item: item, on: selectedDate)
+                }
+            }) {
+                Image(systemName: item.isCompleted(on: selectedDate) ? "checkmark.circle.fill" : "circle")
+                    .font(.title2)
+                    .foregroundColor(Color(item.category?.color ?? item.color))
+            }
+            .buttonStyle(PlainButtonStyle())
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -508,98 +503,6 @@ struct NewScheduleItemView: View {
                                         Image(systemName: "chevron.up.chevron.down")
                                             .foregroundColor(.secondary)
                                             .font(.caption2)
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Section {
-                            HStack {
-                                Text("Show Checkbox")
-                                    .font(.body)
-                                Spacer()
-                                Toggle("", isOn: $item.showCheckbox)
-                            }
-                            
-                            if item.showCheckbox {
-                                HStack {
-                                    Text("Convert to Task")
-                                        .font(.body)
-                                    Spacer()
-                                    Toggle("", isOn: Binding(
-                                        get: { item.itemType == .todo },
-                                        set: { newValue in
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                if newValue {
-                                                    item.convertToToDo()
-                                                } else {
-                                                    let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
-                                                    let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
-                                                    
-                                                    item.convertToScheduled(
-                                                        startTime: defaultStart,
-                                                        endTime: defaultEnd,
-                                                        location: item.location,
-                                                        allDay: item.allDay,
-                                                        frequency: .never,
-                                                        endRepeatOption: .never,
-                                                        endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    )
-                                    )
-                                }
-                            }
-                            
-                            if item.itemType == .todo {
-                             
-                                HStack {
-                                    Text("Assign Date")
-                                        .font(.body)
-                                    Spacer()
-                                    Toggle("", isOn: Binding(
-                                        get: { item.hasDate },
-                                        set: { newValue in
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                if newValue {
-                                               
-                                                    item.setDate(selectedDate, allDay: item.allDay)
-                                                } else {
-                                                    item.setDate(nil)
-                                                }
-                                            }
-                                        }
-                                    ))
-                                }
-                                
-                                if item.hasDate {
-                                    HStack {
-                                        Text("Due Date")
-                                        Spacer()
-                                        DatePicker("", selection: Binding(
-                                            get: { item.startTime },
-                                            set: { newDate in
-                                                item.setDate(newDate, allDay: item.allDay)
-                                            }
-                                        ), displayedComponents: .date)
-                                        .labelsHidden()
-                                    }
-                                    
-                                    // Show time picker only if not all-day
-                                    if !item.allDay {
-                                        HStack {
-                                            Text("Due Time")
-                                            Spacer()
-                                            DatePicker("", selection: Binding(
-                                                get: { item.startTime },
-                                                set: { newDate in
-                                                    item.setDate(newDate, allDay: false)
-                                                }
-                                            ), displayedComponents: .hourAndMinute)
-                                            .labelsHidden()
-                                        }
                                     }
                                 }
                             }
@@ -1040,368 +943,325 @@ struct EditScheduleItemView: View {
                         }
                     }
                     
-                    // Item Type Section
-                    Section {
-                        HStack {
-                            Text("Show Checkbox")
-                                .font(.body)
-                            Spacer()
-                            Toggle("", isOn: $editableItem.showCheckbox)
-                        }
-                        
-                        // Only show the To Do Item toggle if showCheckbox is enabled
-                        if editableItem.showCheckbox {
+                    // Todo-specific options
+                    if editableItem.itemType == .todo {
+                        Section {
+                            // Date assignment toggle
                             HStack {
-                                Text("Convert to Task")
+                                Text("Assign Date")
                                     .font(.body)
                                 Spacer()
                                 Toggle("", isOn: Binding(
-                                    get: { editableItem.itemType == .todo },
+                                    get: { editableItem.hasDate },
                                     set: { newValue in
                                         withAnimation(.easeInOut(duration: 0.3)) {
                                             if newValue {
-                                                editableItem.convertToToDo()
+                                                // Assign current selected date
+                                                editableItem.setDate(selectedDate, allDay: editableItem.allDay)
                                             } else {
-                                                // Convert back to scheduled with default values
-                                                let defaultStart = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
-                                                let defaultEnd = Calendar.current.date(byAdding: .hour, value: 1, to: defaultStart) ?? defaultStart
-                                                
-                                                editableItem.convertToScheduled(
-                                                    startTime: defaultStart,
-                                                    endTime: defaultEnd,
-                                                    location: editableItem.location,
-                                                    allDay: editableItem.allDay,
-                                                    frequency: .never,
-                                                    endRepeatOption: .never,
-                                                    endRepeatDate: Calendar.current.date(byAdding: .month, value: 1, to: defaultStart)
-                                                )
+                                                // Remove date assignment
+                                                editableItem.setDate(nil)
                                             }
                                         }
                                     }
                                 ))
                             }
-                        }
-                        
-                        // Todo-specific options
-                        if editableItem.itemType == .todo {
-                            Section {
-                                // Date assignment toggle
+                            
+                            // Date and time options (only show if date is assigned)
+                            if editableItem.hasDate {
                                 HStack {
-                                    Text("Assign Date")
-                                        .font(.body)
+                                    Text("Due Date")
                                     Spacer()
-                                    Toggle("", isOn: Binding(
-                                        get: { editableItem.hasDate },
-                                        set: { newValue in
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                if newValue {
-                                                    // Assign current selected date
-                                                    editableItem.setDate(selectedDate, allDay: editableItem.allDay)
-                                                } else {
-                                                    // Remove date assignment
-                                                    editableItem.setDate(nil)
-                                                }
-                                            }
+                                    DatePicker("", selection: Binding(
+                                        get: { editableItem.startTime },
+                                        set: { newDate in
+                                            editableItem.setDate(newDate, allDay: editableItem.allDay)
                                         }
-                                    ))
+                                    ), displayedComponents: .date)
+                                    .labelsHidden()
                                 }
                                 
-                                // Date and time options (only show if date is assigned)
-                                if editableItem.hasDate {
+                                // Show time picker only if not all-day
+                                if !editableItem.allDay {
                                     HStack {
-                                        Text("Due Date")
+                                        Text("Due Time")
                                         Spacer()
                                         DatePicker("", selection: Binding(
                                             get: { editableItem.startTime },
                                             set: { newDate in
-                                                editableItem.setDate(newDate, allDay: editableItem.allDay)
+                                                editableItem.setDate(newDate, allDay: false)
                                             }
-                                        ), displayedComponents: .date)
+                                        ), displayedComponents: .hourAndMinute)
                                         .labelsHidden()
                                     }
-                                    
-                                    // Show time picker only if not all-day
-                                    if !editableItem.allDay {
-                                        HStack {
-                                            Text("Due Time")
-                                            Spacer()
-                                            DatePicker("", selection: Binding(
-                                                get: { editableItem.startTime },
-                                                set: { newDate in
-                                                    editableItem.setDate(newDate, allDay: false)
-                                                }
-                                            ), displayedComponents: .hourAndMinute)
-                                            .labelsHidden()
-                                        }
-                                    }
                                 }
                             }
                         }
-                        
-                        // Scheduling Section - now available for both todos (with dates) and scheduled items
-                        if editableItem.itemType == .scheduled || (editableItem.itemType == .todo && editableItem.hasDate) {
-                            Section {
-                                HStack {
-                                    Text("All-day")
-                                    Spacer()
-                                    Toggle("", isOn: $editableItem.allDay)
-                                }
-                                
-                                HStack {
-                                    Text("Start")
-                                    Spacer()
-                                    DatePicker("", selection: $editableItem.startTime, displayedComponents: .date)
-                                        .labelsHidden()
-                                    
-                                    if !editableItem.allDay {
-                                        DatePicker("", selection: $editableItem.startTime, displayedComponents: .hourAndMinute)
-                                            .labelsHidden()
-                                            .onChange(of: editableItem.startTime) { _, newStartTime in
-                                                // Automatically update end time to be one hour after start time
-                                                let calendar = Calendar.current
-                                                editableItem.endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
-                                            }
-                                    }
-                                }
-                                
-                                // For todos, show "Due" instead of "End" and only show end time for scheduled items
-                                if editableItem.itemType == .scheduled {
-                                    HStack {
-                                        Text("End")
-                                        Spacer()
-                                        DatePicker("", selection: $editableItem.endTime, displayedComponents: .date)
-                                            .labelsHidden()
-                                        
-                                        if !editableItem.allDay {
-                                            DatePicker("", selection: $editableItem.endTime, displayedComponents: .hourAndMinute)
-                                                .labelsHidden()
-                                        }
-                                    }
-                                }
-                                
-                                // Repeat Section - now available for both types
-                                HStack {
-                                    Text("Repeat")
-                                    Spacer()
-                                    Menu {
-                                        ForEach(Frequency.allCases) { frequency in
-                                            Button(frequency.displayName) {
-                                                editableItem.frequency = frequency
-                                                if frequency == .custom {
-                                                    showingCustomFrequencyPicker = true
-                                                }
-                                            }
-                                        }
-                                    } label: {
-                                        HStack {
-                                            if editableItem.frequency == .custom {
-                                                Text(customFrequencyConfig.displayDescription())
-                                                    .foregroundColor(.primary)
-                                                    .lineLimit(1)
-                                            } else {
-                                                Text(editableItem.frequency.displayName)
-                                                    .foregroundColor(.primary)
-                                            }
-                                            Image(systemName: "chevron.up.chevron.down")
-                                                .foregroundColor(.secondary)
-                                                .font(.caption2)
-                                        }
-                                    }
-                                }
-                                
-                                // Show end repeat options when frequency is not "Never"
-                                if editableItem.frequency != .never {
-                                    HStack {
-                                        Text("End Repeat")
-                                        Spacer()
-                                        Picker("", selection: $editableItem.endRepeatOption) {
-                                            ForEach(EndRepeatOption.allCases) { option in
-                                                Text(option.displayName).tag(option)
-                                            }
-                                        }
-                                        .pickerStyle(MenuPickerStyle())
-                                    }
-                                    
-                                    // Show date picker when "On Date" is selected
-                                    if editableItem.endRepeatOption == .onDate {
-                                        HStack {
-                                            Text("End Date")
-                                            Spacer()
-                                            DatePicker("", selection: $editableItem.endRepeatDate, displayedComponents: .date)
-                                                .labelsHidden()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Section() {
-                            ZStack(alignment: .topLeading) {
-                                TextEditor(text: $descriptionText)
-                                    .frame(minHeight: 100)
-                                    .focused($descriptionIsFocused)
-                                    .onTapGesture {
-                                        descriptionIsFocused = true
-                                    }
-                                    .onChange(of: descriptionText) { _, newValue in
-                                        editableItem.descriptionText = newValue
-                                    }
-                                    .scrollContentBackground(.hidden)
-                                    .background(Color.clear)
-                                
-                                if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                    Text("Add description...")
-                                        .foregroundColor(.secondary.opacity(0.5))
-                                        .padding(.top, 8)
-                                        .padding(.leading, 6)
-                                        .allowsHitTesting(false)
-                                        .transition(.opacity)
-                                        .animation(.easeInOut(duration: 0.2), value: descriptionText)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                        
+                    }
+                    
+                    // Scheduling Section - now available for both todos (with dates) and scheduled items
+                    if editableItem.itemType == .scheduled || (editableItem.itemType == .todo && editableItem.hasDate) {
                         Section {
-                            ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
-                                HStack {
-                                    Button(action: {
-                                        checklistItems[index].isCompleted.toggle()
-                                    }) {
-                                        Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
-                                            .font(.title2)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                    
-                                    TextField("Item", text: Binding(
-                                        get: { checklistItems[index].text },
-                                        set: { checklistItems[index].text = $0 }
-                                    ))
-                                    .strikethrough(checklistItem.isCompleted)
-                                    .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
-                                }
-                                .padding(.vertical, 2)
+                            HStack {
+                                Text("All-day")
+                                Spacer()
+                                Toggle("", isOn: $editableItem.allDay)
                             }
-                            .onDelete(perform: deleteChecklistItems)
-                            .onMove(perform: moveChecklistItems) // Enable reordering
                             
                             HStack {
-                                Image(systemName: "plus.circle.fill")
-                                    .foregroundColor(.primary)
-                                    .font(.title2)
+                                Text("Start")
+                                Spacer()
+                                DatePicker("", selection: $editableItem.startTime, displayedComponents: .date)
+                                    .labelsHidden()
                                 
-                                TextField("Add subtask", text: $newChecklistItem)
-                                    .focused($checklistInputFocused)
-                                    .onSubmit {
-                                        addChecklistItem()
-                                    }
-                                
-                                if !newChecklistItem.isEmpty {
-                                    Button("Add") {
-                                        addChecklistItem()
-                                    }
-                                    .foregroundColor(.primary)
+                                if !editableItem.allDay {
+                                    DatePicker("", selection: $editableItem.startTime, displayedComponents: .hourAndMinute)
+                                        .labelsHidden()
+                                        .onChange(of: editableItem.startTime) { _, newStartTime in
+                                            // Automatically update end time to be one hour after start time
+                                            let calendar = Calendar.current
+                                            editableItem.endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
+                                        }
                                 }
                             }
-                            .padding(.vertical, 4)
+                            
+                            // For todos, show "Due" instead of "End" and only show end time for scheduled items
+                            if editableItem.itemType == .scheduled {
+                                HStack {
+                                    Text("End")
+                                    Spacer()
+                                    DatePicker("", selection: $editableItem.endTime, displayedComponents: .date)
+                                        .labelsHidden()
+                                    
+                                    if !editableItem.allDay {
+                                        DatePicker("", selection: $editableItem.endTime, displayedComponents: .hourAndMinute)
+                                            .labelsHidden()
+                                    }
+                                }
+                            }
+                            
+                            // Repeat Section - now available for both types
+                            HStack {
+                                Text("Repeat")
+                                Spacer()
+                                Menu {
+                                    ForEach(Frequency.allCases) { frequency in
+                                        Button(frequency.displayName) {
+                                            editableItem.frequency = frequency
+                                            if frequency == .custom {
+                                                showingCustomFrequencyPicker = true
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    HStack {
+                                        if editableItem.frequency == .custom {
+                                            Text(customFrequencyConfig.displayDescription())
+                                                .foregroundColor(.primary)
+                                                .lineLimit(1)
+                                        } else {
+                                            Text(editableItem.frequency.displayName)
+                                                .foregroundColor(.primary)
+                                        }
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .foregroundColor(.secondary)
+                                            .font(.caption2)
+                                    }
+                                }
+                            }
+                            
+                            // Show end repeat options when frequency is not "Never"
+                            if editableItem.frequency != .never {
+                                HStack {
+                                    Text("End Repeat")
+                                    Spacer()
+                                    Picker("", selection: $editableItem.endRepeatOption) {
+                                        ForEach(EndRepeatOption.allCases) { option in
+                                            Text(option.displayName).tag(option)
+                                        }
+                                    }
+                                    .pickerStyle(MenuPickerStyle())
+                                }
+                                
+                                // Show date picker when "On Date" is selected
+                                if editableItem.endRepeatOption == .onDate {
+                                    HStack {
+                                        Text("End Date")
+                                        Spacer()
+                                        DatePicker("", selection: $editableItem.endRepeatDate, displayedComponents: .date)
+                                            .labelsHidden()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    Section() {
+                        ZStack(alignment: .topLeading) {
+                            TextEditor(text: $descriptionText)
+                                .frame(minHeight: 100)
+                                .focused($descriptionIsFocused)
+                                .onTapGesture {
+                                    descriptionIsFocused = true
+                                }
+                                .onChange(of: descriptionText) { _, newValue in
+                                    editableItem.descriptionText = newValue
+                                }
+                                .scrollContentBackground(.hidden)
+                                .background(Color.clear)
+                            
+                            if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text("Add description...")
+                                    .foregroundColor(.secondary.opacity(0.5))
+                                    .padding(.top, 8)
+                                    .padding(.leading, 6)
+                                    .allowsHitTesting(false)
+                                    .transition(.opacity)
+                                    .animation(.easeInOut(duration: 0.2), value: descriptionText)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    
+                    Section {
+                        ForEach(Array(checklistItems.enumerated()), id: \.element.id) { index, checklistItem in
+                            HStack {
+                                Button(action: {
+                                    checklistItems[index].isCompleted.toggle()
+                                }) {
+                                    Image(systemName: checklistItem.isCompleted ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(checklistItem.isCompleted ? .primary : .gray)
+                                        .font(.title2)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                TextField("Item", text: Binding(
+                                    get: { checklistItems[index].text },
+                                    set: { checklistItems[index].text = $0 }
+                                ))
+                                .strikethrough(checklistItem.isCompleted)
+                                .foregroundColor(checklistItem.isCompleted ? .secondary : .primary)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        .onDelete(perform: deleteChecklistItems)
+                        .onMove(perform: moveChecklistItems) // Enable reordering
+                        
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.primary)
+                                .font(.title2)
+                            
+                            TextField("Add subtask", text: $newChecklistItem)
+                                .focused($checklistInputFocused)
+                                .onSubmit {
+                                    addChecklistItem()
+                                }
+                            
+                            if !newChecklistItem.isEmpty {
+                                Button("Add") {
+                                    addChecklistItem()
+                                }
+                                .foregroundColor(.primary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    
+                    // Delete Section
+                    Section {
+                        Button("Delete Event") {
+                            if editableItem.frequency == .never {
+                                // Single event - show simple confirmation
+                                showingDeleteConfirmation = true
+                            } else {
+                                // Recurring event - show options
+                                showingRecurringDeleteOptions = true
+                            }
+                        }
+                        .foregroundColor(.red)
+                    }
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .padding(.top, 8)
+            .navigationTitle(editableItem.itemType == .todo ? "Edit Task" : "Edit Event")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        editableItem.descriptionText = descriptionText
+                        editableItem.checklist = checklistItems
+                        editableItem.category = selectedCategory
+                        
+                        if editableItem.frequency == .custom {
+                            editableItem.customFrequencyConfig = customFrequencyConfig
+                        } else {
+                            editableItem.customFrequencyConfig = nil
                         }
                         
-                        // Delete Section
-                        Section {
-                            Button("Delete Event") {
-                                if editableItem.frequency == .never {
-                                    // Single event - show simple confirmation
-                                    showingDeleteConfirmation = true
-                                } else {
-                                    // Recurring event - show options
-                                    showingRecurringDeleteOptions = true
-                                }
-                            }
-                            .foregroundColor(.red)
-                        }
-                    }
-                    .scrollContentBackground(.hidden)
-                }
-                .padding(.top, 8)
-                .navigationTitle(editableItem.itemType == .todo ? "Edit Task" : "Edit Event")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Save") {
-                            editableItem.descriptionText = descriptionText
-                            editableItem.checklist = checklistItems
-                            editableItem.category = selectedCategory
-                            
-                            if editableItem.frequency == .custom {
-                                editableItem.customFrequencyConfig = customFrequencyConfig
-                            } else {
-                                editableItem.customFrequencyConfig = nil
-                            }
-                            
-                            onSave(editableItem)
-                            dismiss()
-                        }
+                        onSave(editableItem)
+                        dismiss()
                     }
                 }
-                .onAppear {
-                    performLocationSearch()
-                    descriptionText = editableItem.descriptionText
-                    checklistItems = editableItem.checklist
-                    selectedCategory = editableItem.category
-                    
-                    if let existingConfig = editableItem.customFrequencyConfig {
-                        customFrequencyConfig = existingConfig
-                    }
+            }
+            .onAppear {
+                performLocationSearch()
+                descriptionText = editableItem.descriptionText
+                checklistItems = editableItem.checklist
+                selectedCategory = editableItem.category
+                
+                if let existingConfig = editableItem.customFrequencyConfig {
+                    customFrequencyConfig = existingConfig
                 }
-                .onDisappear {
-                    locationSearchTask?.cancel()
+            }
+            .onDisappear {
+                locationSearchTask?.cancel()
+            }
+            .onChange(of: editableItem.frequency) { _, newFrequency in
+                // Reset end repeat options when frequency changes to "Never"
+                if newFrequency == .never {
+                    editableItem.endRepeatOption = .never
                 }
-                .onChange(of: editableItem.frequency) { _, newFrequency in
-                    // Reset end repeat options when frequency changes to "Never"
-                    if newFrequency == .never {
-                        editableItem.endRepeatOption = .never
-                    }
-                    
-                    // Show custom frequency picker when custom is selected
-                    if newFrequency == .custom {
-                        showingCustomFrequencyPicker = true
-                    }
+                
+                // Show custom frequency picker when custom is selected
+                if newFrequency == .custom {
+                    showingCustomFrequencyPicker = true
                 }
-                .sheet(isPresented: $showingManageCategories) {
-                    ManageCategoriesView()
+            }
+            .sheet(isPresented: $showingManageCategories) {
+                ManageCategoriesView()
+            }
+            .sheet(isPresented: $showingCustomFrequencyPicker) {
+                CustomFrequencyPickerView(
+                    customConfig: $customFrequencyConfig,
+                    endRepeatOption: $editableItem.endRepeatOption,
+                    endRepeatDate: $editableItem.endRepeatDate
+                )
+            }
+            .sheet(isPresented: $showingIconPicker) {
+                IconPickerView(selectedIcon: $editableItem.icon)
+            }
+            // Simple delete confirmation for single events
+            .alert("Delete Event", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    onDelete(.thisEvent)
                 }
-                .sheet(isPresented: $showingCustomFrequencyPicker) {
-                    CustomFrequencyPickerView(
-                        customConfig: $customFrequencyConfig,
-                        endRepeatOption: $editableItem.endRepeatOption,
-                        endRepeatDate: $editableItem.endRepeatDate
-                    )
+            } message: {
+                Text("Are you sure you want to delete this event? This action cannot be undone.")
+            }
+            // Recurring event delete options
+            .confirmationDialog("Delete Recurring Event", isPresented: $showingRecurringDeleteOptions) {
+                Button("Delete This Event Only") {
+                    onDelete(.thisEvent)
                 }
-                .sheet(isPresented: $showingIconPicker) {
-                    IconPickerView(selectedIcon: $editableItem.icon)
+                Button("Delete All Events in Series", role: .destructive) {
+                    onDelete(.allEvents)
                 }
-                // Simple delete confirmation for single events
-                .alert("Delete Event", isPresented: $showingDeleteConfirmation) {
-                    Button("Cancel", role: .cancel) { }
-                    Button("Delete", role: .destructive) {
-                        onDelete(.thisEvent)
-                    }
-                } message: {
-                    Text("Are you sure you want to delete this event? This action cannot be undone.")
-                }
-                // Recurring event delete options
-                .confirmationDialog("Delete Recurring Event", isPresented: $showingRecurringDeleteOptions) {
-                    Button("Delete This Event Only") {
-                        onDelete(.thisEvent)
-                    }
-                    Button("Delete All Events in Series", role: .destructive) {
-                        onDelete(.allEvents)
-                    }
-                    Button("Cancel", role: .cancel) { }
-                } message: {
-                    Text("This is a recurring event. Would you like to delete only this occurrence or all events in the series?")
-                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("This is a recurring event. Would you like to delete only this occurrence or all events in the series?")
             }
         }
         

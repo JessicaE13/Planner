@@ -32,6 +32,25 @@ struct ContentView: View {
                 
             }
         }
+        .safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) {
+            Button(action: {
+                selectedRoutineIndex = nil
+                showRoutineDetail = true
+            }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 56, height: 56)
+                    .background(
+                        Circle()
+                            .fill(Color.accentColor)
+                            .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 4)
+                    )
+            }
+            .accessibilityLabel("Add")
+            .padding(.trailing, 20)
+            .padding(.bottom, 0)
+        }
         .onAppear {
             Task {
                 // Check iCloud status and perform initial sync
