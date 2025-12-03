@@ -4,6 +4,7 @@ struct HeaderView: View {
     @Binding var selectedDate: Date
     @State private var showingDatePicker = false
     @State private var currentWeekOffset: Int = 0
+    @State private var showingSettings = false
     @Environment(\.colorScheme) private var colorScheme
     
     private let calendar = Calendar.current
@@ -80,6 +81,12 @@ struct HeaderView: View {
                     Image(systemName: "calendar")
                       
                 }
+                
+                Button {
+                    showingSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                }
             }
             .font(.title3)
             
@@ -147,6 +154,9 @@ struct HeaderView: View {
             }
             .presentationDetents([.medium])
             .presentationCornerRadius(28)
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
         }
         
         Rectangle()

@@ -397,6 +397,37 @@ struct NewScheduleItemView: View {
         }
     }
     
+    private func formattedAddress(from mapItem: MKMapItem) -> String {
+        if #available(iOS 26.0, *) {
+            // Use newer MapKit APIs when available. To avoid SDK differences, conservatively
+            // fall back to the item's name on iOS 26+ without touching deprecated properties.
+            return (mapItem.name ?? "").trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        } else {
+            let placemark = mapItem.placemark
+
+            let street = [placemark.subThoroughfare, placemark.thoroughfare]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            let cityStatePostal = [placemark.locality, placemark.administrativeArea, placemark.postalCode]
+                .compactMap { $0 }
+                .joined(separator: ", ")
+            let country = placemark.country ?? ""
+            let name = placemark.name ?? ""
+
+            var parts: [String] = []
+            if !street.isEmpty { parts.append(street) }
+            if !cityStatePostal.isEmpty { parts.append(cityStatePostal) }
+            if !country.isEmpty { parts.append(country) }
+
+            if parts.isEmpty {
+                let trimmedName = name.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                return trimmedName
+            }
+
+            return parts.joined(separator: "\n")
+        }
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -443,7 +474,7 @@ struct NewScheduleItemView: View {
                                 ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
                                     Button(action: {
                                         let name = itemResult.mapItem.name ?? "Selected Location"
-                                        let address = itemResult.mapItem.placemark.title ?? ""
+                                        let address = formattedAddress(from: itemResult.mapItem)
                                         item.location = name + (address.isEmpty ? "" : "\n" + address)
                                         isSearchingLocation = false
                                         locationSearchResults = []
@@ -451,7 +482,7 @@ struct NewScheduleItemView: View {
                                         VStack(alignment: .leading) {
                                             Text(itemResult.mapItem.name ?? "Unknown")
                                                 .foregroundColor(.primary)
-                                            Text(itemResult.mapItem.placemark.title ?? "")
+                                            Text(formattedAddress(from: itemResult.mapItem))
                                                 .font(.caption)
                                                 .foregroundColor(.gray)
                                         }
@@ -619,7 +650,7 @@ struct NewScheduleItemView: View {
                                     .scrollContentBackground(.hidden)
                                     .background(Color.clear)
                                 
-                                if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                if descriptionText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
                                     Text("Add description...")
                                         .foregroundColor(.secondary.opacity(0.5))
                                         .padding(.top, 8)
@@ -699,6 +730,7 @@ struct NewScheduleItemView: View {
                         onSave(item)
                         dismiss()
                     }
+                    .disabled(item.title.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
@@ -751,9 +783,9 @@ struct NewScheduleItemView: View {
     // MARK: - Checklist Helper Methods
     
     private func addChecklistItem() {
-        guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !newChecklistItem.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty else { return }
         
-        let newItem = ChecklistItem(text: newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines))
+        let newItem = ChecklistItem(text: newChecklistItem.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines))
         checklistItems.append(newItem)
         newChecklistItem = ""
         checklistInputFocused = false
@@ -837,6 +869,37 @@ struct EditScheduleItemView: View {
         }
     }
     
+    private func formattedAddress(from mapItem: MKMapItem) -> String {
+        if #available(iOS 26.0, *) {
+            // Use newer MapKit APIs when available. To avoid SDK differences, conservatively
+            // fall back to the item's name on iOS 26+ without touching deprecated properties.
+            return (mapItem.name ?? "").trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        } else {
+            let placemark = mapItem.placemark
+
+            let street = [placemark.subThoroughfare, placemark.thoroughfare]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            let cityStatePostal = [placemark.locality, placemark.administrativeArea, placemark.postalCode]
+                .compactMap { $0 }
+                .joined(separator: ", ")
+            let country = placemark.country ?? ""
+            let name = placemark.name ?? ""
+
+            var parts: [String] = []
+            if !street.isEmpty { parts.append(street) }
+            if !cityStatePostal.isEmpty { parts.append(cityStatePostal) }
+            if !country.isEmpty { parts.append(country) }
+
+            if parts.isEmpty {
+                let trimmedName = name.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                return trimmedName
+            }
+
+            return parts.joined(separator: "\n")
+        }
+    }
+    
     var body: some View {
         ZStack {
             Color("BackgroundPopup")
@@ -881,7 +944,7 @@ struct EditScheduleItemView: View {
                             ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
                                 Button(action: {
                                     let name = itemResult.mapItem.name ?? "Selected Location"
-                                    let address = itemResult.mapItem.placemark.title ?? ""
+                                    let address = formattedAddress(from: itemResult.mapItem)
                                     editableItem.location = name + (address.isEmpty ? "" : "\n" + address)
                                     isSearchingLocation = false
                                     locationSearchResults = []
@@ -889,7 +952,7 @@ struct EditScheduleItemView: View {
                                     VStack(alignment: .leading) {
                                         Text(itemResult.mapItem.name ?? "Unknown")
                                             .foregroundColor(.primary)
-                                        Text(itemResult.mapItem.placemark.title ?? "")
+                                        Text(formattedAddress(from: itemResult.mapItem))
                                             .font(.caption)
                                             .foregroundColor(.gray)
                                     }
@@ -1110,7 +1173,7 @@ struct EditScheduleItemView: View {
                                 .scrollContentBackground(.hidden)
                                 .background(Color.clear)
                             
-                            if descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            if descriptionText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty {
                                 Text("Add description...")
                                     .foregroundColor(.secondary.opacity(0.5))
                                     .padding(.top, 8)
@@ -1270,9 +1333,9 @@ struct EditScheduleItemView: View {
     // MARK: - Checklist Helper Methods
     
     private func addChecklistItem() {
-        guard !newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !newChecklistItem.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty else { return }
         
-        let newItem = ChecklistItem(text: newChecklistItem.trimmingCharacters(in: .whitespacesAndNewlines))
+        let newItem = ChecklistItem(text: newChecklistItem.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines))
         checklistItems.append(newItem)
         newChecklistItem = ""
         checklistInputFocused = false

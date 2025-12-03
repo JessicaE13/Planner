@@ -1,4 +1,5 @@
 import SwiftUI
+import HealthKit
 
 struct ContentView: View {
     @State private var selectedDate = Date()
@@ -6,14 +7,26 @@ struct ContentView: View {
     @State private var selectedRoutineIndex: Int? = nil
     @StateObject private var plannerDataManager = PlannerDataManager.shared
     @StateObject private var cloudKitManager = CloudKitManager.shared
+    @StateObject private var healthKitManager = HealthKitManager.shared
+    @State private var healthAuthorizationRequested = false
     
     var body: some View {
         ZStack {
-            Color("BackgroundPopup")
-                .ignoresSafeArea()
+//            Color("BackgroundPopup")
+//                .ignoresSafeArea()
             
             VStack (spacing: 0) {
                 HeaderView(selectedDate: $selectedDate)
+                VStack(spacing: 4) {
+                    Text("Steps today")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("\(healthKitManager.todayStepCount.formatted())")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                }
+                .padding(.vertical, 8)
                 ScrollView {
                     VStack(spacing: 0) {
                         RoutineView(
@@ -32,25 +45,6 @@ struct ContentView: View {
                 
             }
         }
-        .safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) {
-            Button(action: {
-                selectedRoutineIndex = nil
-                showRoutineDetail = true
-            }) {
-                Image(systemName: "plus")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 56, height: 56)
-                    .background(
-                        Circle()
-                            .fill(Color.accentColor)
-                            .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 4)
-                    )
-            }
-            .accessibilityLabel("Add")
-            .padding(.trailing, 20)
-            .padding(.bottom, 0)
-        }
         .onAppear {
             Task {
                 // Check iCloud status and perform initial sync
@@ -60,6 +54,24 @@ struct ContentView: View {
                         try await plannerDataManager.performInitialSync()
                     } catch {
                         print("Initial sync failed: \(error)")
+                    }
+                }
+
+                // Request HealthKit authorization once and fetch today's steps
+                if !healthAuthorizationRequested {
+                    do {
+                        try await healthKitManager.requestAuthorization()
+                        try await healthKitManager.fetchTodaySteps()
+                        healthAuthorizationRequested = true
+                    } catch {
+                        print("HealthKit auth/fetch failed: \(error)")
+                    }
+                } else {
+                    // Refresh steps on subsequent appears
+                    do {
+                        try await healthKitManager.fetchTodaySteps()
+                    } catch {
+                        print("Fetching steps failed: \(error)")
                     }
                 }
             }
@@ -91,3 +103,4 @@ extension View {
         self.modifier(SectionHeaderStyle())
     }
 }
+
