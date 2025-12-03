@@ -159,9 +159,6 @@ struct HeaderView: View {
             SettingsView()
         }
         
-        Rectangle()
-            .frame(height: 1)
-            .foregroundColor(.gray.opacity(0.5))
     }
     
     private func updateWeekOffsetForSelectedDate() {

@@ -3,47 +3,103 @@ import HealthKit
 
 struct ContentView: View {
     @State private var selectedDate = Date()
-    @State private var showRoutineDetail = false
-    @State private var selectedRoutineIndex: Int? = nil
+    @State private var showingNewItem = false
     @StateObject private var plannerDataManager = PlannerDataManager.shared
     @StateObject private var cloudKitManager = CloudKitManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @State private var healthAuthorizationRequested = false
+
+    private func distanceString(from meters: Double) -> String {
+        if Locale.current.measurementSystem == .metric {
+            let km = Measurement(value: meters, unit: UnitLength.meters).converted(to: .kilometers).value
+            return String(format: "%.2f km", km)
+        } else {
+            let miles = Measurement(value: meters, unit: UnitLength.meters).converted(to: .miles).value
+            return String(format: "%.2f mi", miles)
+        }
+    }
     
     var body: some View {
         ZStack {
 //            Color("BackgroundPopup")
 //                .ignoresSafeArea()
             
-            VStack (spacing: 0) {
-                HeaderView(selectedDate: $selectedDate)
-                VStack(spacing: 4) {
-                    Text("Steps today")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("\(healthKitManager.todayStepCount.formatted())")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.primary)
-                }
-                .padding(.vertical, 8)
-                ScrollView {
-                    VStack(spacing: 0) {
-                        RoutineView(
-                            selectedDate: selectedDate,
-                            routines: $plannerDataManager.routines,
-                            showRoutineDetail: $showRoutineDetail,
-                            selectedRoutineIndex: $selectedRoutineIndex
-                        )
-               
-                        
-                        ScheduleView(selectedDate: selectedDate)
-                        
-                        HabitView(selectedDate: selectedDate)
+            VStack(spacing: 0) {
+                ZStack(alignment: .top) {
+                    // Scrollable content underneath header
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            // Top spacer to allow content to scroll under the curved header
+                            Color.clear
+                                .frame(height: 140)
+                            
+                            VStack(spacing: 0) {
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), spacing: 12) {
+                                    HealthStatCard(title: "Steps", value: healthKitManager.todayStepCount.formatted(), systemImage: "figure.walk")
+                                    HealthStatCard(title: "Distance", value: distanceString(from: healthKitManager.todayDistanceMeters), systemImage: "figure.run")
+                                    HealthStatCard(title: "Stand", value: "\(healthKitManager.todayStandHours)/12 hr", systemImage: "figure.stand")
+                                    HealthStatCard(title: "Active", value: "\(Int(healthKitManager.todayActiveEnergy)) kcal", systemImage: "flame.fill")
+                                    HealthStatCard(title: "Exercise", value: "\(healthKitManager.todayExerciseMinutes) min", systemImage: "clock")
+                                    HealthStatCard(title: "HR Avg", value: healthKitManager.todayAverageHeartRate > 0 ? "\(healthKitManager.todayAverageHeartRate) bpm" : "--", systemImage: "heart.fill")
+                                }
+                                .padding(16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(Color("BackgroundPopup"))
+                                )
+                                .padding(.horizontal)
+                                .padding(.vertical, 8)
+
+                                ScheduleView(selectedDate: selectedDate)
+                            }
+                        }
+                        .ignoresSafeArea(edges: .top)
                     }
+
+                    // Curved header on top
+                    VStack(spacing: 0) {
+                        HeaderView(selectedDate: $selectedDate)
+                            .padding(.top, 8)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    .background(
+                        // Curved bottom background for the header
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(Color(UIColor.systemBackground))
+                            .ignoresSafeArea(edges: .top)
+                            .frame(height: 160)
+                            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
+                    )
+                    .zIndex(1)
                 }
-                
             }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Button(action: {
+                // TODO: Handle floating action button tap
+                showingNewItem = true
+            }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(20)
+                    .background(
+                        Circle()
+                            .fill(Color.accentColor)
+                            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    )
+            }
+            .padding(.trailing, 20)
+            .padding(.bottom, 24)
+        }
+        .sheet(isPresented: $showingNewItem) {
+            NewScheduleItemView(
+                selectedDate: selectedDate,
+                onSave: { newItem in
+                    UnifiedDataManager.shared.addItem(newItem)
+                    showingNewItem = false
+                }
+            )
         }
         .onAppear {
             Task {
@@ -57,19 +113,19 @@ struct ContentView: View {
                     }
                 }
 
-                // Request HealthKit authorization once and fetch today's steps
+                // Request HealthKit authorization once and fetch today's metrics
                 if !healthAuthorizationRequested {
                     do {
                         try await healthKitManager.requestAuthorization()
-                        try await healthKitManager.fetchTodaySteps()
+                        try await healthKitManager.fetchTodayMetrics()
                         healthAuthorizationRequested = true
                     } catch {
                         print("HealthKit auth/fetch failed: \(error)")
                     }
                 } else {
-                    // Refresh steps on subsequent appears
+                    // Refresh metrics on subsequent appears
                     do {
-                        try await healthKitManager.fetchTodaySteps()
+                        try await healthKitManager.fetchTodayMetrics()
                     } catch {
                         print("Fetching steps failed: \(error)")
                     }
@@ -101,6 +157,33 @@ struct SectionHeaderStyle: ViewModifier {
 extension View {
     func sectionHeaderStyle() -> some View {
         self.modifier(SectionHeaderStyle())
+    }
+}
+
+struct HealthStatCard: View {
+    let title: String
+    let value: String
+    let systemImage: String
+
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text(value)
+                .font(.headline)
+                .foregroundStyle(.primary)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.clear)
+        )
     }
 }
 

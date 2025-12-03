@@ -67,23 +67,23 @@ struct ScheduleView: View {
         ZStack {
 
             VStack {
-                HStack {
-                    Text("Schedule")
-                        .sectionHeaderStyle()
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        showingNewItem = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title2)
-                            .foregroundColor(.primary)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-                .padding(.vertical, 16)
+//                HStack {
+//                    Text("Schedule")
+//                        .sectionHeaderStyle()
+//                    
+//                    Spacer()
+//                    
+//                    Button(action: {
+//                        showingNewItem = true
+//                    }) {
+//                        Image(systemName: "plus")
+//                            .font(.title2)
+//                            .foregroundColor(.primary)
+//                            .contentShape(Rectangle())
+//                    }
+//                    .buttonStyle(PlainButtonStyle())
+//                }
+//                .padding(.vertical, 16)
                 
                 VStack(spacing: 12) {
                     let allScheduleItems = getActualScheduleItems(selectedDate).sorted { item1, item2 in
@@ -711,7 +711,7 @@ struct NewScheduleItemView: View {
                 }
                 .padding(.top, 8)
             }
-            .navigationTitle(item.itemType == .todo ? "New Task" : "New Event")
+            .navigationTitle("New")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -1350,3 +1350,4 @@ struct EditScheduleItemView: View {
     }
     
 }
+
