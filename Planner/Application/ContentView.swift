@@ -8,6 +8,7 @@ struct ContentView: View {
     @StateObject private var cloudKitManager = CloudKitManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @State private var healthAuthorizationRequested = false
+    @State private var isHealthExpanded = false
 
     private func distanceString(from meters: Double) -> String {
         if Locale.current.measurementSystem == .metric {
@@ -35,21 +36,74 @@ struct ContentView: View {
                             
                             VStack(spacing: 0) {
                                 Spacer(minLength: 8)
-                                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), spacing: 12) {
-                                    HealthStatCard(title: "Steps", value: healthKitManager.todayStepCount.formatted(), systemImage: "figure.walk")
-                                    HealthStatCard(title: "Distance", value: distanceString(from: healthKitManager.todayDistanceMeters), systemImage: "figure.run")
-                                    HealthStatCard(title: "Stand", value: "\(healthKitManager.todayStandHours)/12 hr", systemImage: "figure.stand")
-                                    HealthStatCard(title: "Active", value: "\(Int(healthKitManager.todayActiveEnergy)) kcal", systemImage: "flame.fill")
-                                    HealthStatCard(title: "Exercise", value: "\(healthKitManager.todayExerciseMinutes) min", systemImage: "clock")
-                                    HealthStatCard(title: "HR Avg", value: healthKitManager.todayAverageHeartRate > 0 ? "\(healthKitManager.todayAverageHeartRate) bpm" : "--", systemImage: "heart.fill")
+                                VStack(spacing: 12) {
+                                    // Collapsed icon row (tappable)
+                                    HStack {
+                                        Image(systemName: "figure.walk")
+                                        Spacer()
+                                        Image(systemName: "figure.run")
+                                        Spacer()
+                                        Image(systemName: "figure.stand")
+                                        Spacer()
+                                        Image(systemName: "flame.fill")
+                                        Spacer()
+                                        Image(systemName: "clock")
+                                        Spacer()
+                                        Image(systemName: "heart.fill")
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .font(.title3)
+                                    .foregroundStyle(.primary)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        withAnimation(.easeInOut) {
+                                            isHealthExpanded.toggle()
+                                        }
+                                    }
+                                    .padding(16)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color("BackgroundPopup"))
+                                    )
+                                    
+                                    if isHealthExpanded {
+                                        VStack(spacing: 0) {
+                                            VStack(spacing: 12) {
+                                                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), spacing: 12) {
+                                                    HealthStatCard(title: "Steps", value: healthKitManager.todayStepCount.formatted(), systemImage: "figure.walk")
+                                                    HealthStatCard(title: "Distance", value: distanceString(from: healthKitManager.todayDistanceMeters), systemImage: "figure.run")
+                                                    HealthStatCard(title: "Stand", value: "\(healthKitManager.todayStandHours)/12 hr", systemImage: "figure.stand")
+                                                    HealthStatCard(title: "Active", value: "\(Int(healthKitManager.todayActiveEnergy)) kcal", systemImage: "flame.fill")
+                                                    HealthStatCard(title: "Exercise", value: "\(healthKitManager.todayExerciseMinutes) min", systemImage: "clock")
+                                                    HealthStatCard(title: "HR Avg", value: healthKitManager.todayAverageHeartRate > 0 ? "\(healthKitManager.todayAverageHeartRate) bpm" : "--", systemImage: "heart.fill")
+                                                }
+                                            }
+                                            .padding(16)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                                    .fill(Color("BackgroundPopup"))
+                                            )
+                                            .overlay(alignment: .top) {
+                                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                                    .fill(Color("BackgroundPopup"))
+                                                    .frame(width: 14, height: 14)
+                                                    .rotationEffect(.degrees(45))
+                                                    .offset(y: -7)
+                                            }
+                                        }
+                                        .padding(.top, 8)
+                                        .transition(.move(edge: .top).combined(with: .opacity))
+                                    }
+
                                 }
-                                .padding(16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(Color("BackgroundPopup"))
-                                )
+                                //.padding(16)
+                                //.background(
+                                //    RoundedRectangle(cornerRadius: isHealthExpanded ? 16 : 999, style: .continuous)
+                                //        .fill(Color("BackgroundPopup"))
+                                //)
                                 .padding(.horizontal)
                                 .padding(.vertical, 8)
+                                .animation(.easeInOut, value: isHealthExpanded)
 
                                 ScheduleView(selectedDate: selectedDate)
                             }
@@ -212,4 +266,3 @@ struct HealthStatCard: View {
         )
     }
 }
-
