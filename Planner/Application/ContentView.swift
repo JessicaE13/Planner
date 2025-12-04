@@ -34,6 +34,7 @@ struct ContentView: View {
                                 .frame(height: 140)
                             
                             VStack(spacing: 0) {
+                                Spacer(minLength: 8)
                                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), spacing: 12) {
                                     HealthStatCard(title: "Steps", value: healthKitManager.todayStepCount.formatted(), systemImage: "figure.walk")
                                     HealthStatCard(title: "Distance", value: distanceString(from: healthKitManager.todayDistanceMeters), systemImage: "figure.run")
@@ -52,6 +53,7 @@ struct ContentView: View {
 
                                 ScheduleView(selectedDate: selectedDate)
                             }
+                            .padding(.top, 8)
                         }
                         .ignoresSafeArea(edges: .top)
                     }
@@ -65,10 +67,25 @@ struct ContentView: View {
                     .background(
                         // Curved bottom background for the header
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .fill(Color(UIColor.systemBackground))
-                            .ignoresSafeArea(edges: .top)
+                            .fill(Color("BackgroundPopup"))
+                            .ignoresSafeArea(edges: [.top, .horizontal])
                             .frame(height: 160)
-                            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
+                                    .mask(
+                                        LinearGradient(
+                                            gradient: Gradient(stops: [
+                                                .init(color: .clear, location: 0.0),
+                                                .init(color: .black, location: 0.5),
+                                                .init(color: .black, location: 1.0)
+                                            ]),
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
+                                    )
+                                    .ignoresSafeArea(edges: [.top, .horizontal])
+                            )
                     )
                     .zIndex(1)
                 }
@@ -101,6 +118,15 @@ struct ContentView: View {
                 }
             )
         }
+        .onChange(of: selectedDate) { newDate in
+            Task {
+                do {
+                    try await healthKitManager.fetchMetrics(for: newDate)
+                } catch {
+                    print("Fetching metrics for date failed: \(error)")
+                }
+            }
+        }
         .onAppear {
             Task {
                 // Check iCloud status and perform initial sync
@@ -117,7 +143,7 @@ struct ContentView: View {
                 if !healthAuthorizationRequested {
                     do {
                         try await healthKitManager.requestAuthorization()
-                        try await healthKitManager.fetchTodayMetrics()
+                        try await healthKitManager.fetchMetrics(for: selectedDate)
                         healthAuthorizationRequested = true
                     } catch {
                         print("HealthKit auth/fetch failed: \(error)")
@@ -125,7 +151,7 @@ struct ContentView: View {
                 } else {
                     // Refresh metrics on subsequent appears
                     do {
-                        try await healthKitManager.fetchTodayMetrics()
+                        try await healthKitManager.fetchMetrics(for: selectedDate)
                     } catch {
                         print("Fetching steps failed: \(error)")
                     }
@@ -181,7 +207,7 @@ struct HealthStatCard: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.clear)
         )
     }

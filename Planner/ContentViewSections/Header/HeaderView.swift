@@ -128,7 +128,7 @@ struct HeaderView: View {
             )
         }
         .padding()
-        .background(colorScheme == .dark ? Color.black : Color.white)
+        .background(Color("BackgroundPopup"))
         .sheet(isPresented: $showingDatePicker) {
             NavigationView {
                 VStack {
@@ -176,3 +176,4 @@ struct HeaderView: View {
         HeaderView(selectedDate: .constant(Date()))
     }
 }
+

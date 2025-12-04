@@ -9,8 +9,6 @@ import SwiftUI
 
 struct ToDoView: View {
     @StateObject private var dataManager = UnifiedDataManager.shared
-    @State private var filterCategory: Category?
-    @State private var showingFilterOptions = false
     @State private var showingAddToDo = false
     
     private let dateFormatter: DateFormatter = {
@@ -22,12 +20,7 @@ struct ToDoView: View {
     
     // Filter items based on selected category - only show to-do items
     private var filteredItems: [ScheduleItem] {
-        let todoItems = dataManager.toDoItems
-        
-        if let filterCategory = filterCategory {
-            return todoItems.filter { $0.category?.id == filterCategory.id }
-        }
-        return todoItems
+        return dataManager.toDoItems
     }
     
     var body: some View {
@@ -48,21 +41,6 @@ struct ToDoView: View {
                     }
                     
                     Spacer()
-                    
-                    // Filter button
-                    Button(action: {
-                        showingFilterOptions = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "line.3.horizontal.decrease.circle")
-                                .font(.title2)
-                            if let filterCategory = filterCategory {
-                                Text(filterCategory.name)
-                                    .font(.caption)
-                            }
-                        }
-                        .foregroundColor(.primary)
-                    }
                     
                     // Clear completed button
                     if filteredItems.contains(where: { $0.isCompleted }) {
@@ -89,7 +67,7 @@ struct ToDoView: View {
                             .font(.system(size: 60))
                             .foregroundColor(.gray.opacity(0.5))
                         
-                        Text(filterCategory == nil ? "No tasks yet" : "No items in \(filterCategory?.name ?? "this category")")
+                        Text("No tasks yet")
                             .font(.headline)
                             .foregroundColor(.secondary)
                         
@@ -161,12 +139,6 @@ struct ToDoView: View {
                 }
             }
         }
-        .actionSheet(isPresented: $showingFilterOptions) {
-            ActionSheet(
-                title: Text("Filter by Category"),
-                buttons: createFilterButtons()
-            )
-        }
         .sheet(isPresented: $showingAddToDo) {
             NewScheduleItemView(
                 selectedDate: Date(),
@@ -179,26 +151,6 @@ struct ToDoView: View {
             )
         }
     }
-    
-    private func createFilterButtons() -> [ActionSheet.Button] {
-        var buttons: [ActionSheet.Button] = []
-        
-        // Show All button
-        buttons.append(.default(Text("Show All")) {
-            filterCategory = nil
-        })
-        
-        // Category buttons
-        let categoryManager = CategoryDataManager.shared
-        for category in categoryManager.categories {
-            buttons.append(.default(Text(category.name)) {
-                filterCategory = category
-            })
-        }
-        
-        buttons.append(.cancel())
-        return buttons
-    }
 }
 
 // MARK: - Add To Do View using ScheduleItem
@@ -208,10 +160,8 @@ struct AddToDoView: View {
     
     @State private var title = ""
     @State private var notes = ""
-    @State private var selectedCategory: Category?
     @State private var checklistItems: [ChecklistItem] = []
     @State private var newChecklistItem = ""
-    @State private var showingManageCategories = false
     
     @FocusState private var notesIsFocused: Bool
     @FocusState private var checklistInputFocused: Bool
@@ -227,41 +177,6 @@ struct AddToDoView: View {
                         Section(header: Text("Task Details")) {
                             TextField("Task title", text: $title)
                                 .font(.body)
-                            
-                            // Category Selection
-                            HStack {
-                                Text("Category")
-                                Spacer()
-                                Menu {
-                                    Button("None") {
-                                        selectedCategory = nil
-                                    }
-                                    ForEach(CategoryDataManager.shared.categories) { category in
-                                        Button(category.name) {
-                                            selectedCategory = category
-                                        }
-                                    }
-                                    Button("Manage Categories") {
-                                        showingManageCategories = true
-                                    }
-                                } label: {
-                                    HStack {
-                                        if let category = selectedCategory {
-                                            Circle()
-                                                .fill(Color(category.color))
-                                                .frame(width: 12, height: 12)
-                                            Text(category.name)
-                                                .foregroundColor(.primary)
-                                        } else {
-                                            Text("None")
-                                                .foregroundColor(.primary)
-                                        }
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .foregroundColor(.secondary)
-                                            .font(.caption2)
-                                    }
-                                }
-                            }
                         }
                         
                         Section(header: Text("Notes")) {
@@ -380,9 +295,6 @@ struct AddToDoView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingManageCategories) {
-            ManageCategoriesView()
-        }
     }
     
     private func addChecklistItem() {
@@ -406,7 +318,6 @@ struct AddToDoView: View {
         let newItem = ScheduleItem.createToDo(
             title: trimmedTitle,
             descriptionText: notes,
-            category: selectedCategory,
             checklist: checklistItems
         )
         
@@ -446,20 +357,7 @@ struct ToDoItemRow: View {
                     .font(.body)
                     .strikethrough(item.isCompleted)
                     .foregroundColor(item.isCompleted ? .secondary : .primary)
-                if let category = item.category {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color(category.color))
-                            .frame(width: 8, height: 8)
-                        Text(category.name)
-                            .font(.caption2)
-                            .foregroundColor(Color(category.color))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color(category.color).opacity(0.1))
-                    .cornerRadius(8)
-                }
+
                 if !item.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(item.descriptionText)
                         .font(.caption)
@@ -533,7 +431,6 @@ struct EditToDoView: View {
     let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
     
-    @State private var showingManageCategories = false
     @State private var newChecklistItem = ""
     
     @FocusState private var notesIsFocused: Bool
@@ -554,41 +451,6 @@ struct EditToDoView: View {
                     Section(header: Text("Task Details")) {
                         TextField("Task title", text: $item.title)
                             .font(.body)
-                        
-                        // Category Selection
-                        HStack {
-                            Text("Category")
-                            Spacer()
-                            Menu {
-                                Button("None") {
-                                    item.category = nil
-                                }
-                                ForEach(CategoryDataManager.shared.categories) { category in
-                                    Button(category.name) {
-                                        item.category = category
-                                    }
-                                }
-                                Button("Manage Categories") {
-                                    showingManageCategories = true
-                                }
-                            } label: {
-                                HStack {
-                                    if let category = item.category {
-                                        Circle()
-                                            .fill(Color(category.color))
-                                            .frame(width: 12, height: 12)
-                                        Text(category.name)
-                                            .foregroundColor(.primary)
-                                    } else {
-                                        Text("None")
-                                            .foregroundColor(.primary)
-                                    }
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.secondary)
-                                        .font(.caption2)
-                                }
-                            }
-                        }
                     }
                     
                     Section(header: Text("Notes")) {
@@ -676,9 +538,6 @@ struct EditToDoView: View {
                     .disabled(item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-        }
-        .sheet(isPresented: $showingManageCategories) {
-            ManageCategoriesView()
         }
     }
     
@@ -770,21 +629,6 @@ struct MoveToScheduleView: View {
                                 .font(.body)
                                 .foregroundColor(.primary)
                                 .multilineTextAlignment(.leading)
-                            
-                            if let category = scheduleItem.category {
-                                HStack(spacing: 4) {
-                                    Circle()
-                                        .fill(Color(category.color))
-                                        .frame(width: 8, height: 8)
-                                    Text(category.name)
-                                        .font(.caption2)
-                                        .foregroundColor(Color(category.color))
-                                }
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color(category.color).opacity(0.1))
-                                .cornerRadius(8)
-                            }
                         }
                         
                         Spacer()

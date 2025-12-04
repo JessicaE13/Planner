@@ -1,4 +1,3 @@
-
 //  Created by Jessica Estes on 8/11/25.
 //
 
@@ -58,7 +57,7 @@ struct ScheduleDetailView: View {
                                 .frame(width: 56, height: max(vStackHeight, 75))
                             Image(systemName: item.icon)
                                 .font(.title)
-                                .foregroundColor(Color(item.category?.color ?? item.color))
+                                .foregroundColor(Color(item.color))
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
@@ -179,37 +178,11 @@ struct ScheduleDetailView: View {
                         EmptyView()
                     }
              
-                    if let category = item.category {
-                        Divider()
-                            .padding(.horizontal, 24)
-                            .padding(.top, 16)
-                        HStack {
-                            Text("Category")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(Color(category.color))
-                                    .frame(width: 16, height: 16)
-                                Text(category.name)
-                            }
-                            .padding(.horizontal, 12)
-                            .cornerRadius(12)
-                        }
+                    Divider()
                         .padding(.horizontal, 24)
-                        Divider()
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 0)
-                    }
-
+                        .padding(.top, 16)
+                    
                     if item.frequency != .never {
-                        // Add divider above repeat section if there's no category
-                        if item.category == nil {
-                            Divider()
-                                .padding(.horizontal, 24)
-                                .padding(.top, 16)
-                        }
-                        
                         HStack {
                             Text("Repeat")
                                 .foregroundColor(.primary)
@@ -465,3 +438,4 @@ struct ScheduleDetailView: View {
         )
     }
 }
+

@@ -206,12 +206,11 @@ struct ScheduleRowView: View {
         HStack {
             ZStack {
                 RoundedRectangle(cornerRadius: 22)
-                    .fill(Color(.secondarySystemGroupedBackground))
-                 //   .fill(Color(iconBackgroundColor))
+                    .fill(Color(item.color))
                     .frame(width: 50, height: 75)
                 Image(systemName: item.icon)
                     .font(.title2)
-                    .foregroundColor(Color(iconBackgroundColor))
+                    .foregroundStyle(Color(.secondarySystemGroupedBackground))
             }
             .padding(.trailing, 8)
             
@@ -223,8 +222,8 @@ struct ScheduleRowView: View {
             
             Text(item.title)
                 .font(.body)
-                .strikethrough((item.itemType == .todo || item.showCheckbox) && item.isCompleted(on: selectedDate))
-                .foregroundColor((item.itemType == .todo || item.showCheckbox) && item.isCompleted(on: selectedDate) ? .secondary : .primary)
+                .strikethrough(item.isCompleted(on: selectedDate))
+                .foregroundColor(item.isCompleted(on: selectedDate) ? .secondary : .primary)
             
             if item.frequency != .never {
                 Image(systemName: "repeat")
@@ -246,7 +245,7 @@ struct ScheduleRowView: View {
             }) {
                 Image(systemName: item.isCompleted(on: selectedDate) ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundColor(Color(item.category?.color ?? item.color))
+                    .foregroundColor(Color(item.color))
             }
             .buttonStyle(PlainButtonStyle())
         }
@@ -254,36 +253,6 @@ struct ScheduleRowView: View {
         .onTapGesture {
             onTap()
         }
-    }
-    
-    // Computed property to determine the background color
-    private var iconBackgroundColor: String {
-        // Use category color if a category is assigned, otherwise use item's color
-        return item.category?.color ?? item.color
-    }
-    
-    // Helper function to determine appropriate icon color based on background
-    private func iconColor(for colorName: String) -> Color {
-        // For better contrast, we'll determine if the background is light or dark
-        // and choose the appropriate contrasting color
-        
-        // Create a UIColor from the color name to analyze its brightness
-        let uiColor = UIColor(named: colorName) ?? UIColor.systemBlue
-        
-        // Calculate the relative luminance to determine if it's a light or dark color
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 0
-        
-        uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        
-        // Calculate relative luminance using the standard formula
-        let luminance = 0.299 * red + 0.587 * green + 0.114 * blue
-        
-        // If luminance is greater than 0.5, it's a light color, so use dark icon
-        // If luminance is less than or equal to 0.5, it's a dark color, so use light icon
-        return luminance > 0.5 ? .black : .white
     }
     
     private func formatTime(_ date: Date) -> String {
@@ -318,10 +287,6 @@ struct NewScheduleItemView: View {
     @State private var checklistItems: [ChecklistItem] = []
     @State private var newChecklistItem: String = ""
     @FocusState private var checklistInputFocused: Bool
-    
-    // Category management
-    @State private var selectedCategory: Category?
-    @State private var showingManageCategories = false
     
     // Icon selection
     @State private var showingIconPicker = false
@@ -469,71 +434,23 @@ struct NewScheduleItemView: View {
                                 .autocapitalization(.none)
                                 .disableAutocorrection(true)
                                 .keyboardType(.URL)
-                            
-                            if isSearchingLocation && !locationSearchResults.isEmpty {
-                                ForEach(Array(locationSearchResults.prefix(3).enumerated()), id: \.offset) { index, itemResult in
-                                    Button(action: {
-                                        let name = itemResult.mapItem.name ?? "Selected Location"
-                                        let address = formattedAddress(from: itemResult.mapItem)
-                                        item.location = name + (address.isEmpty ? "" : "\n" + address)
-                                        isSearchingLocation = false
-                                        locationSearchResults = []
-                                    }) {
-                                        VStack(alignment: .leading) {
-                                            Text(itemResult.mapItem.name ?? "Unknown")
-                                                .foregroundColor(.primary)
-                                            Text(formattedAddress(from: itemResult.mapItem))
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                        }
-                                        .padding(.vertical, 4)
-                                    }
-                                }
-                            }
                         }
                         
-                        // Category Section
                         Section {
                             HStack {
-                                Text("Category")
+                                Text("Color")
                                 Spacer()
-                                Menu {
-                                    Button("None") {
-                                        selectedCategory = nil
-                                    }
-                                    ForEach(CategoryDataManager.shared.categories) { category in
+                                HStack(spacing: 8) {
+                                    ForEach(["Color1","Color2","Color3","Color4","Color5","Color6","Color7"], id: \.self) { color in
                                         Button(action: {
-                                            selectedCategory = category
+                                            item.color = color
                                         }) {
-                                            HStack {
-                                                Circle()
-                                                  //  .fill(Color(category.color))
-                                                    .fill(Color.red)
-                                                    .frame(width: 16, height: 16)
-                                                Image(systemName: "chevron.up.chevron.down")
-                                                    .foregroundColor(.secondary)
-                                                Text(category.name)
-                                            }
-                                        }
-                                    }
-                                    Button("Manage Categories") {
-                                        showingManageCategories = true
-                                    }
-                                } label: {
-                                    HStack {
-                                        if let selectedCategory = selectedCategory {
                                             Circle()
-                                                .fill(Color(selectedCategory.color))
-                                                .frame(width: 16, height: 16)
-                                            Text(selectedCategory.name)
-                                                .foregroundColor(.primary)
-                                        } else {
-                                            Text("None")
-                                                .foregroundColor(.primary)
+                                                .fill(Color(color))
+                                                .frame(width: 24, height: 24)
+                                                .overlay(Circle().stroke(item.color == color ? Color.primary : Color.clear, lineWidth: 2))
                                         }
-                                        Image(systemName: "chevron.up.chevron.down")
-                                            .foregroundColor(.secondary)
-                                            .font(.caption2)
+                                        .buttonStyle(PlainButtonStyle())
                                     }
                                 }
                             }
@@ -718,7 +635,6 @@ struct NewScheduleItemView: View {
                     Button("Save") {
                         item.descriptionText = descriptionText
                         item.checklist = checklistItems
-                        item.category = selectedCategory
                         
                         // Save custom frequency config if custom is selected
                         if item.frequency == .custom {
@@ -743,7 +659,7 @@ struct NewScheduleItemView: View {
             performLocationSearch()
             descriptionText = item.descriptionText
             checklistItems = item.checklist
-            selectedCategory = item.category
+            // no selectedCategory or manageCategories
             
             // Load existing custom frequency config
             if let existingConfig = item.customFrequencyConfig {
@@ -764,9 +680,6 @@ struct NewScheduleItemView: View {
             if newFrequency == .custom {
                 showingCustomFrequencyPicker = true
             }
-        }
-        .sheet(isPresented: $showingManageCategories) {
-            ManageCategoriesView()
         }
         .sheet(isPresented: $showingCustomFrequencyPicker) {
             CustomFrequencyPickerView(
@@ -823,10 +736,6 @@ struct EditScheduleItemView: View {
     @State private var newChecklistItem: String = ""
     @FocusState private var checklistInputFocused: Bool
     @Environment(\.editMode) private var editMode // Add edit mode environment
-    
-    // Category management
-    @State private var selectedCategory: Category?
-    @State private var showingManageCategories = false
     
     // Icon selection
     @State private var showingIconPicker = false
@@ -962,45 +871,21 @@ struct EditScheduleItemView: View {
                         }
                     }
                     
-                    // Category Section
                     Section {
                         HStack {
-                            Text("Category")
+                            Text("Color")
                             Spacer()
-                            Menu {
-                                Button("None") {
-                                    selectedCategory = nil
-                                }
-                                ForEach(CategoryDataManager.shared.categories) { category in
+                            HStack(spacing: 8) {
+                                ForEach(["Color1","Color2","Color3","Color4","Color5","Color6","Color7"], id: \.self) { color in
                                     Button(action: {
-                                        selectedCategory = category
+                                        editableItem.color = color
                                     }) {
-                                        HStack {
-                                            Circle()
-                                                .fill(Color(category.color))
-                                                .frame(width: 16, height: 16)
-                                            Text(category.name)
-                                        }
-                                    }
-                                }
-                                Button("Manage Categories") {
-                                    showingManageCategories = true
-                                }
-                            } label: {
-                                HStack {
-                                    if let selectedCategory = selectedCategory {
                                         Circle()
-                                            .fill(Color(selectedCategory.color))
-                                            .frame(width: 16, height: 16)
-                                        Text(selectedCategory.name)
-                                            .foregroundColor(.primary)
-                                    } else {
-                                        Text("None")
-                                            .foregroundColor(.primary)
+                                            .fill(Color(color))
+                                            .frame(width: 24, height: 24)
+                                            .overlay(Circle().stroke(editableItem.color == color ? Color.primary : Color.clear, lineWidth: 2))
                                     }
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.secondary)
-                                        .font(.caption2)
+                                    .buttonStyle(PlainButtonStyle())
                                 }
                             }
                         }
@@ -1255,7 +1140,6 @@ struct EditScheduleItemView: View {
                     Button("Save") {
                         editableItem.descriptionText = descriptionText
                         editableItem.checklist = checklistItems
-                        editableItem.category = selectedCategory
                         
                         if editableItem.frequency == .custom {
                             editableItem.customFrequencyConfig = customFrequencyConfig
@@ -1272,7 +1156,7 @@ struct EditScheduleItemView: View {
                 performLocationSearch()
                 descriptionText = editableItem.descriptionText
                 checklistItems = editableItem.checklist
-                selectedCategory = editableItem.category
+                // no selectedCategory or manageCategories
                 
                 if let existingConfig = editableItem.customFrequencyConfig {
                     customFrequencyConfig = existingConfig
@@ -1291,9 +1175,6 @@ struct EditScheduleItemView: View {
                 if newFrequency == .custom {
                     showingCustomFrequencyPicker = true
                 }
-            }
-            .sheet(isPresented: $showingManageCategories) {
-                ManageCategoriesView()
             }
             .sheet(isPresented: $showingCustomFrequencyPicker) {
                 CustomFrequencyPickerView(
@@ -1350,4 +1231,3 @@ struct EditScheduleItemView: View {
     }
     
 }
-
