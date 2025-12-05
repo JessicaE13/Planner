@@ -1,6 +1,10 @@
 import SwiftUI
 import HealthKit
 
+private enum ExpandedSection: Equatable {
+    case health
+}
+
 struct ContentView: View {
     @State private var selectedDate = Date()
     @State private var showingNewItem = false
@@ -8,7 +12,7 @@ struct ContentView: View {
     @StateObject private var cloudKitManager = CloudKitManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @State private var healthAuthorizationRequested = false
-    @State private var isHealthExpanded = false
+    @State private var expandedSection: ExpandedSection? = nil
 
     private func distanceString(from meters: Double) -> String {
         if Locale.current.measurementSystem == .metric {
@@ -38,35 +42,41 @@ struct ContentView: View {
                                 Spacer(minLength: 8)
                                 VStack(spacing: 12) {
                                     // Collapsed icon row (tappable)
-                                    HStack {
-                                        Image(systemName: "figure.walk")
-                                        Spacer()
-                                        Image(systemName: "figure.run")
-                                        Spacer()
-                                        Image(systemName: "figure.stand")
-                                        Spacer()
-                                        Image(systemName: "flame.fill")
-                                        Spacer()
-                                        Image(systemName: "clock")
-                                        Spacer()
-                                        Image(systemName: "heart.fill")
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .font(.title3)
-                                    .foregroundStyle(.primary)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        withAnimation(.easeInOut) {
-                                            isHealthExpanded.toggle()
+                                    if expandedSection != .health {
+                                        HStack {
+                                            Image(systemName: "figure.walk")
+                                            Spacer()
+                                            Image(systemName: "figure.run")
+                                            Spacer()
+                                            Image(systemName: "figure.stand")
+                                            Spacer()
+                                            Image(systemName: "flame.fill")
+                                            Spacer()
+                                            Image(systemName: "clock")
+                                            Spacer()
+                                            Image(systemName: "heart.fill")
                                         }
+                                        .frame(maxWidth: .infinity)
+                                        .font(.title3)
+                                        .foregroundStyle(.primary)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            withAnimation(.easeInOut) {
+                                                expandedSection = .health
+                                            }
+                                        }
+                                        .padding(16)
+                                        .background(
+                                            Capsule()
+                                                .fill(Color.clear)
+                                        )
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(Color.black, lineWidth: 1)
+                                        )
                                     }
-                                    .padding(16)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color("BackgroundPopup"))
-                                    )
                                     
-                                    if isHealthExpanded {
+                                    if expandedSection == .health {
                                         VStack(spacing: 0) {
                                             VStack(spacing: 12) {
                                                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), spacing: 12) {
@@ -81,12 +91,20 @@ struct ContentView: View {
                                             .padding(16)
                                             .background(
                                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                                    .fill(Color("BackgroundPopup"))
+                                                    .fill(Color.clear)
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                                    .stroke(Color.black, lineWidth: 1)
                                             )
                                             .overlay(alignment: .top) {
                                                 RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                                    .fill(Color("BackgroundPopup"))
+                                                    .fill(Color.clear)
                                                     .frame(width: 14, height: 14)
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                                            .stroke(Color.black, lineWidth: 1)
+                                                    )
                                                     .rotationEffect(.degrees(45))
                                                     .offset(y: -7)
                                             }
@@ -103,11 +121,16 @@ struct ContentView: View {
                                 //)
                                 .padding(.horizontal)
                                 .padding(.vertical, 8)
-                                .animation(.easeInOut, value: isHealthExpanded)
+                                .animation(.easeInOut, value: expandedSection)
 
                                 ScheduleView(selectedDate: selectedDate)
                             }
-                            .padding(.top, 8)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if expandedSection != nil {
+                                    withAnimation(.easeInOut) { expandedSection = nil }
+                                }
+                            }
                         }
                         .ignoresSafeArea(edges: .top)
                     }
@@ -116,6 +139,12 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         HeaderView(selectedDate: $selectedDate)
                             .padding(.top, 8)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if expandedSection != nil {
+                                    withAnimation(.easeInOut) { expandedSection = nil }
+                                }
+                            }
                     }
                     .frame(maxWidth: .infinity, alignment: .top)
                     .background(
@@ -126,18 +155,7 @@ struct ContentView: View {
                             .frame(height: 160)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                    .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
-                                    .mask(
-                                        LinearGradient(
-                                            gradient: Gradient(stops: [
-                                                .init(color: .clear, location: 0.0),
-                                                .init(color: .black, location: 0.5),
-                                                .init(color: .black, location: 1.0)
-                                            ]),
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
+                                    .stroke(Color.black, lineWidth: 1)
                                     .ignoresSafeArea(edges: [.top, .horizontal])
                             )
                     )
@@ -266,3 +284,4 @@ struct HealthStatCard: View {
         )
     }
 }
+

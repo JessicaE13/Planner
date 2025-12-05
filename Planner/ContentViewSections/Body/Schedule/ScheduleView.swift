@@ -265,6 +265,9 @@ struct ScheduleRowView: View {
 // MARK: - New Schedule Item View (for creating new events)
 
 struct NewScheduleItemView: View {
+    private enum ExpandedEditorSection: Equatable { case none, schedule, description, checklist }
+    @State private var expandedSection: ExpandedEditorSection = .none
+    
     let selectedDate: Date
     let onSave: (ScheduleItem) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -303,6 +306,17 @@ struct NewScheduleItemView: View {
         
         // Set to the target hour with 0 minutes and 0 seconds
         return calendar.date(bySettingHour: targetHour, minute: 0, second: 0, of: date) ?? date
+    }
+    
+    private var dateSummaryFormatter: DateFormatter {
+        let df = DateFormatter()
+        df.dateFormat = "MMM d, yyyy"
+        return df
+    }
+    private var timeSummaryFormatter: DateFormatter {
+        let df = DateFormatter()
+        df.dateFormat = "h:mm a"
+        return df
     }
     
     init(selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void) {
@@ -456,8 +470,34 @@ struct NewScheduleItemView: View {
                             }
                         }
                         
-                        // Scheduling Section - now available for both todos (with dates) and scheduled items
-                        if item.itemType == .scheduled || (item.itemType == .todo && item.hasDate) {
+                        if expandedSection != .schedule {
+                            Section {
+                                Button(action: {
+                                    withAnimation(.easeInOut) {
+                                        expandedSection = .schedule
+                                    }
+                                }) {
+                                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                        Image(systemName: "calendar")
+                                            .foregroundColor(.primary)
+                                        if item.allDay {
+                                            Text("\(dateSummaryFormatter.string(from: item.startTime)) — All-day")
+                                                .foregroundColor(.primary)
+                                        } else {
+                                            let startDateText = dateSummaryFormatter.string(from: item.startTime)
+                                            let startTimeText = timeSummaryFormatter.string(from: item.startTime)
+                                            let endTimeText = timeSummaryFormatter.string(from: item.endTime)
+                                            Text("\(startDateText) \(startTimeText) - \(endTimeText)")
+                                                .foregroundColor(.primary)
+                                        }
+                                        Spacer()
+                                    }
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        
+                        if (item.itemType == .scheduled || (item.itemType == .todo && item.hasDate)) && expandedSection == .schedule {
                             Section {
                                 HStack {
                                     Text("All-day")
@@ -578,6 +618,12 @@ struct NewScheduleItemView: View {
                                 }
                             }
                             .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.easeInOut) {
+                                    expandedSection = .description
+                                }
+                            }
                         }
                         
                         Section {
@@ -622,6 +668,12 @@ struct NewScheduleItemView: View {
                                 }
                             }
                             .padding(.vertical, 4)
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeInOut) {
+                                expandedSection = .checklist
+                            }
                         }
                     }
                     .scrollContentBackground(.hidden)
