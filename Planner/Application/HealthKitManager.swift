@@ -14,6 +14,7 @@ final class HealthKitManager: ObservableObject {
     @Published var todayExerciseMinutes: Int = 0
     @Published var todayAverageHeartRate: Int = 0
     @Published var todayStandHours: Int = 0
+    @Published var todaySleepDuration: TimeInterval = 0
 
     private init() {}
 
@@ -27,7 +28,8 @@ final class HealthKitManager: ObservableObject {
         let exerciseType = HKQuantityType.quantityType(forIdentifier: .appleExerciseTime)!
         let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
         let standType = HKObjectType.categoryType(forIdentifier: .appleStandHour)!
-        let toRead: Set<HKObjectType> = [stepType, distanceType, activeEnergyType, flightsType, exerciseType, heartRateType, standType]
+        let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+        let toRead: Set<HKObjectType> = [stepType, distanceType, activeEnergyType, flightsType, exerciseType, heartRateType, standType, sleepType]
 
         try await healthStore.requestAuthorization(toShare: [], read: toRead)
     }
@@ -437,6 +439,61 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
+    func fetchSleepDuration(for date: Date) async throws {
+        let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        let now = Date()
+        let end = min(nextDay, now)
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: end, options: .strictStartDate)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { [weak self] _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                let categorySamples = samples as? [HKCategorySample] ?? []
+                var total: TimeInterval = 0
+
+                for sample in categorySamples {
+                    var isAsleep = false
+                    if #available(iOS 16.0, *) {
+                        if let value = HKCategoryValueSleepAnalysis(rawValue: sample.value) {
+                            switch value {
+                            case .asleep, .asleepCore, .asleepDeep, .asleepREM:
+                                isAsleep = true
+                            default:
+                                break
+                            }
+                        }
+                    } else {
+                        if sample.value == HKCategoryValueSleepAnalysis.asleep.rawValue {
+                            isAsleep = true
+                        }
+                    }
+
+                    if isAsleep {
+                        let clampedStart = max(sample.startDate, startOfDay)
+                        let clampedEnd = min(sample.endDate, end)
+                        if clampedEnd > clampedStart {
+                            total += clampedEnd.timeIntervalSince(clampedStart)
+                        }
+                    }
+                }
+
+                DispatchQueue.main.async {
+                    self?.todaySleepDuration = total
+                }
+                continuation.resume(returning: ())
+            }
+
+            self.healthStore.execute(query)
+        }
+    }
+
     func fetchMetrics(for date: Date) async throws {
         async let steps: Void = fetchSteps(for: date)
         async let distance: Void = fetchDistanceWalkingRunning(for: date)
@@ -445,7 +502,8 @@ final class HealthKitManager: ObservableObject {
         async let exercise: Void = fetchExerciseMinutes(for: date)
         async let hr: Void = fetchAverageHeartRate(for: date)
         async let stand: Void = fetchStandHours(for: date)
-        _ = try await (steps, distance, energy, flights, exercise, hr, stand)
+        async let sleep: Void = fetchSleepDuration(for: date)
+        _ = try await (steps, distance, energy, flights, exercise, hr, stand, sleep)
     }
     
     func fetchTodayMetrics() async throws {

@@ -214,20 +214,24 @@ struct ScheduleRowView: View {
             }
             .padding(.trailing, 8)
             
-            if item.itemType == .scheduled {
-                Text(item.allDay ? "All-day" : formatTime(item.startTime))
+            VStack(alignment: .leading, spacing: 2) {
+                if item.itemType == .scheduled {
+                    HStack(spacing: 4) {
+                        Text(item.allDay ? "All-day" : formatTime(item.startTime))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        if item.frequency != .never {
+                            Image(systemName: "repeat")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                Text(item.title)
                     .font(.body)
-                    .foregroundColor(Color.gray)
-            }
-            
-            Text(item.title)
-                .font(.body)
-                .strikethrough(item.isCompleted(on: selectedDate))
-                .foregroundColor(item.isCompleted(on: selectedDate) ? .secondary : .primary)
-            
-            if item.frequency != .never {
-                Image(systemName: "repeat")
-                    .foregroundColor(Color.gray.opacity(0.6))
+                    .fontWeight(.medium)
+                    .strikethrough(item.isCompleted(on: selectedDate))
+                    .foregroundColor(item.isCompleted(on: selectedDate) ? .secondary : .primary)
             }
             
             if item.uniqueKey.hasPrefix("todo-") && item.itemType == .scheduled {
@@ -293,7 +297,126 @@ struct NewScheduleItemView: View {
     
     // Icon selection
     @State private var showingIconPicker = false
+    @State private var hasManuallySelectedIcon = false
+    private let iconDataSource = IconDataSource.shared
+
+    // MARK: - Icon Suggestion Helpers
+    private func mapKeywordToIcon(in text: String) -> String? {
+        let mapping: [String: String] = [
+            "book": "book.fill",
+            "books": "books.vertical.fill",
+            "reading": "book.fill",
+            "read": "book.fill",
+            "meeting": "calendar.badge.checkmark",
+            "coffee": "cup.and.saucer.fill",
+            "tea": "mug.fill",
+            "breakfast": "fork.knife",
+            "lunch": "fork.knife",
+            "dinner": "fork.knife",
+            "run": "figure.run",
+            "running": "figure.run",
+            "walk": "figure.walk",
+            "walking": "figure.walk",
+            "gym": "dumbbell.fill",
+            "weights": "dumbbell.fill",
+            "yoga": "figure.yoga",
+            "swim": "figure.pool.swim",
+            "swimming": "figure.pool.swim",
+            "flight": "airplane",
+            "plane": "airplane",
+            "train": "train.side.front.car",
+            "bus": "bus.fill",
+            "car": "car.fill",
+            "birthday": "birthday.cake.fill",
+            "party": "party.popper.fill",
+            "shopping": "bag.fill",
+            "groceries": "cart.fill",
+            "grocery": "cart.fill",
+            "study": "books.vertical.fill",
+            "class": "graduationcap.fill",
+            "school": "graduationcap.fill",
+            "doctor": "stethoscope",
+            "dentist": "mouth.fill",
+            "meds": "pills.fill",
+            "medicine": "pills.fill",
+            "water": "waterbottle.fill",
+            "haircut": "scissors",
+            "laundry": "washer.fill",
+            "clean": "bubbles.and.sparkles.fill",
+            "cleaning": "bubbles.and.sparkles.fill"
+        ]
+        let lower = text.lowercased()
+        for (keyword, icon) in mapping {
+            if lower.contains(keyword) {
+                return icon
+            }
+        }
+        return nil
+    }
+
+    private func updateIconBasedOnTitle(_ title: String) {
+        guard !hasManuallySelectedIcon else { return }
+        let trimmed = title.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            item.icon = "calendar"
+            return
+        }
+
+        // First, try curated keyword mapping
+        if let mapped = mapKeywordToIcon(in: trimmed) {
+            item.icon = mapped
+            return
+        }
+
+        // Fallback: token-based matching against available icons
+        let tokens = trimmed
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+        guard !tokens.isEmpty else { return }
+
+        let allIcons = iconDataSource.getAllIcons()
+        let scoredMatches: [(IconItem, Int)] = allIcons.map { icon in
+            let searchable = (icon.displayName + " " + icon.name).lowercased()
+            let score = tokens.reduce(0) { $0 + (searchable.contains($1) ? 1 : 0) }
+            return (icon, score)
+        }.filter { $0.1 > 0 }
+
+        if let best = scoredMatches.sorted(by: { lhs, rhs in
+            if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+            return lhs.0.displayName.count < rhs.0.displayName.count
+        }).first {
+            item.icon = best.0.name
+        }
+    }
     
+    // MARK: - Location Search
+    private func performLocationSearch() {
+        locationSearchTask?.cancel()
+        
+        guard !item.location.isEmpty else {
+            locationSearchResults = []
+            return
+        }
+        
+        locationSearchTask = Task {
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = item.location
+            let search = MKLocalSearch(request: request)
+            let response = try? await search.start()
+            if let items = response?.mapItems {
+                let mapped = items.prefix(10).map { IdentifiableMapItem(mapItem: $0) }
+                await MainActor.run {
+                    locationSearchResults = mapped
+                }
+            } else {
+                await MainActor.run {
+                    locationSearchResults = []
+                }
+            }
+        }
+    }
+
     // Helper function to get the next upcoming hour
     private static func nextUpcomingHour(from date: Date) -> Date {
         let calendar = Calendar.current
@@ -350,63 +473,6 @@ struct NewScheduleItemView: View {
         ))
     }
     
-    private func performLocationSearch() {
-        locationSearchTask?.cancel()
-        
-        guard !item.location.isEmpty else {
-            locationSearchResults = []
-            return
-        }
-        
-        locationSearchTask = Task {
-            let request = MKLocalSearch.Request()
-            request.naturalLanguageQuery = item.location
-            let search = MKLocalSearch(request: request)
-            let response = try? await search.start()
-            if let items = response?.mapItems {
-                let mapped = items.prefix(10).map { IdentifiableMapItem(mapItem: $0) }
-                await MainActor.run {
-                    locationSearchResults = mapped
-                }
-            } else {
-                await MainActor.run {
-                    locationSearchResults = []
-                }
-            }
-        }
-    }
-    
-    private func formattedAddress(from mapItem: MKMapItem) -> String {
-        if #available(iOS 26.0, *) {
-            // Use newer MapKit APIs when available. To avoid SDK differences, conservatively
-            // fall back to the item's name on iOS 26+ without touching deprecated properties.
-            return (mapItem.name ?? "").trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-        } else {
-            let placemark = mapItem.placemark
-
-            let street = [placemark.subThoroughfare, placemark.thoroughfare]
-                .compactMap { $0 }
-                .joined(separator: " ")
-            let cityStatePostal = [placemark.locality, placemark.administrativeArea, placemark.postalCode]
-                .compactMap { $0 }
-                .joined(separator: ", ")
-            let country = placemark.country ?? ""
-            let name = placemark.name ?? ""
-
-            var parts: [String] = []
-            if !street.isEmpty { parts.append(street) }
-            if !cityStatePostal.isEmpty { parts.append(cityStatePostal) }
-            if !country.isEmpty { parts.append(country) }
-
-            if parts.isEmpty {
-                let trimmedName = name.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-                return trimmedName
-            }
-
-            return parts.joined(separator: "\n")
-        }
-    }
-    
     var body: some View {
         NavigationView {
             ZStack {
@@ -428,6 +494,9 @@ struct NewScheduleItemView: View {
                                 .buttonStyle(PlainButtonStyle())
                                 
                                 TextField("Title", text: $item.title)
+                                    .onChange(of: item.title) { _, newValue in
+                                        updateIconBasedOnTitle(newValue)
+                                    }
                                     .multilineTextAlignment(.leading)
                                     .focused($titleIsFocused)
                             }
@@ -742,6 +811,9 @@ struct NewScheduleItemView: View {
         }
         .sheet(isPresented: $showingIconPicker) {
             IconPickerView(selectedIcon: $item.icon)
+                .onDisappear {
+                    hasManuallySelectedIcon = true
+                }
         }
     }
     
@@ -1283,3 +1355,4 @@ struct EditScheduleItemView: View {
     }
     
 }
+

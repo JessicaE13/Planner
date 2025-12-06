@@ -1,10 +1,6 @@
 import SwiftUI
 import HealthKit
 
-private enum ExpandedSection: Equatable {
-    case health
-}
-
 struct ContentView: View {
     @State private var selectedDate = Date()
     @State private var showingNewItem = false
@@ -12,7 +8,6 @@ struct ContentView: View {
     @StateObject private var cloudKitManager = CloudKitManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @State private var healthAuthorizationRequested = false
-    @State private var expandedSection: ExpandedSection? = nil
 
     private func distanceString(from meters: Double) -> String {
         if Locale.current.measurementSystem == .metric {
@@ -22,6 +17,32 @@ struct ContentView: View {
             let miles = Measurement(value: meters, unit: UnitLength.meters).converted(to: .miles).value
             return String(format: "%.2f mi", miles)
         }
+    }
+    
+    private func stepsFormatted(_ steps: Int) -> String {
+        if steps >= 1000 {
+            let value = Double(steps) / 1000.0
+            return String(format: "%.1fk", value)
+        } else {
+            return "\(steps)"
+        }
+    }
+
+    private func distanceShortString(from meters: Double) -> String {
+        if Locale.current.measurementSystem == .metric {
+            let km = Measurement(value: meters, unit: UnitLength.meters).converted(to: .kilometers).value
+            return String(format: "%.1f km", km)
+        } else {
+            let miles = Measurement(value: meters, unit: UnitLength.meters).converted(to: .miles).value
+            return String(format: "%.1f mi", miles)
+        }
+    }
+    
+    private func sleepDurationString(from seconds: TimeInterval) -> String {
+        let totalMinutes = Int(seconds / 60)
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        return String(format: "%d:%02d h", hours, minutes)
     }
     
     var body: some View {
@@ -36,83 +57,46 @@ struct ContentView: View {
                         VStack(spacing: 0) {
                             // Top spacer to allow content to scroll under the curved header
                             Color.clear
-                                .frame(height: 140)
+                                .frame(height: 170)
                             
                             VStack(spacing: 0) {
                                 Spacer(minLength: 8)
                                 VStack(spacing: 12) {
-                                    // Collapsed icon row (tappable)
-                                    if expandedSection != .health {
-                                        HStack {
+                                    // Activity bar with icons; simplified (no expand/collapse)
+                                    HStack {
+                                        // Sleep (real data)
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "bed.double.fill")
+                                            Text(sleepDurationString(from: healthKitManager.todaySleepDuration))
+                                                .font(.caption)
+                                                .foregroundStyle(.primary)
+                                        }
+                                        Spacer()
+                                        // Steps
+                                        HStack(spacing: 6) {
                                             Image(systemName: "figure.walk")
-                                            Spacer()
+                                            Text("\(stepsFormatted(healthKitManager.todayStepCount)) steps")
+                                                .font(.caption)
+                                                .foregroundStyle(.primary)
+                                        }
+                                        Spacer()
+                                        // Distance
+                                        HStack(spacing: 6) {
                                             Image(systemName: "figure.run")
-                                            Spacer()
-                                            Image(systemName: "figure.stand")
-                                            Spacer()
-                                            Image(systemName: "flame.fill")
-                                            Spacer()
-                                            Image(systemName: "clock")
-                                            Spacer()
-                                            Image(systemName: "heart.fill")
+                                            Text(distanceShortString(from: healthKitManager.todayDistanceMeters))
+                                                .font(.caption)
+                                                .foregroundStyle(.primary)
                                         }
-                                        .frame(maxWidth: .infinity)
-                                        .font(.title3)
-                                        .foregroundStyle(.primary)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            withAnimation(.easeInOut) {
-                                                expandedSection = .health
-                                            }
-                                        }
-                                        .padding(16)
-                                        .background(
-                                            Capsule()
-                                                .fill(Color.clear)
-                                        )
-                                        .overlay(
-                                            Capsule()
-                                                .stroke(Color.black, lineWidth: 1)
-                                        )
                                     }
-                                    
-                                    if expandedSection == .health {
-                                        VStack(spacing: 0) {
-                                            VStack(spacing: 12) {
-                                                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), spacing: 12) {
-                                                    HealthStatCard(title: "Steps", value: healthKitManager.todayStepCount.formatted(), systemImage: "figure.walk")
-                                                    HealthStatCard(title: "Distance", value: distanceString(from: healthKitManager.todayDistanceMeters), systemImage: "figure.run")
-                                                    HealthStatCard(title: "Stand", value: "\(healthKitManager.todayStandHours)/12 hr", systemImage: "figure.stand")
-                                                    HealthStatCard(title: "Active", value: "\(Int(healthKitManager.todayActiveEnergy)) kcal", systemImage: "flame.fill")
-                                                    HealthStatCard(title: "Exercise", value: "\(healthKitManager.todayExerciseMinutes) min", systemImage: "clock")
-                                                    HealthStatCard(title: "HR Avg", value: healthKitManager.todayAverageHeartRate > 0 ? "\(healthKitManager.todayAverageHeartRate) bpm" : "--", systemImage: "heart.fill")
-                                                }
-                                            }
-                                            .padding(16)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                                    .fill(Color.clear)
-                                            )
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                                    .stroke(Color.black, lineWidth: 1)
-                                            )
-                                            .overlay(alignment: .top) {
-                                                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                                    .fill(Color.clear)
-                                                    .frame(width: 14, height: 14)
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                                            .stroke(Color.black, lineWidth: 1)
-                                                    )
-                                                    .rotationEffect(.degrees(45))
-                                                    .offset(y: -7)
-                                            }
-                                        }
-                                        .padding(.top, 8)
-                                        .transition(.move(edge: .top).combined(with: .opacity))
-                                    }
-
+                                    .font(.title3)
+                                    .foregroundStyle(.primary)
+                                    .padding(16)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color("Background"))
+                                    )
+                                    .frame(maxWidth: 360)
+                                    .frame(maxWidth: .infinity, alignment: .center)
                                 }
                                 //.padding(16)
                                 //.background(
@@ -121,16 +105,10 @@ struct ContentView: View {
                                 //)
                                 .padding(.horizontal)
                                 .padding(.vertical, 8)
-                                .animation(.easeInOut, value: expandedSection)
 
                                 ScheduleView(selectedDate: selectedDate)
                             }
                             .contentShape(Rectangle())
-                            .onTapGesture {
-                                if expandedSection != nil {
-                                    withAnimation(.easeInOut) { expandedSection = nil }
-                                }
-                            }
                         }
                         .ignoresSafeArea(edges: .top)
                     }
@@ -140,11 +118,6 @@ struct ContentView: View {
                         HeaderView(selectedDate: $selectedDate)
                             .padding(.top, 8)
                             .contentShape(Rectangle())
-                            .onTapGesture {
-                                if expandedSection != nil {
-                                    withAnimation(.easeInOut) { expandedSection = nil }
-                                }
-                            }
                     }
                     .frame(maxWidth: .infinity, alignment: .top)
                     .background(
@@ -152,12 +125,6 @@ struct ContentView: View {
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
                             .fill(Color("BackgroundPopup"))
                             .ignoresSafeArea(edges: [.top, .horizontal])
-                            .frame(height: 160)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                    .stroke(Color.black, lineWidth: 1)
-                                    .ignoresSafeArea(edges: [.top, .horizontal])
-                            )
                     )
                     .zIndex(1)
                 }
@@ -170,12 +137,11 @@ struct ContentView: View {
             }) {
                 Image(systemName: "plus")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.accentColor)
                     .padding(20)
                     .background(
                         Circle()
-                            .fill(Color.accentColor)
-                            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+                            .fill(Color("Background"))
                     )
             }
             .padding(.trailing, 20)
@@ -190,7 +156,7 @@ struct ContentView: View {
                 }
             )
         }
-        .onChange(of: selectedDate) { newDate in
+        .onChange(of: selectedDate) { _, newDate in
             Task {
                 do {
                     try await healthKitManager.fetchMetrics(for: newDate)
