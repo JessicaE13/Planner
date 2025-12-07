@@ -130,6 +130,13 @@ struct ScheduleView: View {
                         }
                     }
                 }
+                .presentationDetents([
+                    .fraction(0.18), // compact start height
+                    .large
+                ])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(24)
+                .presentationSizing(.fitted)
             }
             .sheet(item: $showingEdit) { item in
                 NavigationView {
@@ -205,7 +212,7 @@ struct ScheduleRowView: View {
     var body: some View {
         HStack {
             ZStack {
-                RoundedRectangle(cornerRadius: 22)
+                Capsule()
                     .fill(Color(item.color))
                     .frame(width: 50, height: 75)
                 Image(systemName: item.icon)
@@ -217,9 +224,20 @@ struct ScheduleRowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 if item.itemType == .scheduled {
                     HStack(spacing: 4) {
-                        Text(item.allDay ? "All-day" : formatTime(item.startTime))
+                        if item.allDay {
+                            Text("All-day")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            HStack(spacing: 0) {
+                                timeText(item.startTime)
+                                Text(" → ")
+                                timeText(item.endTime)
+                                Text(" | \(formatDuration(from: item.startTime, to: item.endTime))")
+                            }
                             .font(.caption)
                             .foregroundColor(.secondary)
+                        }
                         if item.frequency != .never {
                             Image(systemName: "repeat")
                                 .font(.caption)
@@ -228,10 +246,24 @@ struct ScheduleRowView: View {
                     }
                 }
                 Text(item.title)
-                    .font(.body)
-                    .fontWeight(.medium)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .padding(.vertical, 2)
                     .strikethrough(item.isCompleted(on: selectedDate))
                     .foregroundColor(item.isCompleted(on: selectedDate) ? .secondary : .primary)
+
+                if !item.checklist.isEmpty {
+                    let completedCount = item.checklist.filter { $0.isCompleted }.count
+                    let totalCount = item.checklist.count
+                    HStack(spacing: 4) {
+                        Image(systemName: "checklist")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Text("Checklist \(completedCount)/\(totalCount)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             
             if item.uniqueKey.hasPrefix("todo-") && item.itemType == .scheduled {
@@ -263,6 +295,49 @@ struct ScheduleRowView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "h:mm a"
         return formatter.string(from: date)
+    }
+
+    private func timeRangeWithDuration(start: Date, end: Date) -> String {
+        let startText = formatTime(start)
+        let endText = formatTime(end)
+        let durationText = formatDuration(from: start, to: end)
+        return "\(startText) → \(endText) | \(durationText)"
+    }
+
+    private func formatDuration(from start: Date, to end: Date) -> String {
+        let interval = max(0, end.timeIntervalSince(start))
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .abbreviated
+        // Prefer hours and minutes
+        formatter.allowedUnits = [.hour, .minute]
+        formatter.zeroFormattingBehavior = [.dropAll]
+        if let formatted = formatter.string(from: interval) {
+            return formatted
+        }
+        // Fallback manual formatting
+        let minutes = Int(interval / 60)
+        let hours = minutes / 60
+        let mins = minutes % 60
+        if hours > 0 && mins > 0 { return "\(hours)h \(mins)m" }
+        if hours > 0 { return "\(hours)h" }
+        return "\(mins)m"
+    }
+    
+    private func timeText(_ date: Date) -> some View {
+        let formatterHM = DateFormatter()
+        formatterHM.dateFormat = "h:mm"
+        let formatterPeriod = DateFormatter()
+        formatterPeriod.dateFormat = "a"
+        let hm = formatterHM.string(from: date)
+        let period = formatterPeriod.string(from: date)
+        // Compose: big h:mm and smaller AM/PM
+        return HStack(spacing: 0) {
+            Text(hm)
+            Text(period)
+                .font(.system(size: 9))
+                .fontWeight(.light)
+                .baselineOffset(-2)
+        }
     }
 }
 
@@ -442,6 +517,23 @@ struct NewScheduleItemView: View {
         return df
     }
     
+    private func dateRangeSummaryView(start: Date, end: Date) -> some View {
+        let startDateText = dateSummaryFormatter.string(from: start)
+        let hmFormatter = DateFormatter(); hmFormatter.dateFormat = "h:mm"
+        let apFormatter = DateFormatter(); apFormatter.dateFormat = "a"
+        let startHM = hmFormatter.string(from: start)
+        let startAP = apFormatter.string(from: start)
+        let endHM = hmFormatter.string(from: end)
+        let endAP = apFormatter.string(from: end)
+        return HStack(spacing: 4) {
+            Text("\(startDateText) \(startHM)")
+            Text(startAP).font(.caption2).fontWeight(.light).baselineOffset(-2)
+            Text("→ \(endHM)")
+            Text(endAP).font(.caption2).fontWeight(.light).baselineOffset(-2)
+        }
+        .foregroundColor(.primary)
+    }
+    
     init(selectedDate: Date, onSave: @escaping (ScheduleItem) -> Void) {
         self.selectedDate = selectedDate
         self.onSave = onSave
@@ -553,11 +645,7 @@ struct NewScheduleItemView: View {
                                             Text("\(dateSummaryFormatter.string(from: item.startTime)) — All-day")
                                                 .foregroundColor(.primary)
                                         } else {
-                                            let startDateText = dateSummaryFormatter.string(from: item.startTime)
-                                            let startTimeText = timeSummaryFormatter.string(from: item.startTime)
-                                            let endTimeText = timeSummaryFormatter.string(from: item.endTime)
-                                            Text("\(startDateText) \(startTimeText) - \(endTimeText)")
-                                                .foregroundColor(.primary)
+                                            dateRangeSummaryView(start: item.startTime, end: item.endTime)
                                         }
                                         Spacer()
                                     }

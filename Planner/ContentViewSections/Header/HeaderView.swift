@@ -1,9 +1,19 @@
 import SwiftUI
 
+private struct IsFutureSelectedKey: EnvironmentKey {
+    static let defaultValue: Bool = false
+}
+
+extension EnvironmentValues {
+    var isFutureSelected: Bool {
+        get { self[IsFutureSelectedKey.self] }
+        set { self[IsFutureSelectedKey.self] = newValue }
+    }
+}
+
 struct HeaderView: View {
     @Binding var selectedDate: Date
     @State private var showingDatePicker = false
-    @State private var currentWeekOffset: Int = 0
     @State private var showingSettings = false
     @Environment(\.colorScheme) private var colorScheme
     
@@ -20,16 +30,18 @@ struct HeaderView: View {
     }()
     
     private var weekDates: [Date] {
-        let today = Date()
-        let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
-        let offsetWeekStart = calendar.date(byAdding: .weekOfYear, value: currentWeekOffset, to: startOfWeek) ?? startOfWeek
+        let weekStart = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
         return (0..<7).compactMap { dayOffset in
-            calendar.date(byAdding: .day, value: dayOffset, to: offsetWeekStart)
+            calendar.date(byAdding: .day, value: dayOffset, to: weekStart)
         }
     }
     
     private func isSelected(_ date: Date) -> Bool {
         calendar.isDate(date, inSameDayAs: selectedDate)
+    }
+
+    private var isFutureSelected: Bool {
+        calendar.startOfDay(for: selectedDate) > calendar.startOfDay(for: Date())
     }
     
     var body: some View {
@@ -44,27 +56,28 @@ struct HeaderView: View {
                 // Previous week button
                 Button {
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        currentWeekOffset -= 1
+                        if let newDate = calendar.date(byAdding: .day, value: -7, to: selectedDate) {
+                            selectedDate = newDate
+                        }
                     }
                 } label: {
                     Image(systemName: "chevron.left")
-                       
                 }
                 .padding(.trailing, 8)
                 
                 // Next week button
                 Button {
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        currentWeekOffset += 1
+                        if let newDate = calendar.date(byAdding: .day, value: 7, to: selectedDate) {
+                            selectedDate = newDate
+                        }
                     }
                 } label: {
                     Image(systemName: "chevron.right")
-                       
                 }
                 
                 Button("Today") {
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        currentWeekOffset = 0
                         selectedDate = Date()
                     }
                 }
@@ -119,9 +132,13 @@ struct HeaderView: View {
                     .onEnded { value in
                         withAnimation(.easeInOut(duration: 0.3)) {
                             if value.translation.width > 20 {
-                                currentWeekOffset -= 1
+                                if let newDate = calendar.date(byAdding: .day, value: -7, to: selectedDate) {
+                                    selectedDate = newDate
+                                }
                             } else if value.translation.width < -20 {
-                                currentWeekOffset += 1
+                                if let newDate = calendar.date(byAdding: .day, value: 7, to: selectedDate) {
+                                    selectedDate = newDate
+                                }
                             }
                         }
                     }
@@ -129,6 +146,7 @@ struct HeaderView: View {
         }
         .padding()
         .background(Color("BackgroundPopup"))
+        .environment(\.isFutureSelected, isFutureSelected)
         .sheet(isPresented: $showingDatePicker) {
             NavigationView {
                 VStack {
@@ -147,7 +165,6 @@ struct HeaderView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Done") {
                             showingDatePicker = false
-                            updateWeekOffsetForSelectedDate()
                         }
                     }
                 }
@@ -158,16 +175,6 @@ struct HeaderView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
-        
-    }
-    
-    private func updateWeekOffsetForSelectedDate() {
-        let today = Date()
-        let todayWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
-        let selectedWeekStart = calendar.dateInterval(of: .weekOfYear, for: selectedDate)?.start ?? selectedDate
-        
-        let weekDifference = calendar.dateComponents([.weekOfYear], from: todayWeekStart, to: selectedWeekStart).weekOfYear ?? 0
-        currentWeekOffset = weekDifference
     }
 }
 
@@ -176,4 +183,3 @@ struct HeaderView: View {
         HeaderView(selectedDate: .constant(Date()))
     }
 }
-

@@ -8,6 +8,7 @@ struct ContentView: View {
     @StateObject private var cloudKitManager = CloudKitManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @State private var healthAuthorizationRequested = false
+    @State private var swipeHaptic = UIImpactFeedbackGenerator(style: .light)
 
     private func distanceString(from meters: Double) -> String {
         if Locale.current.measurementSystem == .metric {
@@ -45,6 +46,15 @@ struct ContentView: View {
         return String(format: "%d:%02d h", hours, minutes)
     }
     
+    private func changeDate(by days: Int) {
+        if let newDate = Calendar.current.date(byAdding: .day, value: days, to: selectedDate) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                selectedDate = newDate
+            }
+            swipeHaptic.impactOccurred()
+        }
+    }
+    
     var body: some View {
         ZStack {
 //            Color("BackgroundPopup")
@@ -63,7 +73,7 @@ struct ContentView: View {
                                 Spacer(minLength: 8)
                                 VStack(spacing: 12) {
                                     // Activity bar with icons; simplified (no expand/collapse)
-                                    HStack {
+                                    HStack(spacing: 16) {
                                         // Sleep (real data)
                                         HStack(spacing: 6) {
                                             Image(systemName: "bed.double.fill")
@@ -71,7 +81,9 @@ struct ContentView: View {
                                                 .font(.caption)
                                                 .foregroundStyle(.primary)
                                         }
-                                        Spacer()
+                                        .frame(maxWidth: .infinity)
+                                        .layoutPriority(1)
+
                                         // Steps
                                         HStack(spacing: 6) {
                                             Image(systemName: "figure.walk")
@@ -79,7 +91,9 @@ struct ContentView: View {
                                                 .font(.caption)
                                                 .foregroundStyle(.primary)
                                         }
-                                        Spacer()
+                                        .frame(maxWidth: .infinity)
+                                        .layoutPriority(1)
+
                                         // Distance
                                         HStack(spacing: 6) {
                                             Image(systemName: "figure.run")
@@ -87,10 +101,15 @@ struct ContentView: View {
                                                 .font(.caption)
                                                 .foregroundStyle(.primary)
                                         }
+                                        .frame(maxWidth: .infinity)
+                                        .layoutPriority(1)
                                     }
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.horizontal, 16) // Left/right padding equals spacing
+                                    .padding(.vertical, 16)
+                                    .contentShape(Rectangle())
                                     .font(.title3)
                                     .foregroundStyle(.primary)
-                                    .padding(16)
                                     .background(
                                         Capsule()
                                             .fill(Color("Background"))
@@ -111,6 +130,21 @@ struct ContentView: View {
                             .contentShape(Rectangle())
                         }
                         .ignoresSafeArea(edges: .top)
+                        .contentShape(Rectangle())
+//                        .highPriorityGesture(
+//                            DragGesture(minimumDistance: 10, coordinateSpace: .local)
+//                                .onEnded { value in
+//                                    let horizontal = value.translation.width
+//                                    let vertical = abs(value.translation.height)
+//                                    // Prefer horizontal intent
+//                                    guard abs(horizontal) > 30, vertical < 50 else { return }
+//                                    if horizontal < 0 {
+//                                        changeDate(by: 1)
+//                                    } else {
+//                                        changeDate(by: -1)
+//                                    }
+//                                }
+//                        )
                     }
 
                     // Curved header on top
@@ -127,9 +161,37 @@ struct ContentView: View {
                             .ignoresSafeArea(edges: [.top, .horizontal])
                     )
                     .zIndex(1)
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                            .onEnded { value in
+                                let horizontal = value.translation.width
+                                let vertical = abs(value.translation.height)
+                                guard abs(horizontal) > 30, vertical < 50 else { return }
+                                if horizontal < 0 {
+                                    changeDate(by: 1)
+                                } else {
+                                    changeDate(by: -1)
+                                }
+                            }
+                    )
                 }
             }
         }
+        .contentShape(Rectangle())
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                .onEnded { value in
+                    let horizontal = value.translation.width
+                    let vertical = abs(value.translation.height)
+                    guard abs(horizontal) > 30, vertical < 50 else { return }
+                    if horizontal < 0 {
+                        changeDate(by: 1)
+                    } else {
+                        changeDate(by: -1)
+                    }
+                }
+        )
         .overlay(alignment: .bottomTrailing) {
             Button(action: {
                 // TODO: Handle floating action button tap
@@ -155,6 +217,14 @@ struct ContentView: View {
                     showingNewItem = false
                 }
             )
+            // Make the sheet open very compact and only grow to large when necessary
+            .presentationDetents([
+                .fraction(0.18), // roughly ~18% of the screen height to avoid large negative space
+                .large
+            ])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(24)
+            .presentationSizing(.fitted)
         }
         .onChange(of: selectedDate) { _, newDate in
             Task {
@@ -250,4 +320,3 @@ struct HealthStatCard: View {
         )
     }
 }
-
