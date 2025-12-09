@@ -118,6 +118,7 @@ struct ContentView: View {
                                     .frame(maxWidth: .infinity, alignment: .center)
                                 }
                                 //.padding(16)
+                                
                                 //.background(
                                 //    RoundedRectangle(cornerRadius: isHealthExpanded ? 16 : 999, style: .continuous)
                                 //        .fill(Color("BackgroundPopup"))

@@ -124,21 +124,23 @@ struct ScheduleView: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Done") {
+                            Button(action: {
                                 showingDetail = nil
+                            }) {
+                                Image(systemName: "xmark")
                             }
                         }
                     }
                 }
                 .presentationDetents([
-                    .fraction(0.18), // compact start height
+                    .fraction(0.5), // start at ~50% height
                     .large
                 ])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(24)
                 .presentationSizing(.fitted)
             }
-            .sheet(item: $showingEdit) { item in
+            .fullScreenCover(item: $showingEdit) { item in
                 NavigationView {
                     EditScheduleItemView(
                         item: item,
@@ -153,8 +155,10 @@ struct ScheduleView: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Done") {
+                            Button(action: {
                                 showingEdit = nil
+                            }) {
+                                Image(systemName: "xmark")
                             }
                         }
                     }
@@ -378,16 +382,32 @@ struct NewScheduleItemView: View {
     // MARK: - Icon Suggestion Helpers
     private func mapKeywordToIcon(in text: String) -> String? {
         let mapping: [String: String] = [
+            // Reading/Work
             "book": "book.fill",
             "books": "books.vertical.fill",
             "reading": "book.fill",
             "read": "book.fill",
             "meeting": "calendar.badge.checkmark",
+            
+            // Drinks
             "coffee": "cup.and.saucer.fill",
             "tea": "mug.fill",
+            
+            // Meals
             "breakfast": "fork.knife",
+            "brunch": "fork.knife",
             "lunch": "fork.knife",
             "dinner": "fork.knife",
+            "supper": "fork.knife",
+            "meal": "fork.knife",
+            "eat": "fork.knife",
+            "food": "fork.knife",
+
+            // Time of day
+            "morning": "sunrise.fill",
+            "sunrise": "sunrise.fill",
+            
+            // Fitness
             "run": "figure.run",
             "running": "figure.run",
             "walk": "figure.walk",
@@ -397,13 +417,19 @@ struct NewScheduleItemView: View {
             "yoga": "figure.yoga",
             "swim": "figure.pool.swim",
             "swimming": "figure.pool.swim",
+
+            // Travel
             "flight": "airplane",
             "plane": "airplane",
             "train": "train.side.front.car",
             "bus": "bus.fill",
             "car": "car.fill",
+
+            // Events & celebrations
             "birthday": "birthday.cake.fill",
             "party": "party.popper.fill",
+
+            // Shopping & chores
             "shopping": "bag.fill",
             "groceries": "cart.fill",
             "grocery": "cart.fill",
@@ -462,6 +488,10 @@ struct NewScheduleItemView: View {
             return lhs.0.displayName.count < rhs.0.displayName.count
         }).first {
             item.icon = best.0.name
+        }
+        // No scored matches — default to calendar
+        else {
+            item.icon = "calendar"
         }
     }
     
@@ -948,6 +978,9 @@ struct EditScheduleItemView: View {
     @State private var newChecklistItem: String = ""
     @FocusState private var checklistInputFocused: Bool
     @Environment(\.editMode) private var editMode // Add edit mode environment
+
+    private enum ExpandedEditorSection: Equatable { case none, schedule }
+    @State private var expandedSection: ExpandedEditorSection = .none
     
     // Icon selection
     @State private var showingIconPicker = false
@@ -1019,6 +1052,34 @@ struct EditScheduleItemView: View {
 
             return parts.joined(separator: "\n")
         }
+    }
+
+    private var dateSummaryFormatter: DateFormatter {
+        let df = DateFormatter()
+        df.dateFormat = "MMM d, yyyy"
+        return df
+    }
+    private var timeSummaryFormatter: DateFormatter {
+        let df = DateFormatter()
+        df.dateFormat = "h:mm a"
+        return df
+    }
+    
+    private func dateRangeSummaryView(start: Date, end: Date) -> some View {
+        let startDateText = dateSummaryFormatter.string(from: start)
+        let hmFormatter = DateFormatter(); hmFormatter.dateFormat = "h:mm"
+        let apFormatter = DateFormatter(); apFormatter.dateFormat = "a"
+        let startHM = hmFormatter.string(from: start)
+        let startAP = apFormatter.string(from: start)
+        let endHM = hmFormatter.string(from: end)
+        let endAP = apFormatter.string(from: end)
+        return HStack(spacing: 4) {
+            Text("\(startDateText) \(startHM)")
+            Text(startAP).font(.caption2).fontWeight(.light).baselineOffset(-2)
+            Text("→ \(endHM)")
+            Text(endAP).font(.caption2).fontWeight(.light).baselineOffset(-2)
+        }
+        .foregroundColor(.primary)
     }
     
     var body: some View {
@@ -1159,48 +1220,61 @@ struct EditScheduleItemView: View {
                         }
                     }
                     
-                    // Scheduling Section - now available for both todos (with dates) and scheduled items
-                    if editableItem.itemType == .scheduled || (editableItem.itemType == .todo && editableItem.hasDate) {
+                    // Collapsed summary row when not expanded
+                    if expandedSection != .schedule {
+                        Section {
+                            Button(action: {
+                                withAnimation(.easeInOut) { expandedSection = .schedule }
+                            }) {
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Image(systemName: "calendar").foregroundColor(.primary)
+                                    if editableItem.allDay {
+                                        Text("\(dateSummaryFormatter.string(from: editableItem.startTime)) — All-day")
+                                            .foregroundColor(.primary)
+                                    } else {
+                                        dateRangeSummaryView(start: editableItem.startTime, end: editableItem.endTime)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    
+                    // Expanded schedule editor
+                    if (editableItem.itemType == .scheduled || (editableItem.itemType == .todo && editableItem.hasDate)) && expandedSection == .schedule {
                         Section {
                             HStack {
                                 Text("All-day")
                                 Spacer()
                                 Toggle("", isOn: $editableItem.allDay)
                             }
-                            
                             HStack {
                                 Text("Start")
                                 Spacer()
                                 DatePicker("", selection: $editableItem.startTime, displayedComponents: .date)
                                     .labelsHidden()
-                                
                                 if !editableItem.allDay {
                                     DatePicker("", selection: $editableItem.startTime, displayedComponents: .hourAndMinute)
                                         .labelsHidden()
                                         .onChange(of: editableItem.startTime) { _, newStartTime in
-                                            // Automatically update end time to be one hour after start time
                                             let calendar = Calendar.current
                                             editableItem.endTime = calendar.date(byAdding: .hour, value: 1, to: newStartTime) ?? newStartTime
                                         }
                                 }
                             }
-                            
-                            // For todos, show "Due" instead of "End" and only show end time for scheduled items
                             if editableItem.itemType == .scheduled {
                                 HStack {
                                     Text("End")
                                     Spacer()
                                     DatePicker("", selection: $editableItem.endTime, displayedComponents: .date)
                                         .labelsHidden()
-                                    
                                     if !editableItem.allDay {
                                         DatePicker("", selection: $editableItem.endTime, displayedComponents: .hourAndMinute)
                                             .labelsHidden()
                                     }
                                 }
                             }
-                            
-                            // Repeat Section - now available for both types
                             HStack {
                                 Text("Repeat")
                                 Spacer()
@@ -1208,9 +1282,7 @@ struct EditScheduleItemView: View {
                                     ForEach(Frequency.allCases) { frequency in
                                         Button(frequency.displayName) {
                                             editableItem.frequency = frequency
-                                            if frequency == .custom {
-                                                showingCustomFrequencyPicker = true
-                                            }
+                                            if frequency == .custom { showingCustomFrequencyPicker = true }
                                         }
                                     }
                                 } label: {
@@ -1229,8 +1301,6 @@ struct EditScheduleItemView: View {
                                     }
                                 }
                             }
-                            
-                            // Show end repeat options when frequency is not "Never"
                             if editableItem.frequency != .never {
                                 HStack {
                                     Text("End Repeat")
@@ -1242,8 +1312,6 @@ struct EditScheduleItemView: View {
                                     }
                                     .pickerStyle(MenuPickerStyle())
                                 }
-                                
-                                // Show date picker when "On Date" is selected
                                 if editableItem.endRepeatOption == .onDate {
                                     HStack {
                                         Text("End Date")
@@ -1343,6 +1411,12 @@ struct EditScheduleItemView: View {
                     }
                 }
                 .scrollContentBackground(.hidden)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if expandedSection != .none {
+                        withAnimation(.easeInOut) { expandedSection = .none }
+                    }
+                }
             }
             .padding(.top, 8)
             .navigationTitle(editableItem.itemType == .todo ? "Edit Task" : "Edit Event")

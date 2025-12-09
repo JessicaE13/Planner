@@ -19,6 +19,8 @@ struct ScheduleDetailView: View {
     // Add state to track the height of the VStack (title & location)
     @State private var vStackHeight: CGFloat = 80
     
+    @State private var showingEditSheet = false
+    
     // Add computed property for display date
     private var displayDate: Date {
         item.frequency != .never ? selectedDate : item.startTime
@@ -271,29 +273,12 @@ struct ScheduleDetailView: View {
                 .padding(.top, 0)
             }
         }
-        .navigationTitle(item.itemType == .todo ? "Task Details" : "Event Details")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: EditScheduleItemView(
-                    item: item,
-                    selectedDate: selectedDate,
-                    onSave: { updatedItem in
-                        onSave(updatedItem)
-                    },
-                    onDelete: { deleteOption in
-                        // Handle delete operations
-                        switch deleteOption {
-                        case .thisEvent:
-                            dataManager.excludeDateFromRecurring(item: item, excludeDate: selectedDate)
-                            dismiss() // Dismiss the view after excluding this occurrence
-                        case .allEvents:
-                            dataManager.deleteItem(item)
-                            dismiss() // Dismiss the view after delete
-                        }
-                    }
-                )) {
-                    Text("Edit")
+                Button("Edit") {
+                    showingEditSheet = true
                 }
             }
         }
@@ -316,6 +301,41 @@ struct ScheduleDetailView: View {
             if let updatedItem = dataManager.items.first(where: { $0.id == item.id }) {
                 item = updatedItem
             }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            NavigationView {
+                EditScheduleItemView(
+                    item: item,
+                    selectedDate: selectedDate,
+                    onSave: { updatedItem in
+                        onSave(updatedItem)
+                        showingEditSheet = false
+                    },
+                    onDelete: { deleteOption in
+                        switch deleteOption {
+                        case .thisEvent:
+                            dataManager.excludeDateFromRecurring(item: item, excludeDate: selectedDate)
+                            showingEditSheet = false
+                            dismiss()
+                        case .allEvents:
+                            dataManager.deleteItem(item)
+                            showingEditSheet = false
+                            dismiss()
+                        }
+                    }
+                )
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: { showingEditSheet = false }) {
+                            Image(systemName: "xmark")
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(24)
         }
     }
     
