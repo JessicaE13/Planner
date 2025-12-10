@@ -86,11 +86,27 @@ struct ScheduleView: View {
 //                .padding(.vertical, 16)
                 
                 VStack(spacing: 12) {
-                    let allScheduleItems = getActualScheduleItems(selectedDate).sorted { item1, item2 in
-                        let time1 = getActualTimeForDate(item1, on: selectedDate)
-                        let time2 = getActualTimeForDate(item2, on: selectedDate)
-                        return time1 < time2
+                    let itemsForDate = getActualScheduleItems(selectedDate)
+
+                    let allDayItems = itemsForDate.filter { item in
+                        // Scheduled all-day events OR to-dos that have a date and are all-day
+                        if item.itemType == .scheduled { return item.allDay }
+                        if item.itemType == .todo { return item.hasDate && item.allDay }
+                        return false
                     }
+
+                    let timedItems = itemsForDate.filter { item in
+                        // Everything else that appears on this date but is not all-day
+                        if item.itemType == .scheduled { return !item.allDay }
+                        if item.itemType == .todo { return item.hasDate && !item.allDay }
+                        return false
+                    }.sorted { lhs, rhs in
+                        let lhsTime = getActualTimeForDate(lhs, on: selectedDate)
+                        let rhsTime = getActualTimeForDate(rhs, on: selectedDate)
+                        return lhsTime < rhsTime
+                    }
+
+                    let allScheduleItems = allDayItems + timedItems
                     
                     if !allScheduleItems.isEmpty {
                         ForEach(allScheduleItems, id: \.id) { item in
@@ -226,6 +242,14 @@ struct ScheduleRowView: View {
             .padding(.trailing, 8)
             
             VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .padding(.vertical, 2)
+                    .strikethrough(item.isCompleted(on: selectedDate))
+                    .foregroundColor(item.isCompleted(on: selectedDate) ? .secondary : .primary)
+                
+                // Time/info line below the title
                 if item.itemType == .scheduled {
                     HStack(spacing: 4) {
                         if item.allDay {
@@ -248,14 +272,21 @@ struct ScheduleRowView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                } else if item.itemType == .todo, item.hasDate {
+                    // For dated to-dos, show either All-day or due time
+                    if item.allDay {
+                        Text("All-day")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        HStack(spacing: 0) {
+                            timeText(item.startTime)
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
                 }
-                Text(item.title)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .padding(.vertical, 2)
-                    .strikethrough(item.isCompleted(on: selectedDate))
-                    .foregroundColor(item.isCompleted(on: selectedDate) ? .secondary : .primary)
-
+                
                 if !item.checklist.isEmpty {
                     let completedCount = item.checklist.filter { $0.isCompleted }.count
                     let totalCount = item.checklist.count

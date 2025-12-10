@@ -9,6 +9,10 @@ struct ContentView: View {
     @StateObject private var healthKitManager = HealthKitManager.shared
     @State private var healthAuthorizationRequested = false
     @State private var swipeHaptic = UIImpactFeedbackGenerator(style: .light)
+    
+    private var isFutureSelectedDate: Bool {
+        Calendar.current.startOfDay(for: selectedDate) > Calendar.current.startOfDay(for: Date())
+    }
 
     private func distanceString(from meters: Double) -> String {
         if Locale.current.measurementSystem == .metric {
@@ -77,7 +81,7 @@ struct ContentView: View {
                                         // Sleep (real data)
                                         HStack(spacing: 6) {
                                             Image(systemName: "bed.double.fill")
-                                            Text(sleepDurationString(from: healthKitManager.todaySleepDuration))
+                                            Text(isFutureSelectedDate ? "–" : sleepDurationString(from: healthKitManager.todaySleepDuration))
                                                 .font(.caption)
                                                 .foregroundStyle(.primary)
                                         }
@@ -87,7 +91,7 @@ struct ContentView: View {
                                         // Steps
                                         HStack(spacing: 6) {
                                             Image(systemName: "figure.walk")
-                                            Text("\(stepsFormatted(healthKitManager.todayStepCount)) steps")
+                                            Text("\(isFutureSelectedDate ? "0" : stepsFormatted(healthKitManager.todayStepCount)) steps")
                                                 .font(.caption)
                                                 .foregroundStyle(.primary)
                                         }
@@ -97,7 +101,7 @@ struct ContentView: View {
                                         // Distance
                                         HStack(spacing: 6) {
                                             Image(systemName: "figure.run")
-                                            Text(distanceShortString(from: healthKitManager.todayDistanceMeters))
+                                            Text(isFutureSelectedDate ? (Locale.current.measurementSystem == .metric ? "0.0 km" : "0.0 mi") : distanceShortString(from: healthKitManager.todayDistanceMeters))
                                                 .font(.caption)
                                                 .foregroundStyle(.primary)
                                         }
@@ -105,7 +109,7 @@ struct ContentView: View {
                                         .layoutPriority(1)
                                     }
                                     .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.horizontal, 16) // Left/right padding equals spacing
+                                    .padding(.horizontal, 16)
                                     .padding(.vertical, 16)
                                     .contentShape(Rectangle())
                                     .font(.title3)
@@ -156,10 +160,7 @@ struct ContentView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .top)
                     .background(
-                        // Curved bottom background for the header
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .fill(Color("BackgroundPopup"))
-                            .ignoresSafeArea(edges: [.top, .horizontal])
+                        Color("Background").ignoresSafeArea(edges: [.top, .horizontal])
                     )
                     .zIndex(1)
                     .contentShape(Rectangle())
@@ -210,7 +211,7 @@ struct ContentView: View {
             .padding(.trailing, 20)
             .padding(.bottom, 24)
         }
-        .sheet(isPresented: $showingNewItem) {
+        .fullScreenCover(isPresented: $showingNewItem) {
             NewScheduleItemView(
                 selectedDate: selectedDate,
                 onSave: { newItem in
@@ -218,17 +219,10 @@ struct ContentView: View {
                     showingNewItem = false
                 }
             )
-            // Make the sheet open very compact and only grow to large when necessary
-            .presentationDetents([
-                .fraction(0.18), // roughly ~18% of the screen height to avoid large negative space
-                .large
-            ])
-            .presentationDragIndicator(.visible)
-            .presentationCornerRadius(24)
-            .presentationSizing(.fitted)
         }
         .onChange(of: selectedDate) { _, newDate in
             Task {
+                if isFutureSelectedDate { return }
                 do {
                     try await healthKitManager.fetchMetrics(for: newDate)
                 } catch {
@@ -248,21 +242,23 @@ struct ContentView: View {
                     }
                 }
 
-                // Request HealthKit authorization once and fetch today's metrics
-                if !healthAuthorizationRequested {
-                    do {
-                        try await healthKitManager.requestAuthorization()
-                        try await healthKitManager.fetchMetrics(for: selectedDate)
-                        healthAuthorizationRequested = true
-                    } catch {
-                        print("HealthKit auth/fetch failed: \(error)")
-                    }
-                } else {
-                    // Refresh metrics on subsequent appears
-                    do {
-                        try await healthKitManager.fetchMetrics(for: selectedDate)
-                    } catch {
-                        print("Fetching steps failed: \(error)")
+                // Request HealthKit authorization and fetch metrics unless the selected date is in the future
+                let isFuture = Calendar.current.startOfDay(for: selectedDate) > Calendar.current.startOfDay(for: Date())
+                if !isFuture {
+                    if !healthAuthorizationRequested {
+                        do {
+                            try await healthKitManager.requestAuthorization()
+                            try await healthKitManager.fetchMetrics(for: selectedDate)
+                            healthAuthorizationRequested = true
+                        } catch {
+                            print("HealthKit auth/fetch failed: \(error)")
+                        }
+                    } else {
+                        do {
+                            try await healthKitManager.fetchMetrics(for: selectedDate)
+                        } catch {
+                            print("Fetching steps failed: \(error)")
+                        }
                     }
                 }
             }
@@ -321,3 +317,4 @@ struct HealthStatCard: View {
         )
     }
 }
+

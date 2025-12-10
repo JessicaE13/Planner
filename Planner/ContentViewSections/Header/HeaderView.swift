@@ -145,7 +145,7 @@ struct HeaderView: View {
             )
         }
         .padding()
-        .background(Color("BackgroundPopup"))
+        .background(Color("Background"))
         .environment(\.isFutureSelected, isFutureSelected)
         .sheet(isPresented: $showingDatePicker) {
             NavigationView {
